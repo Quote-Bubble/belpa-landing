@@ -39,7 +39,10 @@ const {
       if (!location.hash) {
         window.scrollTo(0, 0);
         document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
+        // This block runs in <head>, so document.body is still null here —
+        // assigning to it threw on every single page load and aborted the
+        // rest of this script. documentElement is the scroller anyway.
+        if (document.body) document.body.scrollTop = 0;
       }
     </script>
   </head>
@@ -82,10 +85,17 @@ const {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const lenis = new Lenis({
-      duration: 1.1,
+      // Longer glide. At 1.1 each wheel notch resolved fast enough that a
+      // normal mouse (which fires discrete, chunky deltas rather than a
+      // trackpad's stream) read as a series of steps instead of one motion.
+      // A softer multiplier keeps a single notch from overshooting now that
+      // it decays more slowly.
+      duration: 2.1,
+      wheelMultiplier: 0.85,
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     });
     window.__lenis = lenis;
+    window.dispatchEvent(new CustomEvent("quoter:lenis"));
 
     function raf(time: number) {
       lenis.raf(time);
@@ -118,6 +128,7 @@ const {
     };
     window.addEventListener("wheel", mark, { passive: true, once: true });
     window.addEventListener("touchmove", mark, { passive: true, once: true });
+    window.addEventListener("pointerdown", mark, { passive: true, once: true });
     window.addEventListener("keydown", (e) => {
       if (
         e.key === "ArrowDown" ||
@@ -136,7 +147,11 @@ const {
 
     const started = performance.now();
     const tick = () => {
-      if (!userScrolled && !location.hash && window.scrollY > 0) pinTop();
+      if (!userScrolled && !location.hash && window.scrollY > 40) {
+        userScrolled = true;
+      } else if (!userScrolled && !location.hash && window.scrollY > 0) {
+        pinTop();
+      }
       if (performance.now() - started < 3200) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);

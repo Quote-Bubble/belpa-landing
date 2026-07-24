@@ -1,0 +1,795 @@
+---
+/**
+ * A replica of the real roofer dashboard (quoter-dashboard-frontend), played
+ * back as a looping fake screen recording.
+ *
+ * Everything below is derived from ONE seed array of leads, exactly the way
+ * the real Analytics page derives it from Supabase rows. Nothing is typed in
+ * by hand, so the quotes table and the analytics always reconcile — if they
+ * didn't, the demo would read as fake on close inspection.
+ *
+ * Ported faithfully from:
+ *   src/components/AnalyticsClient.tsx     (cards, pills, bar rows)
+ *   src/components/charts/LineChart.tsx    (the SVG geometry below)
+ *   src/components/QuotesTable.tsx         (row grid, status pills)
+ *   src/lib/format.ts                      (labels, status colours)
+ */
+
+type Status = "new" | "contacted" | "won" | "lost";
+type Job =
+  | "full_replacement"
+  | "tile_or_slate_repair"
+  | "gutters_fascias_soffits"
+  | "flat_roof_replacement";
+
+type Seed = {
+  name: string;
+  phone: string;
+  job: Job;
+  value: number;
+  status: Status;
+  /** 0 = six days ago … 6 = today. */
+  day: number;
+};
+
+// 20 leads across a 7-day window. Day counts: [0,1,7,5,4,0,3].
+const LEADS: Seed[] = [
+  { name: "Alan Morgan", phone: "07700 900318", job: "tile_or_slate_repair", value: 1200, status: "contacted", day: 1 },
+
+  { name: "Priya Raval", phone: "07700 900142", job: "full_replacement", value: 8400, status: "contacted", day: 2 },
+  { name: "Tom Whitfield", phone: "07700 900774", job: "full_replacement", value: 9200, status: "new", day: 2 },
+  { name: "Dan Okafor", phone: "07700 900521", job: "tile_or_slate_repair", value: 1350, status: "new", day: 2 },
+  { name: "Helen Brooks", phone: "07700 900983", job: "tile_or_slate_repair", value: 1450, status: "contacted", day: 2 },
+  { name: "Marcus Reid", phone: "07700 900265", job: "gutters_fascias_soffits", value: 2200, status: "new", day: 2 },
+  { name: "Sofia Lindqvist", phone: "07700 900607", job: "full_replacement", value: 9800, status: "won", day: 2 },
+  { name: "Ray Chandra", phone: "07700 900431", job: "tile_or_slate_repair", value: 1550, status: "new", day: 2 },
+
+  { name: "Nina Alvarez", phone: "07700 900876", job: "full_replacement", value: 10400, status: "contacted", day: 3 },
+  { name: "Greg Sutton", phone: "07700 900190", job: "tile_or_slate_repair", value: 1600, status: "lost", day: 3 },
+  { name: "Yusuf Kaya", phone: "07700 900355", job: "gutters_fascias_soffits", value: 2350, status: "new", day: 3 },
+  { name: "Claire Bennett", phone: "07700 900712", job: "full_replacement", value: 11200, status: "new", day: 3 },
+  { name: "Owen Pryce", phone: "07700 900044", job: "tile_or_slate_repair", value: 1750, status: "lost", day: 3 },
+
+  { name: "Ellie Hartman", phone: "07700 900928", job: "full_replacement", value: 9800, status: "contacted", day: 4 },
+  { name: "Rob Ingram", phone: "07700 900583", job: "tile_or_slate_repair", value: 1900, status: "new", day: 4 },
+  { name: "Amara Boateng", phone: "07700 900237", job: "gutters_fascias_soffits", value: 2400, status: "won", day: 4 },
+  { name: "Stef Novak", phone: "07700 900469", job: "flat_roof_replacement", value: 5075, status: "new", day: 4 },
+
+  { name: "Jed Marsh", phone: "07700 900801", job: "full_replacement", value: 8900, status: "new", day: 6 },
+  { name: "Lucy Fairbairn", phone: "07700 900116", job: "tile_or_slate_repair", value: 2100, status: "new", day: 6 },
+  { name: "Kofi Mensah", phone: "07700 900650", job: "gutters_fascias_soffits", value: 2600, status: "new", day: 6 },
+];
+
+const JOB_LABELS: Record<Job, string> = {
+  full_replacement: "Full replacement",
+  tile_or_slate_repair: "Tile / slate repair",
+  gutters_fascias_soffits: "Gutters, fascias & soffits",
+  flat_roof_replacement: "Flat roof replacement",
+};
+const STATUS_LABELS: Record<Status, string> = {
+  new: "New",
+  contacted: "Contacted",
+  won: "Won",
+  lost: "Lost",
+};
+// src/lib/format.ts statusColor()
+const STATUS_COLOR: Record<Status, { fg: string; bg: string }> = {
+  new: { fg: "#1546c9", bg: "#eef4ff" },
+  contacted: { fg: "#6d28d9", bg: "#f3e8ff" },
+  won: { fg: "#0d6b3c", bg: "#e6f6ee" },
+  lost: { fg: "#c02626", bg: "#fdeaea" },
+};
+
+const gbp = new Intl.NumberFormat("en-GB", {
+  style: "currency",
+  currency: "GBP",
+  maximumFractionDigits: 0,
+});
+const money = (v: number) => gbp.format(v);
+const compactMoney = (v: number) =>
+  v >= 10_000 ? `£${Math.round(v / 1000)}K` : v >= 1000 ? `£${(v / 1000).toFixed(1)}K` : money(v);
+const pct = (v: number) => `${Math.round(v)}%`;
+const count = (v: number) => String(Math.round(v));
+
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const s = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+// Day labels, computed at build time so the window always reads as recent.
+const DAYS = 7;
+const now = new Date();
+const dayLabels = Array.from({ length: DAYS }, (_, i) => {
+  const d = new Date(now);
+  d.setDate(d.getDate() - (DAYS - 1 - i));
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+});
+
+const byDay = Array.from({ length: DAYS }, (_, i) => LEADS.filter((l) => l.day === i));
+
+// --- the three trend cards ------------------------------------------------
+const countPoints = byDay.map((rows, i) => ({ label: dayLabels[i], value: rows.length }));
+const medianPoints = byDay.map((rows, i) => ({
+  label: dayLabels[i],
+  value: median(rows.map((r) => r.value)) ?? 0,
+}));
+const winRatePoints = byDay.map((rows, i) => {
+  const w = rows.filter((r) => r.status === "won").length;
+  const l = rows.filter((r) => r.status === "lost").length;
+  return { label: dayLabels[i], value: w + l > 0 ? (w / (w + l)) * 100 : 0 };
+});
+
+const totalCount = LEADS.length;
+const medianValue = median(LEADS.map((l) => l.value));
+const wonRows = LEADS.filter((l) => l.status === "won");
+const lostRows = LEADS.filter((l) => l.status === "lost");
+const winRate = wonRows.length + lostRows.length > 0
+  ? (wonRows.length / (wonRows.length + lostRows.length)) * 100
+  : null;
+
+// --- today / yesterday ----------------------------------------------------
+const todayRows = byDay[DAYS - 1];
+const yesterdayRows = byDay[DAYS - 2];
+const todayMedian = median(todayRows.map((r) => r.value));
+
+// --- value by job type ----------------------------------------------------
+const jobRows = (Object.keys(JOB_LABELS) as Job[])
+  .map((job) => {
+    const values = LEADS.filter((l) => l.job === job).map((l) => l.value);
+    return { job, count: values.length, median: median(values) ?? 0 };
+  })
+  .filter((r) => r.count > 0)
+  .sort((a, b) => b.median - a.median);
+const maxJobMedian = Math.max(1, ...jobRows.map((r) => r.median));
+
+// --- won vs lost ----------------------------------------------------------
+const wonMedian = median(wonRows.map((r) => r.value));
+const lostMedian = median(lostRows.map((r) => r.value));
+const maxOutcome = Math.max(1, wonMedian ?? 0, lostMedian ?? 0);
+
+/**
+ * Geometry lifted verbatim from charts/LineChart.tsx so the curve, padding,
+ * grid lines and end dot land in exactly the same places as the real app.
+ */
+const W = 640, H = 180, PAD_TOP = 16, PAD_BOTTOM = 8, PAD_LEFT = 4, PAD_RIGHT = 54;
+function chart(data: { label: string; value: number }[], fmt: (v: number) => string) {
+  const plotW = W - PAD_LEFT - PAD_RIGHT;
+  const plotH = H - PAD_TOP - PAD_BOTTOM;
+  const maxValue = Math.max(1, ...data.map((d) => d.value));
+  const xAt = (i: number) =>
+    data.length <= 1 ? PAD_LEFT + plotW / 2 : PAD_LEFT + (i / (data.length - 1)) * plotW;
+  const yAt = (v: number) => PAD_TOP + plotH - (Math.max(0, v) / maxValue) * plotH;
+  const pts = data.map((d, i) => ({ x: xAt(i), y: yAt(d.value) }));
+  const line = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+  const last = pts[pts.length - 1];
+  const area = last ? `${line} L ${last.x} ${PAD_TOP + plotH} L ${PAD_LEFT} ${PAD_TOP + plotH} Z` : "";
+  const grid = [0, 0.5, 1].map((s) => ({
+    y: PAD_TOP + plotH - s * plotH,
+    label: fmt(maxValue * s),
+  }));
+  return { line, area, last, grid, first: data[0]?.label ?? "", lastLabel: data[data.length - 1]?.label ?? "" };
+}
+
+const cCount = chart(countPoints, count);
+const cMedian = chart(medianPoints, compactMoney);
+const cWin = chart(winRatePoints, pct);
+
+const STAT_CARDS = [
+  { title: "Quotes received", value: count(totalCount), delta: "0 previous period", c: cCount },
+  { title: "Median quote value", value: medianValue != null ? money(medianValue) : "—", delta: "No quotes previous period", c: cMedian },
+  { title: "Win rate", value: winRate != null ? pct(winRate) : "—", delta: "No won/lost previous period", c: cWin },
+];
+
+// Most recent first, like the real inbox. The newest one is the quote that
+// "arrives" mid-demo — it is still one of the 20 seed leads, so the analytics
+// on the next screen continue to add up.
+const inbox = [...LEADS]
+  .sort((a, b) => b.day - a.day)
+  .slice(0, 5)
+  .map((l, i) => ({ ...l, received: l.day === 6 ? `${2 + i}h ago` : `${6 - l.day}d ago` }));
+const newLead = { ...inbox[0], received: "just now" };
+const restRows = inbox.slice(1);
+
+const STATUS_FILTERS = ["All", "New", "Contacted", "Won", "Lost"];
+const NAV = ["Quotes", "Analytics", "Account", "Support"];
+---
+
+<section class="dd" aria-labelledby="dd-heading">
+  <div class="dd-frame" data-reveal="left">
+    <!-- The whole window zooms, sidebar included — a real screen recording
+         doesn't hold the chrome still while the content scales. -->
+    <div class="dd-zoom">
+    <div class="dd-stage">
+      <!-- Sidebar -->
+      <aside class="dd-side">
+        <span class="dd-brand">Quoter</span>
+        <span class="dd-slug">RIDGELINE ROOFING</span>
+        <nav class="dd-nav">
+          {NAV.map((item) => (
+            <span class="dd-nav-item" data-nav={item.toLowerCase()}>{item}</span>
+          ))}
+        </nav>
+      </aside>
+
+      <!-- Screen -->
+      <div class="dd-screen">
+          <!-- ============ QUOTES ============ -->
+          <div class="dd-view dd-view--quotes">
+            <h3 class="dd-title">Quotes</h3>
+            <p class="dd-sub">Every lead your widget has captured.</p>
+
+            <div class="dd-toolbar">
+              {STATUS_FILTERS.map((f, i) => (
+                <span class:list={["dd-pill", i === 0 && "is-active"]}>{f}</span>
+              ))}
+              <span class="dd-search">Search…</span>
+            </div>
+
+            <div class="dd-table">
+              <div class="dd-thead">
+                <span>Contact</span><span>Job type</span><span>Estimate</span>
+                <span>Status</span><span>Received</span>
+              </div>
+              <!-- The quote that lands mid-demo, and the detail it opens.
+                   The detail sits IMMEDIATELY after its own row so it expands
+                   under the row you clicked, not at the foot of the table. -->
+              <div class="dd-row dd-row--new">
+                <div class="dd-cell">
+                  <span class="dd-newdot" aria-hidden="true"></span>
+                  <b>{newLead.name}</b><small>{newLead.phone}</small>
+                </div>
+                <span class="dd-job">{JOB_LABELS[newLead.job]}</span>
+                <span class="dd-money">{money(newLead.value)}</span>
+                <span
+                  class="dd-status"
+                  style={`color:${STATUS_COLOR[newLead.status].fg};background:${STATUS_COLOR[newLead.status].bg}`}
+                >{STATUS_LABELS[newLead.status]}</span>
+                <span class="dd-when">{newLead.received}</span>
+              </div>
+              <div class="dd-detail">
+                <div class="dd-detail-grid">
+                  <div><small>Roof area</small><b>78 m²</b></div>
+                  <div><small>Pitch</small><b>35°</b></div>
+                  <div><small>Storeys</small><b>Two</b></div>
+                  <div><small>Property</small><b>Semi-detached</b></div>
+                </div>
+              </div>
+
+              {restRows.map((r) => (
+                <div class="dd-row">
+                  <div class="dd-cell">
+                    <b>{r.name}</b><small>{r.phone}</small>
+                  </div>
+                  <span class="dd-job">{JOB_LABELS[r.job]}</span>
+                  <span class="dd-money">{money(r.value)}</span>
+                  <span
+                    class="dd-status"
+                    style={`color:${STATUS_COLOR[r.status].fg};background:${STATUS_COLOR[r.status].bg}`}
+                  >{STATUS_LABELS[r.status]}</span>
+                  <span class="dd-when">{r.received}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <!-- ============ ANALYTICS ============ -->
+          <!-- The real page is taller than this frame, so the demo scrolls it
+               to reach the breakdown cards rather than shrinking everything
+               until it fits and stops looking like the product. -->
+          <div class="dd-view dd-view--analytics">
+            <div class="dd-scroll">
+            <h3 class="dd-title">Analytics</h3>
+            <p class="dd-sub">Quote volume and estimated value across your pipeline.</p>
+
+            <div class="dd-today">
+              <div class="dd-card">
+                <p class="dd-card-t">Quotes today</p>
+                <p class="dd-card-v">{todayRows.length}</p>
+                <p class="dd-card-d">{yesterdayRows.length} yesterday</p>
+              </div>
+              <div class="dd-card">
+                <p class="dd-card-t">Median estimate today</p>
+                <p class="dd-card-v">{todayMedian != null ? money(todayMedian) : "—"}</p>
+                <p class="dd-card-d">— yesterday</p>
+              </div>
+            </div>
+
+            <div class="dd-overview">
+              <h4>Your overview</h4>
+              <span class="dd-range">Date range <b>Last 7 days</b></span>
+            </div>
+
+            <div class="dd-filters">
+              {STATUS_FILTERS.map((f, i) => (
+                <span class:list={["dd-pill", i === 0 && "is-active"]}>{f}</span>
+              ))}
+            </div>
+
+            <div class="dd-cards">
+              {STAT_CARDS.map((card) => (
+                <div class="dd-card">
+                  <p class="dd-card-t">{card.title}</p>
+                  <p class="dd-card-v">{card.value}</p>
+                  <p class="dd-card-d">{card.delta}</p>
+                  <div class="dd-chart">
+                    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+                      {card.c.grid.map((g) => (
+                        <g>
+                          <line x1={PAD_LEFT} x2={W - PAD_RIGHT + 8} y1={g.y} y2={g.y} />
+                          <text x={W - PAD_RIGHT + 12} y={g.y} dy="0.32em">{g.label}</text>
+                        </g>
+                      ))}
+                      <path class="dd-area" d={card.c.area} />
+                      <path class="dd-line" d={card.c.line} />
+                      {card.c.last && (
+                        <>
+                          <circle cx={card.c.last.x} cy={card.c.last.y} r={6} fill="#fff" />
+                          <circle class="dd-dot" cx={card.c.last.x} cy={card.c.last.y} r={4} />
+                        </>
+                      )}
+                    </svg>
+                    <div class="dd-axis"><span>{card.c.first}</span><span>{card.c.lastLabel}</span></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div class="dd-bars">
+              <div class="dd-card">
+                <p class="dd-card-t">Value by job type</p>
+                <p class="dd-card-d">Median estimate, this range</p>
+                <div class="dd-barlist">
+                  {jobRows.map((r) => (
+                    <div class="dd-bar">
+                      <div class="dd-bar-head">
+                        <span>{JOB_LABELS[r.job]} <em>({r.count})</em></span>
+                        <b>{money(r.median)}</b>
+                      </div>
+                      <div class="dd-track">
+                        <span style={`width:${(r.median / maxJobMedian) * 100}%`}></span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div class="dd-card">
+                <p class="dd-card-t">Won vs. lost value</p>
+                <p class="dd-card-d">Median estimate, this range</p>
+                <div class="dd-barlist">
+                  {([["won", wonMedian, wonRows.length], ["lost", lostMedian, lostRows.length]] as const).map(
+                    ([key, med, n]) => (
+                      <div class="dd-bar">
+                        <div class="dd-bar-head">
+                          <span>
+                            <i style={`background:${STATUS_COLOR[key].fg}`}></i>
+                            {STATUS_LABELS[key]} <em>({n})</em>
+                          </span>
+                          <b>{med != null ? money(med) : "—"}</b>
+                        </div>
+                        <div class="dd-track">
+                          <span style={`width:${((med ?? 0) / maxOutcome) * 100}%;background:${STATUS_COLOR[key].fg}`}></span>
+                        </div>
+                      </div>
+                    ),
+                  )}
+                </div>
+              </div>
+            </div>
+            </div>
+          </div>
+      </div>
+    </div>
+    </div>
+
+    <span class="dd-cursor" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="20" height="20">
+        <path d="M5 3l14 8.5-6.2 1.3L10 19z" fill="#fff" stroke="#0a0b0d" stroke-width="1.4" stroke-linejoin="round"/>
+      </svg>
+    </span>
+  </div>
+
+  <div class="dd-copy" data-reveal="right" data-delay="1">
+    <p class="dd-kicker">And it ends on your desk.</p>
+    <h2 id="dd-heading">Every quote, already sorted.</h2>
+    <p class="dd-body">
+      The moment someone finishes a quote it lands in your dashboard — priced,
+      measured and ready to call. Track what you won, what you lost, and what
+      your website is actually worth.
+    </p>
+  </div>
+</section>
+
+<style>
+  /* Mirror of the Satellite section: frame left, copy right. */
+  .dd {
+    display: grid;
+    align-items: center;
+    gap: 2rem;
+    max-width: 76rem;
+    margin-inline: auto;
+    padding: clamp(4rem, 10vw, 8rem) 1.25rem;
+  }
+  @media (min-width: 1024px) {
+    .dd { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 3rem; }
+  }
+  @media (min-width: 1200px) {
+    .dd { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 3.25rem; }
+  }
+
+  /* Same card treatment as .sat-card so the two sections read as a pair. */
+  .dd-frame {
+    position: relative;
+    width: 100%;
+    max-width: 640px;
+    margin-inline: auto;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    box-shadow:
+      0 0 0 1px rgba(21, 55, 140, 0.18),
+      0 24px 48px -18px rgba(15, 40, 100, 0.5);
+    background: #fafafb;
+    aspect-ratio: 4 / 3;
+  }
+  @media (min-width: 1024px) {
+    .dd-frame { max-width: none; margin-inline: 0 auto 0 0; }
+  }
+
+  .dd-zoom {
+    position: absolute;
+    inset: 0;
+    transform-origin: 50% 50%;
+    will-change: transform;
+  }
+
+  .dd-stage {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: 8.5rem 1fr;
+    font-family: var(--font-sans);
+    color: #0a0b0d;
+    /* Everything is authored at this width then scaled to fit the frame, so
+       the replica keeps the real dashboard's proportions at any size. */
+    font-size: clamp(0.42rem, 1.15cqw, 0.62rem);
+    container-type: inline-size;
+  }
+
+  /* ---------- sidebar (light, like DashboardShell) ---------- */
+  .dd-side {
+    display: flex;
+    flex-direction: column;
+    padding: 1.1rem 0.85rem;
+    background: rgba(250, 250, 251, 0.75);
+    border-right: 1px solid rgba(255, 255, 255, 0.5);
+  }
+  .dd-brand {
+    font-family: var(--font-display);
+    font-size: 1.55em;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    padding-inline: 0.35rem;
+  }
+  .dd-slug {
+    margin-top: 0.15rem;
+    padding-inline: 0.35rem;
+    font-size: 0.82em;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: var(--color-brand-600);
+  }
+  .dd-nav { margin-top: 1.4rem; display: flex; flex-direction: column; gap: 0.15rem; }
+  .dd-nav-item {
+    padding: 0.42rem 0.55rem;
+    border-radius: 0.6rem;
+    font-size: 1.05em;
+    color: var(--color-muted);
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  .dd-nav-item[data-nav="quotes"] { background: var(--color-brand-50); color: var(--color-ink); font-weight: 600; }
+
+  /* ---------- screen ---------- */
+  .dd-screen { position: relative; overflow: hidden; background: #fff; }
+  .dd-view {
+    position: absolute;
+    inset: 0;
+    padding: 1.1rem 1.15rem;
+    overflow: hidden;
+  }
+  .dd-view--analytics { opacity: 0; }
+  .dd-scroll { will-change: transform; }
+
+  .dd-title { margin: 0; font-family: var(--font-display); font-size: 2em; font-weight: 600; letter-spacing: -0.02em; }
+  .dd-sub { margin: 0.15rem 0 0; font-size: 1em; color: var(--color-muted); }
+
+  .dd-card {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: 0.8rem;
+    box-shadow: var(--shadow-soft);
+    padding: 0.6rem 0.65rem;
+  }
+  .dd-card-t { margin: 0; font-size: 0.95em; font-weight: 500; color: var(--color-ink-soft); }
+  .dd-card-v { margin: 0.1rem 0 0; font-size: 1.7em; font-weight: 600; letter-spacing: -0.01em; }
+  .dd-card-d { margin: 0; font-size: 0.9em; color: var(--color-muted); }
+
+  /* ---------- quotes ---------- */
+  .dd-toolbar { display: flex; align-items: center; gap: 0.3rem; margin-top: 0.75rem; }
+  .dd-pill {
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.92em;
+    font-weight: 500;
+    color: var(--color-ink-soft);
+  }
+  .dd-pill.is-active { background: var(--color-ink); color: #fff; }
+  .dd-search {
+    margin-left: auto;
+    padding: 0.22rem 0.6rem;
+    border: 1px solid var(--color-line);
+    border-radius: 0.55rem;
+    font-size: 0.9em;
+    color: var(--color-muted);
+    background: #fff;
+  }
+
+  .dd-table {
+    margin-top: 0.6rem;
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: 0.8rem;
+    box-shadow: var(--shadow-soft);
+    overflow: hidden;
+  }
+  .dd-thead, .dd-row {
+    display: grid;
+    grid-template-columns: 1.6fr 1.4fr 0.9fr 0.8fr 0.7fr;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.42rem 0.7rem;
+  }
+  .dd-thead { border-bottom: 1px solid var(--color-line); font-size: 0.9em; color: var(--color-muted); font-weight: 500; }
+  .dd-row { border-bottom: 1px solid rgba(233, 234, 238, 0.6); font-size: 0.95em; transition: background 0.2s ease; }
+  .dd-row:last-of-type { border-bottom: 0; }
+  .dd-cell { display: flex; flex-direction: column; min-width: 0; }
+  .dd-cell b { font-weight: 600; }
+  .dd-cell small { font-size: 0.85em; color: var(--color-muted); }
+  .dd-job { color: var(--color-ink-soft); }
+  .dd-money { font-weight: 500; font-variant-numeric: tabular-nums; }
+  .dd-status { justify-self: start; padding: 0.12rem 0.45rem; border-radius: 999px; font-size: 0.88em; font-weight: 600; }
+  .dd-when { color: var(--color-muted); }
+
+  /* The arriving quote. Collapsed to nothing until it lands. */
+  .dd-row--new {
+    height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+    opacity: 0;
+    background: var(--color-brand-50);
+  }
+  /* Sits in the row's left padding gutter, like the real inbox's new-lead dot.
+     Anchoring it to the text cell put it on top of the contact's name. */
+  .dd-row--new { position: relative; }
+  .dd-newdot {
+    position: absolute;
+    left: 0.18rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0.3rem;
+    height: 0.3rem;
+    border-radius: 999px;
+    background: var(--color-brand-500);
+  }
+
+  .dd-detail { height: 0; overflow: hidden; background: rgba(0, 0, 0, 0.015); }
+  .dd-detail-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; padding: 0.6rem 0.7rem; }
+  .dd-detail-grid small { display: block; font-size: 0.85em; color: var(--color-muted); }
+  .dd-detail-grid b { font-size: 1.1em; font-weight: 600; }
+
+  /* ---------- analytics ---------- */
+  .dd-today { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.7rem; }
+  .dd-overview { display: flex; align-items: center; justify-content: space-between; margin-top: 0.7rem; }
+  .dd-overview h4 { margin: 0; font-family: var(--font-display); font-size: 1.35em; font-weight: 600; }
+  .dd-range { font-size: 0.92em; color: var(--color-muted); }
+  .dd-range b { margin-left: 0.3rem; padding: 0.15rem 0.4rem; border: 1px solid var(--color-line); border-radius: 0.45rem; color: var(--color-ink); font-weight: 500; }
+  .dd-filters { display: flex; gap: 0.25rem; margin-top: 0.45rem; }
+  .dd-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 0.5rem; }
+  .dd-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem; }
+
+  .dd-chart { margin-top: 0.35rem; }
+  .dd-chart svg { display: block; width: 100%; height: 3.2rem; }
+  .dd-chart line { stroke: var(--color-line); stroke-width: 1; }
+  .dd-chart text { fill: var(--color-muted); font-size: 11px; }
+  .dd-area { fill: var(--color-brand-500); opacity: 0.1; }
+  .dd-line { fill: none; stroke: var(--color-brand-500); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .dd-dot { fill: var(--color-brand-500); }
+  .dd-axis { display: flex; justify-content: space-between; font-size: 0.85em; color: var(--color-muted); }
+
+  .dd-barlist { margin-top: 0.45rem; display: flex; flex-direction: column; gap: 0.4rem; }
+  .dd-bar-head { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; font-size: 0.9em; }
+  .dd-bar-head span { display: flex; align-items: center; gap: 0.25rem; color: var(--color-ink-soft); }
+  .dd-bar-head em { font-style: normal; color: var(--color-muted); }
+  .dd-bar-head b { font-weight: 500; font-variant-numeric: tabular-nums; }
+  .dd-bar-head i { width: 0.35rem; height: 0.35rem; border-radius: 999px; }
+  .dd-track { margin-top: 0.18rem; height: 0.3rem; border-radius: 999px; background: rgba(0, 0, 0, 0.05); }
+  .dd-track span { display: block; height: 100%; border-radius: 999px; background: var(--color-brand-500); }
+
+  /* ---------- cursor ---------- */
+  /* Positioned with left/top, NOT a percentage translate — a percentage
+     translate resolves against the cursor's own 20px box, which pins it to
+     the top-left corner no matter what you write. */
+  .dd-cursor {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 20px; height: 20px;
+    opacity: 0;
+    filter: drop-shadow(0 2px 4px rgba(10, 11, 13, 0.3));
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  /* ---------- copy ---------- */
+  .dd-copy { text-align: center; max-width: 28rem; margin-inline: auto; }
+  @media (min-width: 1024px) {
+    .dd-copy { text-align: right; margin-inline: 0 0 0 auto; max-width: 22rem; }
+  }
+  .dd-kicker { margin: 0; color: var(--color-brand-600); font-weight: 600; }
+  .dd-copy h2 {
+    margin: 0.45rem 0 1rem;
+    font-family: var(--font-display);
+    font-size: clamp(2.1rem, 4vw, 3.4rem);
+    letter-spacing: -0.045em;
+    line-height: 1.02;
+  }
+  .dd-body { margin: 0; color: var(--color-ink-soft); line-height: 1.6; }
+  @media (min-width: 1024px) {
+    .dd-body { margin-left: auto; }
+  }
+
+  /* =====================================================================
+     The recording. One 20s timeline; every track shares it so the cursor,
+     the view swap and the zoom stay in step. Only runs while on screen.
+     ===================================================================== */
+  .dd-frame.playing .dd-cursor { animation: dd-cursor 22s linear infinite; }
+  .dd-frame.playing .dd-zoom { animation: dd-zoom 22s ease-in-out infinite; }
+  .dd-frame.playing .dd-view--quotes { animation: dd-quotes 22s ease-in-out infinite; }
+  .dd-frame.playing .dd-view--analytics { animation: dd-analytics 22s ease-in-out infinite; }
+  .dd-frame.playing .dd-scroll { animation: dd-scroll 22s ease-in-out infinite; }
+  .dd-frame.playing .dd-row--new { animation: dd-newrow 22s ease-in-out infinite; }
+  .dd-frame.playing .dd-newdot { animation: dd-newdot 22s ease-in-out infinite; }
+  .dd-frame.playing .dd-detail { animation: dd-detail 22s ease-in-out infinite; }
+  .dd-frame.playing .dd-nav-item[data-nav="quotes"] { animation: dd-nav-quotes 22s ease-in-out infinite; }
+  .dd-frame.playing .dd-nav-item[data-nav="analytics"] { animation: dd-nav-analytics 22s ease-in-out infinite; }
+
+  /* Cursor: settles on a row, then the Analytics nav item, then tracks a
+     chart, then the bars. Percentages are the shared clock. */
+  @keyframes dd-cursor {
+    0%    { opacity: 0; left: 62%; top: 90%; transform: scale(1); }
+    5%    { opacity: 1; left: 60%; top: 78%; transform: scale(1); }
+    /* the new quote lands — go to it */
+    14%   { opacity: 1; left: 52%; top: 34%; transform: scale(1); }
+    17%   { opacity: 1; left: 52%; top: 34%; transform: scale(0.8); }   /* click */
+    20%   { opacity: 1; left: 52%; top: 34%; transform: scale(1); }
+    30%   { opacity: 1; left: 50%; top: 48%; transform: scale(1); }
+    /* over to Analytics in the sidebar */
+    38%   { opacity: 1; left: 11%; top: 30%; transform: scale(1); }
+    41%   { opacity: 1; left: 11%; top: 30%; transform: scale(0.8); }   /* click */
+    44%   { opacity: 1; left: 11%; top: 30%; transform: scale(1); }
+    56%   { opacity: 1; left: 40%; top: 60%; transform: scale(1); }     /* across a chart */
+    66%   { opacity: 1; left: 70%; top: 58%; transform: scale(1); }
+    78%   { opacity: 1; left: 46%; top: 84%; transform: scale(1); }     /* down to the bars */
+    /* back to Quotes — the loop closes with a click, not a fade */
+    88%   { opacity: 1; left: 11%; top: 22%; transform: scale(1); }
+    91%   { opacity: 1; left: 11%; top: 22%; transform: scale(0.8); }   /* click */
+    94%   { opacity: 1; left: 11%; top: 22%; transform: scale(1); }
+    100%  { opacity: 1; left: 30%; top: 60%; transform: scale(1); }
+  }
+
+  /* Zoom: pushes in hard on whatever the cursor is looking at, so individual
+     figures are actually legible rather than a vague swell. */
+  @keyframes dd-zoom {
+    0%, 7%    { transform: scale(1);    transform-origin: 50% 20%; }
+    16%, 28%  { transform: scale(1.75); transform-origin: 52% 34%; }  /* the new row */
+    35%       { transform: scale(1);    transform-origin: 50% 30%; }
+    46%       { transform: scale(1);    transform-origin: 50% 20%; }
+    56%, 64%  { transform: scale(1.7);  transform-origin: 40% 58%; }  /* a stat card */
+    70%, 76%  { transform: scale(1.55); transform-origin: 72% 58%; }  /* win rate */
+    82%, 88%  { transform: scale(1.5);  transform-origin: 45% 82%; }  /* bar cards */
+    94%, 100% { transform: scale(1);    transform-origin: 50% 20%; }
+  }
+
+  /* Scrolls the analytics page down to the breakdown cards, then back. */
+  @keyframes dd-scroll {
+    0%, 70%   { transform: translateY(0); }
+    80%, 88%  { transform: translateY(-26%); }
+    93%, 100% { transform: translateY(0); }
+  }
+
+  /* Both views swap on a click, never a cross-fade to nothing. */
+  @keyframes dd-quotes {
+    0%, 41%   { opacity: 1; }
+    45%, 91%  { opacity: 0; }
+    94%, 100% { opacity: 1; }
+  }
+  @keyframes dd-analytics {
+    0%, 41%   { opacity: 0; }
+    45%, 91%  { opacity: 1; }
+    94%, 100% { opacity: 0; }
+  }
+
+  /* The arriving quote slides open, gets clicked, then resets to closed WHILE
+     THE ANALYTICS VIEW IS COVERING IT (45–91%). Resetting it on screen would
+     read as the lead being deleted, and leaving it open would make the loop
+     wrap visibly pop. */
+  @keyframes dd-newrow {
+    0%, 8%    { height: 0;      padding-top: 0;       padding-bottom: 0;       opacity: 0; }
+    12%, 62%  { height: 2.6rem; padding-top: 0.42rem; padding-bottom: 0.42rem; opacity: 1; }
+    70%, 100% { height: 0;      padding-top: 0;       padding-bottom: 0;       opacity: 0; }
+  }
+  /* Animates the `scale` property, not `transform` — transform is already
+     spoken for by the translateY(-50%) that centres the dot. */
+  @keyframes dd-newdot {
+    0%, 9%    { scale: 0; opacity: 0; }
+    13%       { scale: 1.6; opacity: 1; }
+    18%, 62%  { scale: 1; opacity: 1; }
+    70%, 100% { scale: 0; opacity: 0; }
+  }
+  @keyframes dd-detail {
+    0%, 17%   { height: 0; }
+    23%, 33%  { height: 3.4rem; }
+    38%, 100% { height: 0; }
+  }
+  @keyframes dd-nav-quotes {
+    0%, 42%   { background: var(--color-brand-50); color: var(--color-ink); }
+    46%, 91%  { background: transparent; color: var(--color-muted); }
+    94%, 100% { background: var(--color-brand-50); color: var(--color-ink); }
+  }
+  @keyframes dd-nav-analytics {
+    0%, 42%   { background: transparent; color: var(--color-muted); }
+    46%, 91%  { background: var(--color-brand-50); color: var(--color-ink); font-weight: 600; }
+    94%, 100% { background: transparent; color: var(--color-muted); }
+  }
+
+  /* One honest static frame instead of motion. */
+  @media (prefers-reduced-motion: reduce) {
+    .dd-frame.playing .dd-cursor,
+    .dd-frame.playing .dd-zoom,
+    .dd-frame.playing .dd-view--quotes,
+    .dd-frame.playing .dd-view--analytics,
+    .dd-frame.playing .dd-row--new,
+    .dd-frame.playing .dd-newdot,
+    .dd-frame.playing .dd-detail,
+    .dd-frame.playing .dd-scroll,
+    .dd-frame.playing .dd-nav-item { animation: none; }
+    .dd-view--analytics { opacity: 1; }
+    .dd-view--quotes { opacity: 0; }
+    .dd-nav-item[data-nav="quotes"] { background: transparent; color: var(--color-muted); font-weight: 400; }
+    .dd-nav-item[data-nav="analytics"] { background: var(--color-brand-50); color: var(--color-ink); font-weight: 600; }
+  }
+
+  @media (max-width: 1023px) {
+    .dd-copy { order: -1; }
+    .dd-stage { grid-template-columns: 6rem 1fr; }
+  }
+</style>
+
+<script>
+  // Same gating as the satellite loop: don't burn frames off-screen.
+  const frame = document.querySelector<HTMLElement>(".dd-frame");
+  if (frame) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          frame.classList.toggle("playing", entry.isIntersecting);
+        }
+      },
+      { threshold: 0.45 },
+    );
+    io.observe(frame);
+  }
+</script>

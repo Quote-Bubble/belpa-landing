@@ -40,6 +40,57 @@
   --shadow-float: 0 24px 60px -20px rgba(23, 60, 160, 0.28), 0 8px 24px rgba(10, 11, 13, 0.08);
 }
 
+:root {
+  /* Keep in sync with QUOTE_SIZES in quoter-widget-frontend/lib/motion.ts. */
+  --q-collapsed-bar-h: 90px;
+  --q-collapsed-h: 120px;
+  --q-shadow-room: calc(var(--q-collapsed-h) - var(--q-collapsed-bar-h));
+  --q-embed-pad-x: 22px;
+}
+
+@property --dz-blur {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --dz-opacity {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
+@property --dz-rise {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --dz-scale {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
+
+/* "Book a call" softening into the background as the navbar assembles, and
+   re-forming out of it in the top right. Blur + fade + a slight rise, driven
+   per-frame from meeting-wipe.ts. No transition here — the values ARE the
+   scroll position, so a transition would only add lag. */
+/* The fade rides inside `filter`, not the `opacity` property. The entrance
+   animation (`widget-rise ... forwards`) and `.meeting-load.is-settled` both
+   assert opacity at a higher precedence than this rule could reach, so an
+   `opacity:` declaration here is silently ignored — the button blurred but
+   never actually faded, and then got cut. filter:opacity() is uncontested. */
+.is-dissolving {
+  filter: blur(var(--dz-blur, 0px)) opacity(var(--dz-opacity, 1));
+  transition: none;
+}
+/* Rise + expand use the standalone `translate`/`scale` properties so they
+   compose with the `transform` that meeting-wipe.ts writes on the docked copy
+   instead of fighting it. Both are out-of-flow effects: nothing reflows. */
+.hero-meeting-takeoff.is-dissolving,
+.meeting-fly.is-dissolving {
+  translate: 0 var(--dz-rise, 0px);
+  scale: var(--dz-scale, 1);
+}
+
 html {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -421,17 +472,6 @@ input {
   transform: none;
 }
 
-/* Widget dock morph: live on document.body so it stacks above page sections */
-html.is-widget-morph-ready #quoter-widget {
-  position: fixed !important;
-  top: 0;
-  left: 0;
-  margin: 0;
-  z-index: 62; /* above page sections; just under brand wordmark (70) */
-  will-change: transform, width, border-radius, padding;
-  transform-origin: 0 0;
-}
-
 /* Atmosphere blooms in first — everything else reveals through its light */
 .site-bg {
   opacity: 0;
@@ -564,7 +604,7 @@ html.quoter-suggesting .hero-meeting-takeoff,
 html.quoter-suggesting .meeting-fly {
   opacity: 0 !important;
   pointer-events: none !important;
-  visibility: hidden;
+  visibility: hidden !important;
   transition: opacity 0.15s ease;
 }
 
@@ -578,7 +618,7 @@ html.quoter-flow-open .hero-meeting-takeoff,
 html.quoter-flow-open .meeting-fly {
   opacity: 0 !important;
   pointer-events: none !important;
-  visibility: hidden;
+  visibility: hidden !important;
   transition: opacity 0.2s ease;
 }
 
@@ -588,7 +628,7 @@ html.quoter-flow-open .meeting-fly {
    separation beneath the panel (the exact amount is computed in JS on expand,
    applied as padding-top here so it animates in sync with the panel). */
 .page-lower {
-  transition: padding-top 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: padding-top 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 /* Keep the panel above the lower sections while it overlays them. */
 html.quoter-expanded #quoter-widget {

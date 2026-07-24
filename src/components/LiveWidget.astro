@@ -20,8 +20,17 @@
 // a CSP violation in the console). If you ever move the widget to a new URL
 // (e.g. a custom domain), change it in BOTH places. vercel.json can't read an
 // env var, so this stays a manual, hand-kept pair.
-const EMBED_SRC =
-  "https://quoter-widget-frontend.vercel.app/embed?roofer=quoter-landing-demo";
+// In `astro dev` this points at a locally-running quoter-widget-frontend so
+// widget changes are actually visible here. Without this the dev site embeds
+// PRODUCTION, and local widget work appears to do nothing at all.
+// Override with PUBLIC_QUOTER_EMBED_ORIGIN; builds always use the live origin
+// (which is the one vercel.json's frame-src allows).
+const EMBED_ORIGIN =
+  import.meta.env.PUBLIC_QUOTER_EMBED_ORIGIN ??
+  (import.meta.env.DEV
+    ? "http://localhost:3000"
+    : "https://quoter-widget-frontend.vercel.app");
+const EMBED_SRC = `${EMBED_ORIGIN}/embed?roofer=quoter-landing-demo`;
 
 // Keep in sync with QUOTE_SIZES in the widget repo (lib/motion.ts).
 const COLLAPSED_H = 120;
@@ -144,7 +153,7 @@ const COLLAPSED_H = 120;
         __lenis?: { scrollTo?: (t: number, o?: unknown) => void };
       }).__lenis;
       const target = window.scrollY + delta;
-      if (lenis?.scrollTo) lenis.scrollTo(target, { duration: 0.55 });
+      if (lenis?.scrollTo) lenis.scrollTo(target, { duration: 0.32 });
       else window.scrollTo({ top: target, behavior: "smooth" });
     }
 
@@ -194,7 +203,9 @@ const COLLAPSED_H = 120;
       if (mode === "expanded") {
         // Leave real space beneath the panel, then bring it fully into view.
         separateLowerSections();
-        if (!wasExpanded) requestAnimationFrame(scrollPanelIntoView);
+        if (!wasExpanded) {
+          window.setTimeout(scrollPanelIntoView, 320);
+        }
       } else {
         resetLowerSections();
       }
