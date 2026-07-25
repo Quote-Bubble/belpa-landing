@@ -31,13 +31,19 @@
  * mid-loop while the cursor is already moving on, so full interactive parity
  * there isn't worth the added weight. Real typography/labels are still used.
  *
- * PERFORMANCE: the real markup is authored at true dashboard proportions
- * (1280x960 — sidebar 256px + content, matching QuotesTable's own
- * min-w-[920px]) inside `.dd-fit`, then scaled to whatever size the frame
- * renders at with ONE `transform: scale()` recomputed only on resize (a few
- * lines of JS, ResizeObserver-driven). Everything that plays every frame
- * during the 22s loop (`.dd-zoom`, `.dd-cursor`, opacity crossfades) is a
- * separate, purely-animated CSS layer nested inside that static scale, so the
+ * PERFORMANCE: the real markup is authored at 1040x780 (sidebar 256px +
+ * content) inside `.dd-fit`, then scaled to whatever size the frame renders
+ * at with ONE `transform: scale()` recomputed only on resize (a few lines of
+ * JS, ResizeObserver-driven). This canvas is deliberately smaller than the
+ * real dashboard's own natural width — QuotesTable's fixed-px column
+ * minimums (220/190/170/140/130px) need ~1034px just for themselves, more
+ * than a compact preview card should scale down to and still read as
+ * legible, so `.dd-row-grid` below uses the SAME column proportions as
+ * QuotesTable's GRID_TEMPLATE but as flexible fr tracks instead of fixed
+ * floors — same visual shape, no hard minimum forcing either an oversized
+ * canvas or clipped columns. Everything that plays every frame during the
+ * 22s loop (`.dd-zoom`, `.dd-cursor`, opacity crossfades) is a separate,
+ * purely-animated CSS layer nested inside the static fit-scale, so the
  * animation itself is exactly as cheap (GPU-composited transform/opacity
  * only, zero JS) as before — this is strictly additive, not a regression.
  */
@@ -239,7 +245,7 @@ const NAV = [
   <div class="dd-frame" data-reveal="left">
     <div class="dd-viewport">
       <!-- Static fit-to-frame scale (JS, resize-only). Real dashboard markup
-           lives inside at true 1280x960 proportions. -->
+           lives inside at true dashboard proportions, scaled as one block. -->
       <div class="dd-fit">
         <!-- Animated close-up zoom (CSS keyframes, every frame of the loop).
              Nested OUTSIDE .dd-fit's scale so the two transforms never
@@ -505,17 +511,17 @@ const NAV = [
     padding: clamp(4rem, 10vw, 8rem) 1.25rem;
   }
   @media (min-width: 1024px) {
-    .dd { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 3rem; }
+    .dd { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 3rem; }
   }
   @media (min-width: 1200px) {
-    .dd { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 3.25rem; }
+    .dd { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 3.25rem; }
   }
 
   /* Same card treatment as .sat-card so the two sections read as a pair. */
   .dd-frame {
     position: relative;
     width: 100%;
-    max-width: 640px;
+    max-width: 760px;
     margin-inline: auto;
     border-radius: 18px;
     overflow: hidden;
@@ -538,8 +544,8 @@ const NAV = [
     overflow: hidden;
   }
   .dd-fit {
-    width: 1280px;
-    height: 960px;
+    width: 1040px;
+    height: 780px;
     transform-origin: top left;
     will-change: transform;
   }
@@ -572,11 +578,16 @@ const NAV = [
   .dd-view--analytics { opacity: 0; }
   .dd-scroll { will-change: transform; }
 
-  /* Ported grid template — literally QuotesTable.tsx's GRID_TEMPLATE. */
+  /* Same column order/proportions as QuotesTable.tsx's GRID_TEMPLATE, but fr-
+     based instead of its fixed-px minimums. The real template's hard 220px/
+     190px/170px/140px/130px floors need ~1034px just for themselves — more
+     than fits in a compact preview card — so at demo scale they'd force an
+     overflow (columns silently clipped by .dd-view's overflow:hidden). Fully
+     flexible columns keep the same visual proportions without that floor. */
   .dd-row-grid {
     display: grid;
-    grid-template-columns: minmax(220px, 1.6fr) minmax(190px, 1.4fr) 170px 140px 130px 44px 44px;
-    gap: 1rem;
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1.3fr) minmax(0, 0.85fr) minmax(0, 0.85fr) minmax(0, 0.65fr) 2.5rem 2.5rem;
+    gap: 0.85rem;
     padding-top: 0.85rem;
     padding-bottom: 0.85rem;
   }
@@ -804,10 +815,10 @@ const NAV = [
 </style>
 
 <script>
-  // Fit the real-proportions (1280x960) markup to whatever size the frame
+  // Fit the real-proportions markup to whatever size the frame
   // actually renders at. Runs once on load and again on resize — NOT during
   // the animation loop, so it costs nothing while the recording plays.
-  const NATURAL_W = 1280;
+  const NATURAL_W = 1040;
   const frame = document.querySelector<HTMLElement>(".dd-frame");
   const viewport = frame?.querySelector<HTMLElement>(".dd-viewport");
   const fit = frame?.querySelector<HTMLElement>(".dd-fit");
