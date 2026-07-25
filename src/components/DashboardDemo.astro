@@ -3,16 +3,49 @@
  * A replica of the real roofer dashboard (quoter-dashboard-frontend), played
  * back as a looping fake screen recording.
  *
- * Everything below is derived from ONE seed array of leads, exactly the way
- * the real Analytics page derives it from Supabase rows. Nothing is typed in
- * by hand, so the quotes table and the analytics always reconcile — if they
- * didn't, the demo would read as fake on close inspection.
+ * Unlike a hand-drawn approximation, the markup below is PORTED VERBATIM from
+ * the real dashboard components — same Tailwind utility classes, same JSX
+ * structure, same SVG icon paths, same chart geometry constants. This works
+ * because quoter-landing and quoter-dashboard-frontend share one design-token
+ * system (see src/styles/global.css's @theme block vs the dashboard's
+ * src/app/globals.css — both define identical --color-brand-*, --color-ink,
+ * --shadow-soft etc.), so the same class names resolve to the same pixels in
+ * both repos. `.surface` / `.field` / `.archive-btn` are the dashboard's own
+ * small utility classes, not yet in the landing's shared stylesheet — ported
+ * here scoped to this component (Astro <style> is scoped by default) rather
+ * than touching the global stylesheet for a landing-page-only need.
  *
- * Ported faithfully from:
- *   src/components/AnalyticsClient.tsx     (cards, pills, bar rows)
- *   src/components/charts/LineChart.tsx    (the SVG geometry below)
- *   src/components/QuotesTable.tsx         (row grid, status pills)
- *   src/lib/format.ts                      (labels, status colours)
+ * Sources ported from (quoter-dashboard-frontend):
+ *   src/components/DashboardShell.tsx      (sidebar width/glass, main padding)
+ *   src/components/Sidebar.tsx             (wordmark, nav icons, roofer card)
+ *   src/components/PageHeader.tsx          (title/subtitle typography)
+ *   src/components/QuotesTable.tsx         (grid template, row/pill/icon markup)
+ *   src/components/StatusPicker.tsx        (closed-state status pill)
+ *   src/components/QuoteDetailPanel.tsx    (ColLabel/Figure typography)
+ *   src/components/AnalyticsClient.tsx     (cards, filter pills, bar rows)
+ *   src/components/charts/LineChart.tsx    (SVG geometry, byte-identical)
+ *   src/lib/format.ts                      (labels, status colours, money fmt)
+ *
+ * Not ported: RoofPlan (SVG roof-outline renderer) and the detail panel's
+ * live contact/WhatsApp actions — the detail view is only glimpsed for ~2s
+ * mid-loop while the cursor is already moving on, so full interactive parity
+ * there isn't worth the added weight. Real typography/labels are still used.
+ *
+ * PERFORMANCE: the real markup is authored at 1040x780 (sidebar 256px +
+ * content) inside `.dd-fit`, then scaled to whatever size the frame renders
+ * at with ONE `transform: scale()` recomputed only on resize (a few lines of
+ * JS, ResizeObserver-driven). This canvas is deliberately smaller than the
+ * real dashboard's own natural width — QuotesTable's fixed-px column
+ * minimums (220/190/170/140/130px) need ~1034px just for themselves, more
+ * than a compact preview card should scale down to and still read as
+ * legible, so `.dd-row-grid` below uses the SAME column proportions as
+ * QuotesTable's GRID_TEMPLATE but as flexible fr tracks instead of fixed
+ * floors — same visual shape, no hard minimum forcing either an oversized
+ * canvas or clipped columns. Everything that plays every frame during the
+ * 15s loop (`.dd-zoom`, `.dd-cursor`, opacity crossfades) is a separate,
+ * purely-animated CSS layer nested inside the static fit-scale, so the
+ * animation itself is exactly as cheap (GPU-composited transform/opacity
+ * only, zero JS) as before — this is strictly additive, not a regression.
  */
 
 type Status = "new" | "contacted" | "won" | "lost";
@@ -60,6 +93,9 @@ const LEADS: Seed[] = [
   { name: "Kofi Mensah", phone: "07700 900650", job: "gutters_fascias_soffits", value: 2600, status: "new", day: 6 },
 ];
 
+// ---------------------------------------------------------------------------
+// Ported verbatim from src/lib/format.ts
+// ---------------------------------------------------------------------------
 const JOB_LABELS: Record<Job, string> = {
   full_replacement: "Full replacement",
   tile_or_slate_repair: "Tile / slate repair",
@@ -72,7 +108,6 @@ const STATUS_LABELS: Record<Status, string> = {
   won: "Won",
   lost: "Lost",
 };
-// src/lib/format.ts statusColor()
 const STATUS_COLOR: Record<Status, { fg: string; bg: string }> = {
   new: { fg: "#1546c9", bg: "#eef4ff" },
   contacted: { fg: "#6d28d9", bg: "#f3e8ff" },
@@ -86,6 +121,7 @@ const gbp = new Intl.NumberFormat("en-GB", {
   maximumFractionDigits: 0,
 });
 const money = (v: number) => gbp.format(v);
+// Ported from AnalyticsClient.tsx's local compactMoney/formatCount/formatPercent.
 const compactMoney = (v: number) =>
   v >= 10_000 ? `£${Math.round(v / 1000)}K` : v >= 1000 ? `£${(v / 1000).toFixed(1)}K` : money(v);
 const pct = (v: number) => `${Math.round(v)}%`;
@@ -150,8 +186,9 @@ const lostMedian = median(lostRows.map((r) => r.value));
 const maxOutcome = Math.max(1, wonMedian ?? 0, lostMedian ?? 0);
 
 /**
- * Geometry lifted verbatim from charts/LineChart.tsx so the curve, padding,
- * grid lines and end dot land in exactly the same places as the real app.
+ * Geometry lifted verbatim from charts/LineChart.tsx (same constants,
+ * same path-building math) so the curve, padding, grid lines and end dot
+ * land in exactly the same relative places as the real app.
  */
 const W = 640, H = 180, PAD_TOP = 16, PAD_BOTTOM = 8, PAD_LEFT = 4, PAD_RIGHT = 54;
 function chart(data: { label: string; value: number }[], fmt: (v: number) => string) {
@@ -193,195 +230,265 @@ const newLead = { ...inbox[0], received: "just now" };
 const restRows = inbox.slice(1);
 
 const STATUS_FILTERS = ["All", "New", "Contacted", "Won", "Lost"];
-const NAV = ["Quotes", "Analytics", "Account", "Support"];
+
+// Ported verbatim from Sidebar.tsx's NAV array (same viewBox/paths).
+const iconProps = 'width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+const NAV = [
+  { key: "quotes", label: "Quotes", icon: `<svg ${iconProps}><path d="M4 5h16M4 12h16M4 19h10"/></svg>` },
+  { key: "analytics", label: "Analytics", icon: `<svg ${iconProps}><path d="M4 19V5M4 19h16M8 19v-6M13 19V9M18 19v-9"/></svg>` },
+  { key: "account", label: "Account", icon: `<svg ${iconProps}><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>` },
+  { key: "support", label: "Support", icon: `<svg ${iconProps}><circle cx="12" cy="12" r="9"/><path d="M9.3 9.3a2.7 2.7 0 0 1 5.2 1c0 1.8-2.7 2.2-2.7 4"/><path d="M12 17.5h.01"/></svg>` },
+];
 ---
 
 <section class="dd" aria-labelledby="dd-heading">
   <div class="dd-frame" data-reveal="left">
-    <!-- The whole window zooms, sidebar included — a real screen recording
-         doesn't hold the chrome still while the content scales. -->
-    <div class="dd-zoom">
-    <div class="dd-stage">
-      <!-- Sidebar -->
-      <aside class="dd-side">
-        <span class="dd-brand">Quoter</span>
-        <span class="dd-slug">RIDGELINE ROOFING</span>
-        <nav class="dd-nav">
-          {NAV.map((item) => (
-            <span class="dd-nav-item" data-nav={item.toLowerCase()}>{item}</span>
-          ))}
-        </nav>
-      </aside>
+    <div class="dd-viewport">
+      <!-- Static fit-to-frame scale (JS, resize-only). Real dashboard markup
+           lives inside at true dashboard proportions, scaled as one block. -->
+      <div class="dd-fit">
+        <!-- Animated close-up zoom (CSS keyframes, every frame of the loop).
+             Nested OUTSIDE .dd-fit's scale so the two transforms never
+             clobber each other — they compose instead. -->
+        <div class="dd-zoom">
+          <div class="dd-stage">
+            <!-- ============ SIDEBAR — ported from Sidebar.tsx + DashboardShell.tsx ============ -->
+            <aside class="dd-side flex h-full w-64 shrink-0 flex-col border-r border-white/50 px-4 py-6">
+              <span class="dd-wordmark px-2 text-2xl text-ink">Quoter</span>
+              <p class="mt-1 px-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-600">Ridgeline Roofing</p>
 
-      <!-- Screen -->
-      <div class="dd-screen">
-          <!-- ============ QUOTES ============ -->
-          <div class="dd-view dd-view--quotes">
-            <h3 class="dd-title">Quotes</h3>
-            <p class="dd-sub">Every lead your widget has captured.</p>
-
-            <div class="dd-toolbar">
-              {STATUS_FILTERS.map((f, i) => (
-                <span class:list={["dd-pill", i === 0 && "is-active"]}>{f}</span>
-              ))}
-              <span class="dd-search">Search…</span>
-            </div>
-
-            <div class="dd-table">
-              <div class="dd-thead">
-                <span>Contact</span><span>Job type</span><span>Estimate</span>
-                <span>Status</span><span>Received</span>
-              </div>
-              <!-- The quote that lands mid-demo, and the detail it opens.
-                   The detail sits IMMEDIATELY after its own row so it expands
-                   under the row you clicked, not at the foot of the table. -->
-              <div class="dd-row dd-row--new">
-                <div class="dd-cell">
-                  <span class="dd-newdot" aria-hidden="true"></span>
-                  <b>{newLead.name}</b><small>{newLead.phone}</small>
-                </div>
-                <span class="dd-job">{JOB_LABELS[newLead.job]}</span>
-                <span class="dd-money">{money(newLead.value)}</span>
-                <span
-                  class="dd-status"
-                  style={`color:${STATUS_COLOR[newLead.status].fg};background:${STATUS_COLOR[newLead.status].bg}`}
-                >{STATUS_LABELS[newLead.status]}</span>
-                <span class="dd-when">{newLead.received}</span>
-              </div>
-              <div class="dd-detail">
-                <div class="dd-detail-grid">
-                  <div><small>Roof area</small><b>78 m²</b></div>
-                  <div><small>Pitch</small><b>35°</b></div>
-                  <div><small>Storeys</small><b>Two</b></div>
-                  <div><small>Property</small><b>Semi-detached</b></div>
-                </div>
-              </div>
-
-              {restRows.map((r) => (
-                <div class="dd-row">
-                  <div class="dd-cell">
-                    <b>{r.name}</b><small>{r.phone}</small>
+              <nav class="mt-8 flex flex-col gap-1">
+                {NAV.map((item) => (
+                  <div class="dd-nav-item relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium" data-nav={item.key}>
+                    <span class="dd-nav-pill absolute inset-0 -z-10 rounded-xl" aria-hidden="true"></span>
+                    <span class="dd-nav-icon" set:html={item.icon} />
+                    {item.label}
                   </div>
-                  <span class="dd-job">{JOB_LABELS[r.job]}</span>
-                  <span class="dd-money">{money(r.value)}</span>
-                  <span
-                    class="dd-status"
-                    style={`color:${STATUS_COLOR[r.status].fg};background:${STATUS_COLOR[r.status].bg}`}
-                  >{STATUS_LABELS[r.status]}</span>
-                  <span class="dd-when">{r.received}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+                ))}
+              </nav>
 
-          <!-- ============ ANALYTICS ============ -->
-          <!-- The real page is taller than this frame, so the demo scrolls it
-               to reach the breakdown cards rather than shrinking everything
-               until it fits and stops looking like the product. -->
-          <div class="dd-view dd-view--analytics">
-            <div class="dd-scroll">
-            <h3 class="dd-title">Analytics</h3>
-            <p class="dd-sub">Quote volume and estimated value across your pipeline.</p>
-
-            <div class="dd-today">
-              <div class="dd-card">
-                <p class="dd-card-t">Quotes today</p>
-                <p class="dd-card-v">{todayRows.length}</p>
-                <p class="dd-card-d">{yesterdayRows.length} yesterday</p>
-              </div>
-              <div class="dd-card">
-                <p class="dd-card-t">Median estimate today</p>
-                <p class="dd-card-v">{todayMedian != null ? money(todayMedian) : "—"}</p>
-                <p class="dd-card-d">— yesterday</p>
-              </div>
-            </div>
-
-            <div class="dd-overview">
-              <h4>Your overview</h4>
-              <span class="dd-range">Date range <b>Last 7 days</b></span>
-            </div>
-
-            <div class="dd-filters">
-              {STATUS_FILTERS.map((f, i) => (
-                <span class:list={["dd-pill", i === 0 && "is-active"]}>{f}</span>
-              ))}
-            </div>
-
-            <div class="dd-cards">
-              {STAT_CARDS.map((card) => (
-                <div class="dd-card">
-                  <p class="dd-card-t">{card.title}</p>
-                  <p class="dd-card-v">{card.value}</p>
-                  <p class="dd-card-d">{card.delta}</p>
-                  <div class="dd-chart">
-                    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
-                      {card.c.grid.map((g) => (
-                        <g>
-                          <line x1={PAD_LEFT} x2={W - PAD_RIGHT + 8} y1={g.y} y2={g.y} />
-                          <text x={W - PAD_RIGHT + 12} y={g.y} dy="0.32em">{g.label}</text>
-                        </g>
-                      ))}
-                      <path class="dd-area" d={card.c.area} />
-                      <path class="dd-line" d={card.c.line} />
-                      {card.c.last && (
-                        <>
-                          <circle cx={card.c.last.x} cy={card.c.last.y} r={6} fill="#fff" />
-                          <circle class="dd-dot" cx={card.c.last.x} cy={card.c.last.y} r={4} />
-                        </>
-                      )}
-                    </svg>
-                    <div class="dd-axis"><span>{card.c.first}</span><span>{card.c.lastLabel}</span></div>
+              <div class="mt-auto">
+                <div class="surface flex items-center gap-3 rounded-xl p-3">
+                  <div class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-b from-brand-400 to-brand-600 text-sm font-semibold text-white">
+                    R
+                  </div>
+                  <div class="min-w-0">
+                    <p class="truncate text-sm font-semibold text-ink">Ridgeline Roofing</p>
+                    <p class="truncate text-xs text-muted">owner@ridgelineroofing.co.uk</p>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            </aside>
 
-            <div class="dd-bars">
-              <div class="dd-card">
-                <p class="dd-card-t">Value by job type</p>
-                <p class="dd-card-d">Median estimate, this range</p>
-                <div class="dd-barlist">
-                  {jobRows.map((r) => (
-                    <div class="dd-bar">
-                      <div class="dd-bar-head">
-                        <span>{JOB_LABELS[r.job]} <em>({r.count})</em></span>
-                        <b>{money(r.median)}</b>
+            <!-- ============ SCREEN ============ -->
+            <div class="dd-screen relative min-w-0 flex-1 overflow-hidden bg-white">
+
+              <!-- ============ QUOTES — ported from QuotesTable.tsx + PageHeader.tsx ============ -->
+              <div class="dd-view dd-view--quotes absolute inset-0 overflow-hidden px-8 py-8">
+                <h1 class="font-display text-3xl font-semibold tracking-tight text-ink">Quotes</h1>
+                <p class="mt-1 text-sm text-ink-soft">Every lead your widget has captured.</p>
+
+                <div class="mt-4 flex items-center gap-1.5">
+                  {STATUS_FILTERS.map((f, i) => (
+                    <span class:list={["rounded-full px-3 py-1 text-xs font-medium", i === 0 ? "bg-ink text-white" : "text-ink-soft"]}>{f}</span>
+                  ))}
+                  <label class="search-field field ml-auto flex items-center gap-2 px-3 py-1.5 text-sm text-muted">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                    Search…
+                  </label>
+                </div>
+
+                <div class="surface mt-3 overflow-hidden rounded-2xl">
+                  <div class="dd-row-grid border-b border-line px-6 py-3 text-sm font-medium text-muted">
+                    <span>Contact</span><span>Job type</span><span>Estimate</span>
+                    <span>Status</span><span>Received</span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+                  </div>
+
+                  <!-- The quote that lands mid-demo, and the detail it opens.
+                       The detail sits IMMEDIATELY after its own row so it expands
+                       under the row you clicked, not at the foot of the table.
+                       Collapses via the same grid-template-rows 0fr->1fr trick
+                       as .dd-detail — the row's own padding/line-heights are
+                       IDENTICAL to every other row's (no separate collapsed-
+                       state override), so its open height can't drift from a
+                       hardcoded guess the way a fixed `height:` value did. -->
+                  <div class="dd-row-collapse">
+                    <div class="dd-row-collapse-inner">
+                      <div class="dd-row-grid dd-row--new relative items-center border-b border-line/60 px-6 text-sm transition-colors duration-150">
+                        <div class="dd-newdot absolute left-2 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-brand-500" aria-hidden="true"></div>
+                        <div class="min-w-0">
+                          <div class="truncate font-semibold text-ink">{newLead.name}</div>
+                          <div class="truncate text-xs text-muted">{newLead.phone}</div>
+                        </div>
+                        <span class="truncate text-ink-soft">{JOB_LABELS[newLead.job]}</span>
+                        <span class="truncate font-medium tabular-nums text-ink">{money(newLead.value)}</span>
+                        <span>
+                          <span
+                            class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
+                            style={`color:${STATUS_COLOR[newLead.status].fg};background:${STATUS_COLOR[newLead.status].bg}`}
+                          >{STATUS_LABELS[newLead.status]}</span>
+                        </span>
+                        <span class="text-muted">{newLead.received}</span>
+                        <span class="flex justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
+                        <span class="flex justify-center dd-archive-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg></span>
                       </div>
-                      <div class="dd-track">
-                        <span style={`width:${(r.median / maxJobMedian) * 100}%`}></span>
+                    </div>
+                  </div>
+
+                  <div class="dd-detail overflow-hidden bg-black/[0.015]">
+                    <div class="grid grid-cols-4 gap-4 px-6 py-4">
+                      <div>
+                        <p class="text-[11px] font-medium uppercase tracking-wide text-muted">Roof area</p>
+                        <p class="mt-0.5 text-sm font-semibold text-ink">78 m²</p>
                       </div>
+                      <div>
+                        <p class="text-[11px] font-medium uppercase tracking-wide text-muted">Pitch</p>
+                        <p class="mt-0.5 text-sm font-semibold text-ink">35°</p>
+                      </div>
+                      <div>
+                        <p class="text-[11px] font-medium uppercase tracking-wide text-muted">Roof type</p>
+                        <p class="mt-0.5 text-sm font-semibold text-ink">Hip</p>
+                      </div>
+                      <div>
+                        <p class="text-[11px] font-medium uppercase tracking-wide text-muted">Chimneys</p>
+                        <p class="mt-0.5 text-sm font-semibold text-ink">1</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {restRows.map((r) => (
+                    <div class="dd-row-grid items-center border-b border-line/60 px-6 text-sm last:border-0">
+                      <div class="min-w-0">
+                        <div class="truncate font-semibold text-ink">{r.name}</div>
+                        <div class="truncate text-xs text-muted">{r.phone}</div>
+                      </div>
+                      <span class="truncate text-ink-soft">{JOB_LABELS[r.job]}</span>
+                      <span class="truncate font-medium tabular-nums text-ink">{money(r.value)}</span>
+                      <span>
+                        <span
+                          class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
+                          style={`color:${STATUS_COLOR[r.status].fg};background:${STATUS_COLOR[r.status].bg}`}
+                        >{STATUS_LABELS[r.status]}</span>
+                      </span>
+                      <span class="text-muted">{r.received}</span>
+                      <span class="flex justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
+                      <span class="flex justify-center dd-archive-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg></span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div class="dd-card">
-                <p class="dd-card-t">Won vs. lost value</p>
-                <p class="dd-card-d">Median estimate, this range</p>
-                <div class="dd-barlist">
-                  {([["won", wonMedian, wonRows.length], ["lost", lostMedian, lostRows.length]] as const).map(
-                    ([key, med, n]) => (
-                      <div class="dd-bar">
-                        <div class="dd-bar-head">
-                          <span>
-                            <i style={`background:${STATUS_COLOR[key].fg}`}></i>
-                            {STATUS_LABELS[key]} <em>({n})</em>
-                          </span>
-                          <b>{med != null ? money(med) : "—"}</b>
-                        </div>
-                        <div class="dd-track">
-                          <span style={`width:${((med ?? 0) / maxOutcome) * 100}%;background:${STATUS_COLOR[key].fg}`}></span>
+              <!-- ============ ANALYTICS — ported from AnalyticsClient.tsx + LineChart.tsx ============ -->
+              <div class="dd-view dd-view--analytics absolute inset-0 overflow-hidden px-8 py-8">
+                <div class="dd-scroll">
+                  <h1 class="font-display text-3xl font-semibold tracking-tight text-ink">Analytics</h1>
+                  <p class="mt-1 text-sm text-ink-soft">Quote volume and estimated value across your pipeline.</p>
+
+                  <div class="mt-4 grid grid-cols-2 gap-4">
+                    <div class="surface rounded-2xl p-4">
+                      <p class="text-xs font-medium text-ink-soft">Quotes today</p>
+                      <p class="mt-0.5 text-xl font-semibold text-ink">{todayRows.length}</p>
+                      <p class="text-xs text-muted">{yesterdayRows.length} yesterday</p>
+                    </div>
+                    <div class="surface rounded-2xl p-4">
+                      <p class="text-xs font-medium text-ink-soft">Median estimate today</p>
+                      <p class="mt-0.5 text-xl font-semibold text-ink">{todayMedian != null ? money(todayMedian) : "—"}</p>
+                      <p class="text-xs text-muted">— yesterday</p>
+                    </div>
+                  </div>
+
+                  <div class="mt-4 flex items-center justify-between">
+                    <h2 class="font-display text-lg font-semibold text-ink">Your overview</h2>
+                    <span class="flex items-center gap-2 text-sm text-muted">
+                      Date range
+                      <span class="field rounded-lg px-2.5 py-1 text-sm font-medium text-ink">Last 7 days</span>
+                    </span>
+                  </div>
+
+                  <div class="mt-3 flex flex-wrap gap-1.5">
+                    {STATUS_FILTERS.map((f, i) => (
+                      <span class:list={["rounded-full px-3 py-1 text-xs font-medium", i === 0 ? "bg-ink text-white" : "text-ink-soft"]}>{f}</span>
+                    ))}
+                  </div>
+
+                  <div class="mt-3 grid grid-cols-3 gap-4">
+                    {STAT_CARDS.map((card, i) => (
+                      <div class="surface rounded-2xl p-4" data-chart={i}>
+                        <p class="text-xs font-medium text-ink-soft">{card.title}</p>
+                        <p class="mt-0.5 text-xl font-semibold text-ink">{card.value}</p>
+                        <p class="text-xs text-muted">{card.delta}</p>
+                        <div class="dd-chart relative mt-3">
+                          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" class="w-full" style="height:90px" aria-hidden="true">
+                            {card.c.grid.map((g) => (
+                              <g>
+                                <line x1={PAD_LEFT} x2={W - PAD_RIGHT + 8} y1={g.y} y2={g.y} stroke="var(--color-line)" stroke-width="1"/>
+                                <text x={W - PAD_RIGHT + 12} y={g.y} dy="0.32em" fill="var(--color-muted)" font-size="11">{g.label}</text>
+                              </g>
+                            ))}
+                            <path class="dd-chart-area" d={card.c.area} fill="var(--color-brand-500)" stroke="none"/>
+                            <path class="dd-chart-line" pathLength="1" d={card.c.line} fill="none" stroke="var(--color-brand-500)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+                            {card.c.last && (
+                              <g class="dd-chart-dot">
+                                <circle cx={card.c.last.x} cy={card.c.last.y} r="6" fill="#fff"/>
+                                <circle cx={card.c.last.x} cy={card.c.last.y} r="4" fill="var(--color-brand-500)"/>
+                              </g>
+                            )}
+                          </svg>
+                          <div class="mt-1 flex justify-between text-xs text-muted"><span>{card.c.first}</span><span>{card.c.lastLabel}</span></div>
                         </div>
                       </div>
-                    ),
-                  )}
+                    ))}
+                  </div>
+
+                  <div class="mt-4 grid grid-cols-2 gap-4">
+                    <div class="surface rounded-2xl p-4">
+                      <p class="text-xs font-medium text-ink-soft">Value by job type</p>
+                      <p class="text-xs text-muted">Median estimate, this range</p>
+                      <div class="mt-3 space-y-2.5">
+                        {jobRows.map((r) => (
+                          <div>
+                            <div class="flex items-center justify-between gap-2 text-xs">
+                              <span class="text-ink-soft">{JOB_LABELS[r.job]} <span class="text-muted">({r.count})</span></span>
+                              <span class="font-medium tabular-nums text-ink">{money(r.median)}</span>
+                            </div>
+                            <div class="mt-1 h-1.5 rounded-full bg-black/[0.05]">
+                              <div class="h-1.5 rounded-full bg-brand-500" style={`width:${(r.median / maxJobMedian) * 100}%`}></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div class="surface rounded-2xl p-4">
+                      <p class="text-xs font-medium text-ink-soft">Won vs. lost value</p>
+                      <p class="text-xs text-muted">Median estimate, this range</p>
+                      <div class="mt-3 space-y-2.5">
+                        {([["won", wonMedian, wonRows.length], ["lost", lostMedian, lostRows.length]] as const).map(
+                          ([key, med, n]) => (
+                            <div>
+                              <div class="flex items-center justify-between gap-2 text-xs">
+                                <span class="flex items-center gap-1.5 text-ink-soft">
+                                  <span class="h-2 w-2 shrink-0 rounded-full" style={`background:${STATUS_COLOR[key].fg}`}></span>
+                                  {STATUS_LABELS[key]} <span class="text-muted">({n})</span>
+                                </span>
+                                <span class="font-medium tabular-nums text-ink">{med != null ? money(med) : "—"}</span>
+                              </div>
+                              <div class="mt-1 h-1.5 rounded-full bg-black/[0.05]">
+                                <div class="h-1.5 rounded-full" style={`width:${((med ?? 0) / maxOutcome) * 100}%;background:${STATUS_COLOR[key].fg}`}></div>
+                              </div>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+
             </div>
           </div>
+        </div>
       </div>
-    </div>
     </div>
 
     <span class="dd-cursor" aria-hidden="true">
@@ -413,17 +520,17 @@ const NAV = ["Quotes", "Analytics", "Account", "Support"];
     padding: clamp(4rem, 10vw, 8rem) 1.25rem;
   }
   @media (min-width: 1024px) {
-    .dd { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 3rem; }
+    .dd { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 3rem; }
   }
   @media (min-width: 1200px) {
-    .dd { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 3.25rem; }
+    .dd { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 3.25rem; }
   }
 
   /* Same card treatment as .sat-card so the two sections read as a pair. */
   .dd-frame {
     position: relative;
     width: 100%;
-    max-width: 640px;
+    max-width: 760px;
     margin-inline: auto;
     border-radius: 18px;
     overflow: hidden;
@@ -438,185 +545,126 @@ const NAV = ["Quotes", "Analytics", "Account", "Support"];
     .dd-frame { max-width: none; margin-inline: 0 auto 0 0; }
   }
 
-  .dd-zoom {
+  /* ---------- fit-to-frame scaling (static, resize-only — see PERFORMANCE
+     note in the frontmatter comment above) ---------- */
+  .dd-viewport {
     position: absolute;
     inset: 0;
+    overflow: hidden;
+  }
+  .dd-fit {
+    width: 1040px;
+    height: 780px;
+    transform-origin: top left;
+    will-change: transform;
+  }
+  /* ---------- animated close-up zoom (every frame of the loop) ---------- */
+  .dd-zoom {
+    width: 100%;
+    height: 100%;
     transform-origin: 50% 50%;
     will-change: transform;
   }
 
   .dd-stage {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    grid-template-columns: 8.5rem 1fr;
+    display: flex;
+    width: 100%;
+    height: 100%;
     font-family: var(--font-sans);
     color: #0a0b0d;
-    /* Everything is authored at this width then scaled to fit the frame, so
-       the replica keeps the real dashboard's proportions at any size. */
-    font-size: clamp(0.42rem, 1.15cqw, 0.62rem);
-    container-type: inline-size;
+    font-size: 15px;
   }
 
-  /* ---------- sidebar (light, like DashboardShell) ---------- */
+  /* ---------- sidebar (real Sidebar.tsx + DashboardShell.tsx values) ---------- */
   .dd-side {
-    display: flex;
-    flex-direction: column;
-    padding: 1.1rem 0.85rem;
     background: rgba(250, 250, 251, 0.75);
-    border-right: 1px solid rgba(255, 255, 255, 0.5);
   }
-  .dd-brand {
+  /* Matches the site-wide "Quoter" wordmark exactly (Nav.astro's .brand-fly:
+     font-weight 600, letter-spacing -0.045em) rather than relying on
+     .font-display + Tailwind's font-semibold to win the cascade — the
+     landing's own .font-display defaults to font-weight 400, so stacking
+     font-semibold on top of it only wins if the utility layer happens to
+     come after it; explicit values here can't lose that race. */
+  .dd-wordmark {
     font-family: var(--font-display);
-    font-size: 1.55em;
     font-weight: 600;
-    letter-spacing: -0.02em;
-    padding-inline: 0.35rem;
+    letter-spacing: -0.045em;
+    line-height: 0.92;
   }
-  .dd-slug {
-    margin-top: 0.15rem;
-    padding-inline: 0.35rem;
-    font-size: 0.82em;
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    color: var(--color-brand-600);
-  }
-  .dd-nav { margin-top: 1.4rem; display: flex; flex-direction: column; gap: 0.15rem; }
-  .dd-nav-item {
-    padding: 0.42rem 0.55rem;
-    border-radius: 0.6rem;
-    font-size: 1.05em;
-    color: var(--color-muted);
-    transition: background 0.2s ease, color 0.2s ease;
-  }
-  .dd-nav-item[data-nav="quotes"] { background: var(--color-brand-50); color: var(--color-ink); font-weight: 600; }
+  .dd-nav-icon { display: flex; color: var(--color-muted); transition: color 0.2s ease; }
+  .dd-nav-item { color: var(--color-ink-soft); transition: color 0.2s ease; }
+  .dd-nav-pill { background: transparent; transition: background-color 0.2s ease; }
 
   /* ---------- screen ---------- */
-  .dd-screen { position: relative; overflow: hidden; background: #fff; }
-  .dd-view {
-    position: absolute;
-    inset: 0;
-    padding: 1.1rem 1.15rem;
-    overflow: hidden;
-  }
   .dd-view--analytics { opacity: 0; }
   .dd-scroll { will-change: transform; }
 
-  .dd-title { margin: 0; font-family: var(--font-display); font-size: 2em; font-weight: 600; letter-spacing: -0.02em; }
-  .dd-sub { margin: 0.15rem 0 0; font-size: 1em; color: var(--color-muted); }
-
-  .dd-card {
-    background: #fff;
-    border: 1px solid var(--color-line);
-    border-radius: 0.8rem;
-    box-shadow: var(--shadow-soft);
-    padding: 0.6rem 0.65rem;
-  }
-  .dd-card-t { margin: 0; font-size: 0.95em; font-weight: 500; color: var(--color-ink-soft); }
-  .dd-card-v { margin: 0.1rem 0 0; font-size: 1.7em; font-weight: 600; letter-spacing: -0.01em; }
-  .dd-card-d { margin: 0; font-size: 0.9em; color: var(--color-muted); }
-
-  /* ---------- quotes ---------- */
-  .dd-toolbar { display: flex; align-items: center; gap: 0.3rem; margin-top: 0.75rem; }
-  .dd-pill {
-    padding: 0.2rem 0.5rem;
-    border-radius: 999px;
-    font-size: 0.92em;
-    font-weight: 500;
-    color: var(--color-ink-soft);
-  }
-  .dd-pill.is-active { background: var(--color-ink); color: #fff; }
-  .dd-search {
-    margin-left: auto;
-    padding: 0.22rem 0.6rem;
-    border: 1px solid var(--color-line);
-    border-radius: 0.55rem;
-    font-size: 0.9em;
-    color: var(--color-muted);
-    background: #fff;
-  }
-
-  .dd-table {
-    margin-top: 0.6rem;
-    background: #fff;
-    border: 1px solid var(--color-line);
-    border-radius: 0.8rem;
-    box-shadow: var(--shadow-soft);
-    overflow: hidden;
-  }
-  .dd-thead, .dd-row {
+  /* Same column order/proportions as QuotesTable.tsx's GRID_TEMPLATE, but fr-
+     based instead of its fixed-px minimums. The real template's hard 220px/
+     190px/170px/140px/130px floors need ~1034px just for themselves — more
+     than fits in a compact preview card — so at demo scale they'd force an
+     overflow (columns silently clipped by .dd-view's overflow:hidden). Fully
+     flexible columns keep the same visual proportions without that floor. */
+  .dd-row-grid {
     display: grid;
-    grid-template-columns: 1.6fr 1.4fr 0.9fr 0.8fr 0.7fr;
-    gap: 0.5rem;
-    align-items: center;
-    padding: 0.42rem 0.7rem;
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1.3fr) minmax(0, 0.85fr) minmax(0, 0.85fr) minmax(0, 0.65fr) 2.5rem 2.5rem;
+    gap: 0.85rem;
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
   }
-  .dd-thead { border-bottom: 1px solid var(--color-line); font-size: 0.9em; color: var(--color-muted); font-weight: 500; }
-  .dd-row { border-bottom: 1px solid rgba(233, 234, 238, 0.6); font-size: 0.95em; transition: background 0.2s ease; }
-  .dd-row:last-of-type { border-bottom: 0; }
-  .dd-cell { display: flex; flex-direction: column; min-width: 0; }
-  .dd-cell b { font-weight: 600; }
-  .dd-cell small { font-size: 0.85em; color: var(--color-muted); }
-  .dd-job { color: var(--color-ink-soft); }
-  .dd-money { font-weight: 500; font-variant-numeric: tabular-nums; }
-  .dd-status { justify-self: start; padding: 0.12rem 0.45rem; border-radius: 999px; font-size: 0.88em; font-weight: 600; }
-  .dd-when { color: var(--color-muted); }
+  .dd-archive-icon { color: #b8791a; opacity: 0.4; }
 
-  /* The arriving quote. Collapsed to nothing until it lands. */
-  .dd-row--new {
-    height: 0;
-    padding-top: 0;
-    padding-bottom: 0;
+  /* Chart draw-in (not present in the real LineChart.tsx — a demo-only
+     enhancement, since the real one renders instantly). pathLength="1"
+     normalises the line's length to 1 unit regardless of its real geometry,
+     so stroke-dasharray/dashoffset can animate it as a plain 0-1 reveal.
+     Each of the three cards gets its OWN timing (below) matched to when the
+     camera/cursor actually arrives at it, rather than all three drawing at
+     once when the Analytics view appears. */
+  .dd-chart-line {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+  }
+  .dd-chart-area { opacity: 0; }
+  /* Opacity only, no scale — SVG transform-origin: center resolves against
+     the viewBox by default, not the circle's own box, so a scale-in here
+     would pop from the wrong point. */
+  .dd-chart-dot { opacity: 0; }
+
+  /* The arriving quote. Same grid-template-rows 0fr->1fr collapse as
+     .dd-detail below — its own padding/line-heights are never overridden,
+     so its open height is whatever the row's real content needs, identical
+     to every sibling row, not a separately-guessed number. */
+  .dd-row-collapse {
+    display: grid;
+    grid-template-rows: 0fr;
+  }
+  .dd-row-collapse-inner {
     overflow: hidden;
-    opacity: 0;
+    min-height: 0;
+  }
+  .dd-row--new {
     background: var(--color-brand-50);
   }
-  /* Sits in the row's left padding gutter, like the real inbox's new-lead dot.
-     Anchoring it to the text cell put it on top of the contact's name. */
-  .dd-row--new { position: relative; }
-  .dd-newdot {
-    position: absolute;
-    left: 0.18rem;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 0.3rem;
-    height: 0.3rem;
-    border-radius: 999px;
-    background: var(--color-brand-500);
+  .dd-detail { height: 0; }
+
+  /* ---------- fonts used only at real dashboard scale (not clamped —
+     .dd-fit's static scale shrinks everything uniformly, so real px sizes
+     are correct by construction; see frontmatter PERFORMANCE note) ---------- */
+
+  /* ---------- ported small utility classes (dashboard's globals.css;
+     scoped here rather than added to the shared landing stylesheet) ---------- */
+  .surface {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    box-shadow: var(--shadow-soft);
   }
-
-  .dd-detail { height: 0; overflow: hidden; background: rgba(0, 0, 0, 0.015); }
-  .dd-detail-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; padding: 0.6rem 0.7rem; }
-  .dd-detail-grid small { display: block; font-size: 0.85em; color: var(--color-muted); }
-  .dd-detail-grid b { font-size: 1.1em; font-weight: 600; }
-
-  /* ---------- analytics ---------- */
-  .dd-today { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.7rem; }
-  .dd-overview { display: flex; align-items: center; justify-content: space-between; margin-top: 0.7rem; }
-  .dd-overview h4 { margin: 0; font-family: var(--font-display); font-size: 1.35em; font-weight: 600; }
-  .dd-range { font-size: 0.92em; color: var(--color-muted); }
-  .dd-range b { margin-left: 0.3rem; padding: 0.15rem 0.4rem; border: 1px solid var(--color-line); border-radius: 0.45rem; color: var(--color-ink); font-weight: 500; }
-  .dd-filters { display: flex; gap: 0.25rem; margin-top: 0.45rem; }
-  .dd-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 0.5rem; }
-  .dd-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem; }
-
-  .dd-chart { margin-top: 0.35rem; }
-  .dd-chart svg { display: block; width: 100%; height: 3.2rem; }
-  .dd-chart line { stroke: var(--color-line); stroke-width: 1; }
-  .dd-chart text { fill: var(--color-muted); font-size: 11px; }
-  .dd-area { fill: var(--color-brand-500); opacity: 0.1; }
-  .dd-line { fill: none; stroke: var(--color-brand-500); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-  .dd-dot { fill: var(--color-brand-500); }
-  .dd-axis { display: flex; justify-content: space-between; font-size: 0.85em; color: var(--color-muted); }
-
-  .dd-barlist { margin-top: 0.45rem; display: flex; flex-direction: column; gap: 0.4rem; }
-  .dd-bar-head { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; font-size: 0.9em; }
-  .dd-bar-head span { display: flex; align-items: center; gap: 0.25rem; color: var(--color-ink-soft); }
-  .dd-bar-head em { font-style: normal; color: var(--color-muted); }
-  .dd-bar-head b { font-weight: 500; font-variant-numeric: tabular-nums; }
-  .dd-bar-head i { width: 0.35rem; height: 0.35rem; border-radius: 999px; }
-  .dd-track { margin-top: 0.18rem; height: 0.3rem; border-radius: 999px; background: rgba(0, 0, 0, 0.05); }
-  .dd-track span { display: block; height: 100%; border-radius: 999px; background: var(--color-brand-500); }
+  .field {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+  }
+  .search-field { border-radius: 12px; }
 
   /* ---------- cursor ---------- */
   /* Positioned with left/top, NOT a percentage translate — a percentage
@@ -654,60 +702,163 @@ const NAV = ["Quotes", "Analytics", "Account", "Support"];
   /* =====================================================================
      The recording. One 20s timeline; every track shares it so the cursor,
      the view swap and the zoom stay in step. Only runs while on screen.
+     Hook classnames are unchanged from the previous implementation, just
+     retargeted onto the now-real, ported markup above.
      ===================================================================== */
-  .dd-frame.playing .dd-cursor { animation: dd-cursor 22s linear infinite; }
-  .dd-frame.playing .dd-zoom { animation: dd-zoom 22s ease-in-out infinite; }
-  .dd-frame.playing .dd-view--quotes { animation: dd-quotes 22s ease-in-out infinite; }
-  .dd-frame.playing .dd-view--analytics { animation: dd-analytics 22s ease-in-out infinite; }
-  .dd-frame.playing .dd-scroll { animation: dd-scroll 22s ease-in-out infinite; }
-  .dd-frame.playing .dd-row--new { animation: dd-newrow 22s ease-in-out infinite; }
-  .dd-frame.playing .dd-newdot { animation: dd-newdot 22s ease-in-out infinite; }
-  .dd-frame.playing .dd-detail { animation: dd-detail 22s ease-in-out infinite; }
-  .dd-frame.playing .dd-nav-item[data-nav="quotes"] { animation: dd-nav-quotes 22s ease-in-out infinite; }
-  .dd-frame.playing .dd-nav-item[data-nav="analytics"] { animation: dd-nav-analytics 22s ease-in-out infinite; }
+  /* cubic-bezier(0.65,0,0.35,1) is a SYMMETRIC ease-in-out ("easeInOutCubic") —
+     deliberately NOT var(--ease-out-soft) here. That curve front-loads almost
+     all its motion into the first fraction of a segment then coasts nearly
+     still for the rest before stopping dead — fine for a single arrival, but
+     chained across many waypoints in a row it reads as burst-coast-stop,
+     burst-coast-stop, i.e. exactly the "start stop" feeling. A true ease-in-out
+     spreads velocity across the WHOLE segment instead, so the multi-point
+     travel/pan sequences below flow as one continuous motion. Cursor and
+     camera share this curve so they still move with the same character;
+     individual keyframe steps override it for the snappy click pulses only. */
+  .dd-frame.playing .dd-cursor { animation: dd-cursor 15s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+  .dd-frame.playing .dd-zoom { animation: dd-zoom 15s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+  .dd-frame.playing .dd-view--quotes { animation: dd-quotes 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-view--analytics { animation: dd-analytics 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-scroll { animation: dd-scroll 15s ease-in-out infinite; }
+  .dd-frame.playing [data-chart="0"] .dd-chart-line { animation: dd-chart-line-0 15s ease-in-out infinite; }
+  .dd-frame.playing [data-chart="0"] .dd-chart-area { animation: dd-chart-area-0 15s ease-in-out infinite; }
+  .dd-frame.playing [data-chart="0"] .dd-chart-dot  { animation: dd-chart-dot-0  15s ease-in-out infinite; }
+  .dd-frame.playing [data-chart="1"] .dd-chart-line { animation: dd-chart-line-1 15s ease-in-out infinite; }
+  .dd-frame.playing [data-chart="1"] .dd-chart-area { animation: dd-chart-area-1 15s ease-in-out infinite; }
+  .dd-frame.playing [data-chart="1"] .dd-chart-dot  { animation: dd-chart-dot-1  15s ease-in-out infinite; }
+  .dd-frame.playing [data-chart="2"] .dd-chart-line { animation: dd-chart-line-2 15s ease-in-out infinite; }
+  .dd-frame.playing [data-chart="2"] .dd-chart-area { animation: dd-chart-area-2 15s ease-in-out infinite; }
+  .dd-frame.playing [data-chart="2"] .dd-chart-dot  { animation: dd-chart-dot-2  15s ease-in-out infinite; }
+  .dd-frame.playing .dd-row-collapse { animation: dd-newrow 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-newdot { animation: dd-newdot 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-detail { animation: dd-detail 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-nav-item[data-nav="quotes"] { animation: dd-nav-quotes-text 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-nav-item[data-nav="quotes"] .dd-nav-pill { animation: dd-nav-quotes-pill 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-nav-item[data-nav="quotes"] .dd-nav-icon { animation: dd-nav-quotes-icon 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-nav-item[data-nav="analytics"] { animation: dd-nav-analytics-text 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-nav-item[data-nav="analytics"] .dd-nav-pill { animation: dd-nav-analytics-pill 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-nav-item[data-nav="analytics"] .dd-nav-icon { animation: dd-nav-analytics-icon 15s ease-in-out infinite; }
 
   /* Cursor: settles on a row, then the Analytics nav item, then tracks a
      chart, then the bars. Percentages are the shared clock. */
+  /* Click targets below are computed from the actual authored layout (sidebar
+     padding/nav-item heights, view padding, chart-card grid math at 1040x780
+     natural size), not eyeballed — so the cursor lands on the real elements:
+       Quotes nav item center   ~ (7%, 16%)
+       Analytics nav item center ~ (7%, 22%)
+       New-lead row (open)       ~ (52%, 28%)
+       Stat cards (Quotes/Median/Win rate), chart centers ~ (39%,53%) (62%,53%) (86%,53%)
+       Bar cards (Value by job type / Won vs lost), post-scroll ~ (45%,54%) (80%,54%)
+     0% and 100% share the same idle position/opacity so the infinite loop has
+     no visible teleport at the seam — it fades out at rest and fades back in
+     at the same spot. */
   @keyframes dd-cursor {
-    0%    { opacity: 0; left: 62%; top: 90%; transform: scale(1); }
-    5%    { opacity: 1; left: 60%; top: 78%; transform: scale(1); }
-    /* the new quote lands — go to it */
-    14%   { opacity: 1; left: 52%; top: 34%; transform: scale(1); }
-    17%   { opacity: 1; left: 52%; top: 34%; transform: scale(0.8); }   /* click */
-    20%   { opacity: 1; left: 52%; top: 34%; transform: scale(1); }
-    30%   { opacity: 1; left: 50%; top: 48%; transform: scale(1); }
-    /* over to Analytics in the sidebar */
-    38%   { opacity: 1; left: 11%; top: 30%; transform: scale(1); }
-    41%   { opacity: 1; left: 11%; top: 30%; transform: scale(0.8); }   /* click */
-    44%   { opacity: 1; left: 11%; top: 30%; transform: scale(1); }
-    56%   { opacity: 1; left: 40%; top: 60%; transform: scale(1); }     /* across a chart */
-    66%   { opacity: 1; left: 70%; top: 58%; transform: scale(1); }
-    78%   { opacity: 1; left: 46%; top: 84%; transform: scale(1); }     /* down to the bars */
+    0%    { opacity: 0; left: 60%; top: 88%; transform: scale(1); }
+    4%    { opacity: 1; left: 60%; top: 88%; transform: scale(1); }
+    /* travel to the new row, with a slight arc rather than a dead-straight line */
+    9%    { opacity: 1; left: 56%; top: 55%; transform: scale(1); }
+    13%   { opacity: 1; left: 52%; top: 28%; transform: scale(1); animation-timing-function: ease; }
+    16%   { opacity: 1; left: 52%; top: 28%; transform: scale(0.82); animation-timing-function: ease; }  /* click */
+    19%   { opacity: 1; left: 52%; top: 28%; transform: scale(1); }
+    29%   { opacity: 1; left: 48%; top: 30%; transform: scale(1); }     /* settles while the detail opens */
+    /* arc across to the Analytics nav item */
+    34%   { opacity: 1; left: 26%; top: 24%; transform: scale(1); }
+    40%   { opacity: 1; left: 7%;  top: 22%; transform: scale(1); animation-timing-function: ease; }
+    43%   { opacity: 1; left: 7%;  top: 22%; transform: scale(0.82); animation-timing-function: ease; }   /* click */
+    46%   { opacity: 1; left: 7%;  top: 22%; transform: scale(1); }
+    /* sweep left to right across the three trend-card charts */
+    50%   { opacity: 1; left: 39%; top: 53%; transform: scale(1); }
+    58%   { opacity: 1; left: 62%; top: 53%; transform: scale(1); }
+    68%   { opacity: 1; left: 86%; top: 53%; transform: scale(1); }
+    /* down to the two breakdown cards, once the page has scrolled to them */
+    76%   { opacity: 1; left: 45%; top: 54%; transform: scale(1); }
+    84%   { opacity: 1; left: 80%; top: 54%; transform: scale(1); }
     /* back to Quotes — the loop closes with a click, not a fade */
-    88%   { opacity: 1; left: 11%; top: 22%; transform: scale(1); }
-    91%   { opacity: 1; left: 11%; top: 22%; transform: scale(0.8); }   /* click */
-    94%   { opacity: 1; left: 11%; top: 22%; transform: scale(1); }
-    100%  { opacity: 1; left: 30%; top: 60%; transform: scale(1); }
+    90%   { opacity: 1; left: 7%;  top: 16%; transform: scale(1); animation-timing-function: ease; }
+    93%   { opacity: 1; left: 7%;  top: 16%; transform: scale(0.82); animation-timing-function: ease; }   /* click */
+    96%   { opacity: 1; left: 7%;  top: 16%; transform: scale(1); }
+    100%  { opacity: 0; left: 60%; top: 88%; transform: scale(1); }
   }
 
-  /* Zoom: pushes in hard on whatever the cursor is looking at, so individual
-     figures are actually legible rather than a vague swell. */
+  /* Camera: ONE push-in per act, not a zoom-in/zoom-out cycle per point of
+     interest — that repeated pulsing was the "goes left right and stuff"
+     feeling. Act 1 pushes in once for the new-row click, pulls fully back
+     while travelling to Analytics, then pushes in ONCE for the whole
+     analytics tour and just PANS (origin only, constant scale) across the
+     three charts and the two breakdown cards — a single sustained shot, the
+     way a real product video holds one framing and pans rather than
+     re-zooming on every element. Origins match the cursor's own targets
+     above so the camera is always centred on what the cursor is doing. */
   @keyframes dd-zoom {
-    0%, 7%    { transform: scale(1);    transform-origin: 50% 20%; }
-    16%, 28%  { transform: scale(1.75); transform-origin: 52% 34%; }  /* the new row */
-    35%       { transform: scale(1);    transform-origin: 50% 30%; }
-    46%       { transform: scale(1);    transform-origin: 50% 20%; }
-    56%, 64%  { transform: scale(1.7);  transform-origin: 40% 58%; }  /* a stat card */
-    70%, 76%  { transform: scale(1.55); transform-origin: 72% 58%; }  /* win rate */
-    82%, 88%  { transform: scale(1.5);  transform-origin: 45% 82%; }  /* bar cards */
-    94%, 100% { transform: scale(1);    transform-origin: 50% 20%; }
+    0%, 6%    { transform: scale(1);    transform-origin: 50% 20%; }
+    13%, 27%  { transform: scale(1.7);  transform-origin: 52% 28%; }  /* new row + detail */
+    33%       { transform: scale(1);    transform-origin: 50% 24%; }
+    44%       { transform: scale(1);    transform-origin: 50% 20%; }
+    50%       { transform: scale(1.55); transform-origin: 39% 53%; }  /* push in once for Analytics */
+    58%       { transform: scale(1.55); transform-origin: 62% 53%; }  /* pan, same scale */
+    68%       { transform: scale(1.55); transform-origin: 86% 53%; }  /* pan, same scale */
+    76%       { transform: scale(1.4);  transform-origin: 45% 54%; }  /* ease down to the bars */
+    84%       { transform: scale(1.4);  transform-origin: 80% 54%; }  /* pan, same scale */
+    92%, 100% { transform: scale(1);    transform-origin: 50% 20%; }
   }
 
   /* Scrolls the analytics page down to the breakdown cards, then back. */
   @keyframes dd-scroll {
-    0%, 70%   { transform: translateY(0); }
-    80%, 88%  { transform: translateY(-26%); }
-    93%, 100% { transform: translateY(0); }
+    0%, 72%   { transform: translateY(0); }
+    78%, 86%  { transform: translateY(-26%); }
+    92%, 100% { transform: translateY(0); }
+  }
+
+  /* Each chart draws in during the window the camera/cursor are actually
+     arriving at it (matching dd-cursor's 50%/58%/68% arrivals above), then
+     STAYS drawn while the camera moves on to the next one or the bars below
+     -- a real dashboard doesn't erase a chart just because you looked away
+     from it. All three reset together at 91-94%, hidden behind the view's
+     own opacity fade-out, so nothing visibly "un-draws" on screen. */
+  @keyframes dd-chart-line-0 {
+    0%, 44%   { stroke-dashoffset: 1; }
+    50%, 91%  { stroke-dashoffset: 0; }
+    94%, 100% { stroke-dashoffset: 1; }
+  }
+  @keyframes dd-chart-area-0 {
+    0%, 46%   { opacity: 0; }
+    52%, 91%  { opacity: 0.1; }
+    94%, 100% { opacity: 0; }
+  }
+  @keyframes dd-chart-dot-0 {
+    0%, 49%   { opacity: 0; }
+    53%, 91%  { opacity: 1; }
+    94%, 100% { opacity: 0; }
+  }
+  @keyframes dd-chart-line-1 {
+    0%, 52%   { stroke-dashoffset: 1; }
+    58%, 91%  { stroke-dashoffset: 0; }
+    94%, 100% { stroke-dashoffset: 1; }
+  }
+  @keyframes dd-chart-area-1 {
+    0%, 54%   { opacity: 0; }
+    60%, 91%  { opacity: 0.1; }
+    94%, 100% { opacity: 0; }
+  }
+  @keyframes dd-chart-dot-1 {
+    0%, 57%   { opacity: 0; }
+    61%, 91%  { opacity: 1; }
+    94%, 100% { opacity: 0; }
+  }
+  @keyframes dd-chart-line-2 {
+    0%, 62%   { stroke-dashoffset: 1; }
+    68%, 91%  { stroke-dashoffset: 0; }
+    94%, 100% { stroke-dashoffset: 1; }
+  }
+  @keyframes dd-chart-area-2 {
+    0%, 64%   { opacity: 0; }
+    70%, 91%  { opacity: 0.1; }
+    94%, 100% { opacity: 0; }
+  }
+  @keyframes dd-chart-dot-2 {
+    0%, 67%   { opacity: 0; }
+    71%, 91%  { opacity: 1; }
+    94%, 100% { opacity: 0; }
   }
 
   /* Both views swap on a click, never a cross-fade to nothing. */
@@ -727,12 +878,10 @@ const NAV = ["Quotes", "Analytics", "Account", "Support"];
      read as the lead being deleted, and leaving it open would make the loop
      wrap visibly pop. */
   @keyframes dd-newrow {
-    0%, 8%    { height: 0;      padding-top: 0;       padding-bottom: 0;       opacity: 0; }
-    12%, 62%  { height: 2.6rem; padding-top: 0.42rem; padding-bottom: 0.42rem; opacity: 1; }
-    70%, 100% { height: 0;      padding-top: 0;       padding-bottom: 0;       opacity: 0; }
+    0%, 8%    { grid-template-rows: 0fr; }
+    12%, 62%  { grid-template-rows: 1fr; }
+    70%, 100% { grid-template-rows: 0fr; }
   }
-  /* Animates the `scale` property, not `transform` — transform is already
-     spoken for by the translateY(-50%) that centres the dot. */
   @keyframes dd-newdot {
     0%, 9%    { scale: 0; opacity: 0; }
     13%       { scale: 1.6; opacity: 1; }
@@ -741,18 +890,38 @@ const NAV = ["Quotes", "Analytics", "Account", "Support"];
   }
   @keyframes dd-detail {
     0%, 17%   { height: 0; }
-    23%, 33%  { height: 3.4rem; }
+    23%, 33%  { height: 4.2rem; }
     38%, 100% { height: 0; }
   }
-  @keyframes dd-nav-quotes {
-    0%, 42%   { background: var(--color-brand-50); color: var(--color-ink); }
-    46%, 91%  { background: transparent; color: var(--color-muted); }
-    94%, 100% { background: var(--color-brand-50); color: var(--color-ink); }
+  @keyframes dd-nav-quotes-text {
+    0%, 42%   { color: var(--color-brand-700); font-weight: 600; }
+    46%, 91%  { color: var(--color-ink-soft); font-weight: 500; }
+    94%, 100% { color: var(--color-brand-700); font-weight: 600; }
   }
-  @keyframes dd-nav-analytics {
-    0%, 42%   { background: transparent; color: var(--color-muted); }
-    46%, 91%  { background: var(--color-brand-50); color: var(--color-ink); font-weight: 600; }
-    94%, 100% { background: transparent; color: var(--color-muted); }
+  @keyframes dd-nav-quotes-pill {
+    0%, 42%   { background: var(--color-brand-50); }
+    46%, 91%  { background: transparent; }
+    94%, 100% { background: var(--color-brand-50); }
+  }
+  @keyframes dd-nav-quotes-icon {
+    0%, 42%   { color: var(--color-brand-600); }
+    46%, 91%  { color: var(--color-muted); }
+    94%, 100% { color: var(--color-brand-600); }
+  }
+  @keyframes dd-nav-analytics-text {
+    0%, 42%   { color: var(--color-ink-soft); font-weight: 500; }
+    46%, 91%  { color: var(--color-brand-700); font-weight: 600; }
+    94%, 100% { color: var(--color-ink-soft); font-weight: 500; }
+  }
+  @keyframes dd-nav-analytics-pill {
+    0%, 42%   { background: transparent; }
+    46%, 91%  { background: var(--color-brand-50); }
+    94%, 100% { background: transparent; }
+  }
+  @keyframes dd-nav-analytics-icon {
+    0%, 42%   { color: var(--color-muted); }
+    46%, 91%  { color: var(--color-brand-600); }
+    94%, 100% { color: var(--color-muted); }
   }
 
   /* One honest static frame instead of motion. */
@@ -761,27 +930,57 @@ const NAV = ["Quotes", "Analytics", "Account", "Support"];
     .dd-frame.playing .dd-zoom,
     .dd-frame.playing .dd-view--quotes,
     .dd-frame.playing .dd-view--analytics,
-    .dd-frame.playing .dd-row--new,
+    .dd-frame.playing .dd-row-collapse,
     .dd-frame.playing .dd-newdot,
     .dd-frame.playing .dd-detail,
     .dd-frame.playing .dd-scroll,
-    .dd-frame.playing .dd-nav-item { animation: none; }
+    .dd-frame.playing [data-chart] .dd-chart-line,
+    .dd-frame.playing [data-chart] .dd-chart-area,
+    .dd-frame.playing [data-chart] .dd-chart-dot,
+    .dd-frame.playing .dd-nav-item[data-nav="quotes"],
+    .dd-frame.playing .dd-nav-item[data-nav="quotes"] .dd-nav-pill,
+    .dd-frame.playing .dd-nav-item[data-nav="quotes"] .dd-nav-icon,
+    .dd-frame.playing .dd-nav-item[data-nav="analytics"],
+    .dd-frame.playing .dd-nav-item[data-nav="analytics"] .dd-nav-pill,
+    .dd-frame.playing .dd-nav-item[data-nav="analytics"] .dd-nav-icon { animation: none; }
     .dd-view--analytics { opacity: 1; }
     .dd-view--quotes { opacity: 0; }
-    .dd-nav-item[data-nav="quotes"] { background: transparent; color: var(--color-muted); font-weight: 400; }
-    .dd-nav-item[data-nav="analytics"] { background: var(--color-brand-50); color: var(--color-ink); font-weight: 600; }
+    /* Static frame shows Analytics permanently, so its charts should read
+       as fully drawn, not stuck mid-reveal. */
+    [data-chart] .dd-chart-line { stroke-dashoffset: 0; }
+    [data-chart] .dd-chart-area { opacity: 0.1; }
+    [data-chart] .dd-chart-dot { opacity: 1; }
+    .dd-nav-item[data-nav="quotes"] { color: var(--color-ink-soft); font-weight: 500; }
+    .dd-nav-item[data-nav="quotes"] .dd-nav-pill { background: transparent; }
+    .dd-nav-item[data-nav="quotes"] .dd-nav-icon { color: var(--color-muted); }
+    .dd-nav-item[data-nav="analytics"] { color: var(--color-brand-700); font-weight: 600; }
+    .dd-nav-item[data-nav="analytics"] .dd-nav-pill { background: var(--color-brand-50); }
+    .dd-nav-item[data-nav="analytics"] .dd-nav-icon { color: var(--color-brand-600); }
   }
 
   @media (max-width: 1023px) {
     .dd-copy { order: -1; }
-    .dd-stage { grid-template-columns: 6rem 1fr; }
   }
 </style>
 
 <script>
-  // Same gating as the satellite loop: don't burn frames off-screen.
+  // Fit the real-proportions markup to whatever size the frame
+  // actually renders at. Runs once on load and again on resize — NOT during
+  // the animation loop, so it costs nothing while the recording plays.
+  const NATURAL_W = 1040;
   const frame = document.querySelector<HTMLElement>(".dd-frame");
-  if (frame) {
+  const viewport = frame?.querySelector<HTMLElement>(".dd-viewport");
+  const fit = frame?.querySelector<HTMLElement>(".dd-fit");
+
+  if (frame && viewport && fit) {
+    const applyScale = () => {
+      const scale = viewport.clientWidth / NATURAL_W;
+      fit.style.transform = `scale(${scale})`;
+    };
+    applyScale();
+    new ResizeObserver(applyScale).observe(viewport);
+
+    // Same gating as the satellite loop: don't burn frames off-screen.
     const io = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
