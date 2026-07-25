@@ -693,12 +693,18 @@ const NAV = [
      Hook classnames are unchanged from the previous implementation, just
      retargeted onto the now-real, ported markup above.
      ===================================================================== */
-  /* var(--ease-out-soft) is the site's own easing curve (global.css), reused
-     here so the cursor and the camera share the exact same motion character
-     instead of the previous linear-vs-ease-in-out mismatch. Individual
-     keyframe steps below override this for the snappy click pulses. */
-  .dd-frame.playing .dd-cursor { animation: dd-cursor 15s var(--ease-out-soft) infinite; }
-  .dd-frame.playing .dd-zoom { animation: dd-zoom 15s var(--ease-out-soft) infinite; }
+  /* cubic-bezier(0.65,0,0.35,1) is a SYMMETRIC ease-in-out ("easeInOutCubic") —
+     deliberately NOT var(--ease-out-soft) here. That curve front-loads almost
+     all its motion into the first fraction of a segment then coasts nearly
+     still for the rest before stopping dead — fine for a single arrival, but
+     chained across many waypoints in a row it reads as burst-coast-stop,
+     burst-coast-stop, i.e. exactly the "start stop" feeling. A true ease-in-out
+     spreads velocity across the WHOLE segment instead, so the multi-point
+     travel/pan sequences below flow as one continuous motion. Cursor and
+     camera share this curve so they still move with the same character;
+     individual keyframe steps override it for the snappy click pulses only. */
+  .dd-frame.playing .dd-cursor { animation: dd-cursor 15s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+  .dd-frame.playing .dd-zoom { animation: dd-zoom 15s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
   .dd-frame.playing .dd-view--quotes { animation: dd-quotes 15s ease-in-out infinite; }
   .dd-frame.playing .dd-view--analytics { animation: dd-analytics 15s ease-in-out infinite; }
   .dd-frame.playing .dd-scroll { animation: dd-scroll 15s ease-in-out infinite; }
