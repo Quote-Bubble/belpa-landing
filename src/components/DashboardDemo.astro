@@ -42,7 +42,7 @@
  * QuotesTable's GRID_TEMPLATE but as flexible fr tracks instead of fixed
  * floors — same visual shape, no hard minimum forcing either an oversized
  * canvas or clipped columns. Everything that plays every frame during the
- * 12s loop (`.dd-zoom`, `.dd-cursor`, opacity crossfades) is a separate,
+ * 15s loop (`.dd-zoom`, `.dd-cursor`, opacity crossfades) is a separate,
  * purely-animated CSS layer nested inside the static fit-scale, so the
  * animation itself is exactly as cheap (GPU-composited transform/opacity
  * only, zero JS) as before — this is strictly additive, not a regression.
@@ -306,24 +306,33 @@ const NAV = [
 
                   <!-- The quote that lands mid-demo, and the detail it opens.
                        The detail sits IMMEDIATELY after its own row so it expands
-                       under the row you clicked, not at the foot of the table. -->
-                  <div class="dd-row-grid dd-row--new relative items-center border-b border-line/60 px-6 text-sm transition-colors duration-150">
-                    <div class="dd-newdot absolute left-2 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-brand-500" aria-hidden="true"></div>
-                    <div class="min-w-0">
-                      <div class="truncate font-semibold text-ink">{newLead.name}</div>
-                      <div class="truncate text-xs text-muted">{newLead.phone}</div>
+                       under the row you clicked, not at the foot of the table.
+                       Collapses via the same grid-template-rows 0fr->1fr trick
+                       as .dd-detail — the row's own padding/line-heights are
+                       IDENTICAL to every other row's (no separate collapsed-
+                       state override), so its open height can't drift from a
+                       hardcoded guess the way a fixed `height:` value did. -->
+                  <div class="dd-row-collapse">
+                    <div class="dd-row-collapse-inner">
+                      <div class="dd-row-grid dd-row--new relative items-center border-b border-line/60 px-6 text-sm transition-colors duration-150">
+                        <div class="dd-newdot absolute left-2 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-brand-500" aria-hidden="true"></div>
+                        <div class="min-w-0">
+                          <div class="truncate font-semibold text-ink">{newLead.name}</div>
+                          <div class="truncate text-xs text-muted">{newLead.phone}</div>
+                        </div>
+                        <span class="truncate text-ink-soft">{JOB_LABELS[newLead.job]}</span>
+                        <span class="truncate font-medium tabular-nums text-ink">{money(newLead.value)}</span>
+                        <span>
+                          <span
+                            class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
+                            style={`color:${STATUS_COLOR[newLead.status].fg};background:${STATUS_COLOR[newLead.status].bg}`}
+                          >{STATUS_LABELS[newLead.status]}</span>
+                        </span>
+                        <span class="text-muted">{newLead.received}</span>
+                        <span class="flex justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
+                        <span class="flex justify-center dd-archive-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg></span>
+                      </div>
                     </div>
-                    <span class="truncate text-ink-soft">{JOB_LABELS[newLead.job]}</span>
-                    <span class="truncate font-medium tabular-nums text-ink">{money(newLead.value)}</span>
-                    <span>
-                      <span
-                        class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
-                        style={`color:${STATUS_COLOR[newLead.status].fg};background:${STATUS_COLOR[newLead.status].bg}`}
-                      >{STATUS_LABELS[newLead.status]}</span>
-                    </span>
-                    <span class="text-muted">{newLead.received}</span>
-                    <span class="flex justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
-                    <span class="flex justify-center dd-archive-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg></span>
                   </div>
 
                   <div class="dd-detail overflow-hidden bg-black/[0.015]">
@@ -593,13 +602,19 @@ const NAV = [
   }
   .dd-archive-icon { color: #b8791a; opacity: 0.4; }
 
-  /* The arriving quote. Collapsed to nothing until it lands. */
-  .dd-row--new {
-    height: 0;
-    padding-top: 0;
-    padding-bottom: 0;
+  /* The arriving quote. Same grid-template-rows 0fr->1fr collapse as
+     .dd-detail below — its own padding/line-heights are never overridden,
+     so its open height is whatever the row's real content needs, identical
+     to every sibling row, not a separately-guessed number. */
+  .dd-row-collapse {
+    display: grid;
+    grid-template-rows: 0fr;
+  }
+  .dd-row-collapse-inner {
     overflow: hidden;
-    opacity: 0;
+    min-height: 0;
+  }
+  .dd-row--new {
     background: var(--color-brand-50);
   }
   .dd-detail { height: 0; }
@@ -665,20 +680,20 @@ const NAV = [
      here so the cursor and the camera share the exact same motion character
      instead of the previous linear-vs-ease-in-out mismatch. Individual
      keyframe steps below override this for the snappy click pulses. */
-  .dd-frame.playing .dd-cursor { animation: dd-cursor 12s var(--ease-out-soft) infinite; }
-  .dd-frame.playing .dd-zoom { animation: dd-zoom 12s var(--ease-out-soft) infinite; }
-  .dd-frame.playing .dd-view--quotes { animation: dd-quotes 12s ease-in-out infinite; }
-  .dd-frame.playing .dd-view--analytics { animation: dd-analytics 12s ease-in-out infinite; }
-  .dd-frame.playing .dd-scroll { animation: dd-scroll 12s ease-in-out infinite; }
-  .dd-frame.playing .dd-row--new { animation: dd-newrow 12s ease-in-out infinite; }
-  .dd-frame.playing .dd-newdot { animation: dd-newdot 12s ease-in-out infinite; }
-  .dd-frame.playing .dd-detail { animation: dd-detail 12s ease-in-out infinite; }
-  .dd-frame.playing .dd-nav-item[data-nav="quotes"] { animation: dd-nav-quotes-text 12s ease-in-out infinite; }
-  .dd-frame.playing .dd-nav-item[data-nav="quotes"] .dd-nav-pill { animation: dd-nav-quotes-pill 12s ease-in-out infinite; }
-  .dd-frame.playing .dd-nav-item[data-nav="quotes"] .dd-nav-icon { animation: dd-nav-quotes-icon 12s ease-in-out infinite; }
-  .dd-frame.playing .dd-nav-item[data-nav="analytics"] { animation: dd-nav-analytics-text 12s ease-in-out infinite; }
-  .dd-frame.playing .dd-nav-item[data-nav="analytics"] .dd-nav-pill { animation: dd-nav-analytics-pill 12s ease-in-out infinite; }
-  .dd-frame.playing .dd-nav-item[data-nav="analytics"] .dd-nav-icon { animation: dd-nav-analytics-icon 12s ease-in-out infinite; }
+  .dd-frame.playing .dd-cursor { animation: dd-cursor 15s var(--ease-out-soft) infinite; }
+  .dd-frame.playing .dd-zoom { animation: dd-zoom 15s var(--ease-out-soft) infinite; }
+  .dd-frame.playing .dd-view--quotes { animation: dd-quotes 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-view--analytics { animation: dd-analytics 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-scroll { animation: dd-scroll 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-row-collapse { animation: dd-newrow 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-newdot { animation: dd-newdot 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-detail { animation: dd-detail 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-nav-item[data-nav="quotes"] { animation: dd-nav-quotes-text 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-nav-item[data-nav="quotes"] .dd-nav-pill { animation: dd-nav-quotes-pill 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-nav-item[data-nav="quotes"] .dd-nav-icon { animation: dd-nav-quotes-icon 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-nav-item[data-nav="analytics"] { animation: dd-nav-analytics-text 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-nav-item[data-nav="analytics"] .dd-nav-pill { animation: dd-nav-analytics-pill 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-nav-item[data-nav="analytics"] .dd-nav-icon { animation: dd-nav-analytics-icon 15s ease-in-out infinite; }
 
   /* Cursor: settles on a row, then the Analytics nav item, then tracks a
      chart, then the bars. Percentages are the shared clock. */
@@ -767,9 +782,9 @@ const NAV = [
      read as the lead being deleted, and leaving it open would make the loop
      wrap visibly pop. */
   @keyframes dd-newrow {
-    0%, 8%    { height: 0;      padding-top: 0;       padding-bottom: 0;       opacity: 0; }
-    12%, 62%  { height: 3.4rem; padding-top: 0.85rem;  padding-bottom: 0.85rem; opacity: 1; }
-    70%, 100% { height: 0;      padding-top: 0;       padding-bottom: 0;       opacity: 0; }
+    0%, 8%    { grid-template-rows: 0fr; }
+    12%, 62%  { grid-template-rows: 1fr; }
+    70%, 100% { grid-template-rows: 0fr; }
   }
   @keyframes dd-newdot {
     0%, 9%    { scale: 0; opacity: 0; }
@@ -819,7 +834,7 @@ const NAV = [
     .dd-frame.playing .dd-zoom,
     .dd-frame.playing .dd-view--quotes,
     .dd-frame.playing .dd-view--analytics,
-    .dd-frame.playing .dd-row--new,
+    .dd-frame.playing .dd-row-collapse,
     .dd-frame.playing .dd-newdot,
     .dd-frame.playing .dd-detail,
     .dd-frame.playing .dd-scroll,
