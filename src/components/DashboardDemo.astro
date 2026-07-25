@@ -661,8 +661,12 @@ const NAV = [
      Hook classnames are unchanged from the previous implementation, just
      retargeted onto the now-real, ported markup above.
      ===================================================================== */
-  .dd-frame.playing .dd-cursor { animation: dd-cursor 12s linear infinite; }
-  .dd-frame.playing .dd-zoom { animation: dd-zoom 12s ease-in-out infinite; }
+  /* var(--ease-out-soft) is the site's own easing curve (global.css), reused
+     here so the cursor and the camera share the exact same motion character
+     instead of the previous linear-vs-ease-in-out mismatch. Individual
+     keyframe steps below override this for the snappy click pulses. */
+  .dd-frame.playing .dd-cursor { animation: dd-cursor 12s var(--ease-out-soft) infinite; }
+  .dd-frame.playing .dd-zoom { animation: dd-zoom 12s var(--ease-out-soft) infinite; }
   .dd-frame.playing .dd-view--quotes { animation: dd-quotes 12s ease-in-out infinite; }
   .dd-frame.playing .dd-view--analytics { animation: dd-analytics 12s ease-in-out infinite; }
   .dd-frame.playing .dd-scroll { animation: dd-scroll 12s ease-in-out infinite; }
@@ -678,46 +682,72 @@ const NAV = [
 
   /* Cursor: settles on a row, then the Analytics nav item, then tracks a
      chart, then the bars. Percentages are the shared clock. */
+  /* Click targets below are computed from the actual authored layout (sidebar
+     padding/nav-item heights, view padding, chart-card grid math at 1040x780
+     natural size), not eyeballed — so the cursor lands on the real elements:
+       Quotes nav item center   ~ (7%, 16%)
+       Analytics nav item center ~ (7%, 22%)
+       New-lead row (open)       ~ (52%, 28%)
+       Stat cards (Quotes/Median/Win rate), chart centers ~ (39%,53%) (62%,53%) (86%,53%)
+       Bar cards (Value by job type / Won vs lost), post-scroll ~ (45%,54%) (80%,54%)
+     0% and 100% share the same idle position/opacity so the infinite loop has
+     no visible teleport at the seam — it fades out at rest and fades back in
+     at the same spot. */
   @keyframes dd-cursor {
-    0%    { opacity: 0; left: 62%; top: 90%; transform: scale(1); }
-    5%    { opacity: 1; left: 60%; top: 78%; transform: scale(1); }
-    /* the new quote lands — go to it */
-    14%   { opacity: 1; left: 52%; top: 34%; transform: scale(1); }
-    17%   { opacity: 1; left: 52%; top: 34%; transform: scale(0.8); }   /* click */
-    20%   { opacity: 1; left: 52%; top: 34%; transform: scale(1); }
-    30%   { opacity: 1; left: 50%; top: 48%; transform: scale(1); }
-    /* over to Analytics in the sidebar */
-    38%   { opacity: 1; left: 11%; top: 30%; transform: scale(1); }
-    41%   { opacity: 1; left: 11%; top: 30%; transform: scale(0.8); }   /* click */
-    44%   { opacity: 1; left: 11%; top: 30%; transform: scale(1); }
-    56%   { opacity: 1; left: 40%; top: 60%; transform: scale(1); }     /* across a chart */
-    66%   { opacity: 1; left: 70%; top: 58%; transform: scale(1); }
-    78%   { opacity: 1; left: 46%; top: 84%; transform: scale(1); }     /* down to the bars */
+    0%    { opacity: 0; left: 60%; top: 88%; transform: scale(1); }
+    4%    { opacity: 1; left: 60%; top: 88%; transform: scale(1); }
+    /* travel to the new row, with a slight arc rather than a dead-straight line */
+    9%    { opacity: 1; left: 56%; top: 55%; transform: scale(1); }
+    13%   { opacity: 1; left: 52%; top: 28%; transform: scale(1); animation-timing-function: ease; }
+    16%   { opacity: 1; left: 52%; top: 28%; transform: scale(0.82); animation-timing-function: ease; }  /* click */
+    19%   { opacity: 1; left: 52%; top: 28%; transform: scale(1); }
+    29%   { opacity: 1; left: 48%; top: 30%; transform: scale(1); }     /* settles while the detail opens */
+    /* arc across to the Analytics nav item */
+    34%   { opacity: 1; left: 26%; top: 24%; transform: scale(1); }
+    40%   { opacity: 1; left: 7%;  top: 22%; transform: scale(1); animation-timing-function: ease; }
+    43%   { opacity: 1; left: 7%;  top: 22%; transform: scale(0.82); animation-timing-function: ease; }   /* click */
+    46%   { opacity: 1; left: 7%;  top: 22%; transform: scale(1); }
+    /* sweep left to right across the three trend-card charts */
+    50%   { opacity: 1; left: 39%; top: 53%; transform: scale(1); }
+    58%   { opacity: 1; left: 62%; top: 53%; transform: scale(1); }
+    68%   { opacity: 1; left: 86%; top: 53%; transform: scale(1); }
+    /* down to the two breakdown cards, once the page has scrolled to them */
+    76%   { opacity: 1; left: 45%; top: 54%; transform: scale(1); }
+    84%   { opacity: 1; left: 80%; top: 54%; transform: scale(1); }
     /* back to Quotes — the loop closes with a click, not a fade */
-    88%   { opacity: 1; left: 11%; top: 22%; transform: scale(1); }
-    91%   { opacity: 1; left: 11%; top: 22%; transform: scale(0.8); }   /* click */
-    94%   { opacity: 1; left: 11%; top: 22%; transform: scale(1); }
-    100%  { opacity: 1; left: 30%; top: 60%; transform: scale(1); }
+    90%   { opacity: 1; left: 7%;  top: 16%; transform: scale(1); animation-timing-function: ease; }
+    93%   { opacity: 1; left: 7%;  top: 16%; transform: scale(0.82); animation-timing-function: ease; }   /* click */
+    96%   { opacity: 1; left: 7%;  top: 16%; transform: scale(1); }
+    100%  { opacity: 0; left: 60%; top: 88%; transform: scale(1); }
   }
 
-  /* Zoom: pushes in hard on whatever the cursor is looking at, so individual
-     figures are actually legible rather than a vague swell. */
+  /* Camera: ONE push-in per act, not a zoom-in/zoom-out cycle per point of
+     interest — that repeated pulsing was the "goes left right and stuff"
+     feeling. Act 1 pushes in once for the new-row click, pulls fully back
+     while travelling to Analytics, then pushes in ONCE for the whole
+     analytics tour and just PANS (origin only, constant scale) across the
+     three charts and the two breakdown cards — a single sustained shot, the
+     way a real product video holds one framing and pans rather than
+     re-zooming on every element. Origins match the cursor's own targets
+     above so the camera is always centred on what the cursor is doing. */
   @keyframes dd-zoom {
-    0%, 7%    { transform: scale(1);    transform-origin: 50% 20%; }
-    16%, 28%  { transform: scale(1.75); transform-origin: 52% 34%; }  /* the new row */
-    35%       { transform: scale(1);    transform-origin: 50% 30%; }
-    46%       { transform: scale(1);    transform-origin: 50% 20%; }
-    56%, 64%  { transform: scale(1.7);  transform-origin: 40% 58%; }  /* a stat card */
-    70%, 76%  { transform: scale(1.55); transform-origin: 72% 58%; }  /* win rate */
-    82%, 88%  { transform: scale(1.5);  transform-origin: 45% 82%; }  /* bar cards */
-    94%, 100% { transform: scale(1);    transform-origin: 50% 20%; }
+    0%, 6%    { transform: scale(1);    transform-origin: 50% 20%; }
+    13%, 27%  { transform: scale(1.7);  transform-origin: 52% 28%; }  /* new row + detail */
+    33%       { transform: scale(1);    transform-origin: 50% 24%; }
+    44%       { transform: scale(1);    transform-origin: 50% 20%; }
+    50%       { transform: scale(1.55); transform-origin: 39% 53%; }  /* push in once for Analytics */
+    58%       { transform: scale(1.55); transform-origin: 62% 53%; }  /* pan, same scale */
+    68%       { transform: scale(1.55); transform-origin: 86% 53%; }  /* pan, same scale */
+    76%       { transform: scale(1.4);  transform-origin: 45% 54%; }  /* ease down to the bars */
+    84%       { transform: scale(1.4);  transform-origin: 80% 54%; }  /* pan, same scale */
+    92%, 100% { transform: scale(1);    transform-origin: 50% 20%; }
   }
 
   /* Scrolls the analytics page down to the breakdown cards, then back. */
   @keyframes dd-scroll {
-    0%, 70%   { transform: translateY(0); }
-    80%, 88%  { transform: translateY(-26%); }
-    93%, 100% { transform: translateY(0); }
+    0%, 72%   { transform: translateY(0); }
+    78%, 86%  { transform: translateY(-26%); }
+    92%, 100% { transform: translateY(0); }
   }
 
   /* Both views swap on a click, never a cross-fade to nothing. */
