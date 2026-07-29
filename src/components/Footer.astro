@@ -64,17 +64,15 @@ const year = new Date().getFullYear();
     border-radius: 6px;
   }
 
-  /* Soft white → solid brand blue so the giant word always sits on blue,
-     never on the page’s white/dot-grid (especially tight on mobile). */
   .footer-giant {
     overflow: hidden;
     background: linear-gradient(
       180deg,
       rgba(255, 255, 255, 0) 0%,
-      #d7e5ff 14%,
-      #9bbfff 36%,
-      #5f93ff 62%,
-      #2f6bff 100%
+      #eaf1ff 24%,
+      #bcd4ff 55%,
+      #7dabff 82%,
+      #4f8bff 100%
     );
   }
 
@@ -85,33 +83,31 @@ const year = new Date().getFullYear();
   }
 
   .giant-word {
-    margin-top: clamp(2rem, 5vw, 3.25rem);
-    margin-bottom: -0.08em;
+    margin-top: clamp(1.25rem, 4vw, 3rem);
+    margin-bottom: -0.06em;
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: clamp(4.2rem, 22vw, 22rem);
-    line-height: 0.86;
+    font-size: clamp(3.6rem, 19vw, 22rem);
+    line-height: 0.9;
     letter-spacing: -0.045em;
     text-align: center;
     white-space: nowrap;
     color: #ffffff;
-    opacity: 1;
+    opacity: 0.92;
     user-select: none;
     pointer-events: none;
-    /* Keeps the word readable if a soft gradient band peeks through */
-    text-shadow: 0 6px 28px rgba(15, 55, 160, 0.28);
   }
 
   .footer-legal {
     position: relative;
     z-index: 5;
     background: #2f6bff;
-    padding: 16px 20px calc(16px + env(safe-area-inset-bottom, 0px));
+    padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     text-align: center;
     font-size: 12.5px;
   }
@@ -134,26 +130,30 @@ const year = new Date().getFullYear();
     color: rgba(255, 255, 255, 0.92);
   }
 
+  /* Phones: short solid blue closer — contrast from paint, not from height. */
   @media (max-width: 640px) {
+    .footer-cta {
+      padding-bottom: 1.15rem;
+    }
     .footer-giant {
-      /* No transparent top on mobile — white page would kill white type */
       background: linear-gradient(
         180deg,
-        #cfe0ff 0%,
-        #7eafff 32%,
-        #3f7fff 68%,
+        rgba(255, 255, 255, 0) 0%,
+        #4f8bff 28px,
+        #2f6bff 72px,
         #2f6bff 100%
       );
     }
     .giant-word {
-      /* Keep enough top air that the word sits in the blue band, not the
-         pale page fade that made white type disappear. */
-      margin-top: 2.25rem;
-      font-size: clamp(3.6rem, 24vw, 7rem);
+      margin-top: 0.55rem;
+      margin-bottom: -0.04em;
+      font-size: clamp(2.6rem, 16vw, 3.75rem);
+      opacity: 1;
     }
     .footer-legal {
-      padding: 14px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+      padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px));
       font-size: 12px;
+      gap: 5px;
     }
   }
 </style>
