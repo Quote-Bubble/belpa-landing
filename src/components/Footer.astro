@@ -17,8 +17,14 @@ const year = new Date().getFullYear();
 </section>
 
 <footer class="footer-giant relative">
+  <!-- Desktop: giant brand echo + scroll FX. Hidden on phones. -->
   <div class="giant-wrap" data-reveal="brand-echo">
     <div class="giant-word" aria-hidden="true" data-fx="punch">Quoter</div>
+  </div>
+
+  <!-- Mobile-only closer: always visible, no reveal/FX dependency. -->
+  <div class="footer-m" aria-hidden="true">
+    <p class="footer-m-brand font-display">Quoter</p>
   </div>
 
   <div class="footer-legal">
@@ -64,6 +70,7 @@ const year = new Date().getFullYear();
     border-radius: 6px;
   }
 
+  /* —— Desktop footer (unchanged drama) —— */
   .footer-giant {
     overflow: hidden;
     background: linear-gradient(
@@ -98,6 +105,10 @@ const year = new Date().getFullYear();
     pointer-events: none;
   }
 
+  .footer-m {
+    display: none;
+  }
+
   .footer-legal {
     position: relative;
     z-index: 5;
@@ -130,30 +141,62 @@ const year = new Date().getFullYear();
     color: rgba(255, 255, 255, 0.92);
   }
 
-  /* Phones: short solid blue closer — contrast from paint, not from height. */
+  /* —— Mobile-only remake ——
+     One solid blue slab: brand → links → copyright. No scroll-reveal, no FX,
+     no empty gradient padding. Always painted, always readable. */
   @media (max-width: 640px) {
     .footer-cta {
-      padding-bottom: 1.15rem;
+      padding-top: 1.1rem;
+      padding-bottom: 1.35rem;
     }
-    .footer-giant {
-      background: linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0) 0%,
-        #4f8bff 28px,
-        #2f6bff 72px,
-        #2f6bff 100%
-      );
+    .footer-cta-line {
+      font-size: 1.45rem;
     }
-    .giant-word {
+    .footer-cta-link {
       margin-top: 0.55rem;
-      margin-bottom: -0.04em;
-      font-size: clamp(2.6rem, 16vw, 3.75rem);
-      opacity: 1;
+      font-size: 0.98rem;
     }
+
+    .footer-giant {
+      background: #2f6bff;
+      /* Hairline dissolve off the white page — not a tall pale ramp */
+      box-shadow: 0 -28px 40px -28px rgba(47, 107, 255, 0.55);
+    }
+
+    .giant-wrap {
+      display: none;
+    }
+
+    .footer-m {
+      display: block;
+      padding: 1.35rem 1.25rem 0.15rem;
+      text-align: center;
+    }
+    .footer-m-brand {
+      margin: 0;
+      font-size: 2.75rem;
+      font-weight: 600;
+      letter-spacing: -0.045em;
+      line-height: 0.92;
+      color: #ffffff;
+      user-select: none;
+    }
+
     .footer-legal {
-      padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+      background: transparent;
+      padding: 0.55rem 1.25rem calc(1.1rem + env(safe-area-inset-bottom, 0px));
+      gap: 0.45rem;
       font-size: 12px;
-      gap: 5px;
+    }
+    .footer-legal-links {
+      gap: 0.35rem 1.35rem;
+    }
+    .footer-legal a,
+    .footer-legal-copy {
+      color: #ffffff;
+    }
+    .footer-legal-copy {
+      opacity: 0.88;
     }
   }
 </style>
