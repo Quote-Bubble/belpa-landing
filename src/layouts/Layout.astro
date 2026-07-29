@@ -175,6 +175,70 @@ const {
 </script>
 
 <script>
+  /**
+   * Mobile only: slide the hero blob so its glow sits behind the search bar
+   * + Book a call cluster on every phone height. Fixed px placement drifted
+   * on short/tall screens once the hero was vertically centred.
+   *
+   * Uses --blob-shift (compose with load-bloom). Ignores keyboard
+   * visualViewport jumps — only width/orientation/layout settle.
+   */
+  function initBlobAnchor() {
+    const bg = document.querySelector<HTMLElement>(".site-bg");
+    if (!bg) return;
+
+    const mq = window.matchMedia("(max-width: 640px)");
+    // Mask opaque band midpoint on the 1650px mobile layer:
+    // ((32% + 48%) / 2) * 1650 + top(-90) ≈ 570px from document top at shift 0.
+    const NATURAL_BAND_MID = -90 + 1650 * 0.4;
+
+    const pin = () => {
+      if (!mq.matches) {
+        bg.style.removeProperty("--blob-shift");
+        return;
+      }
+      const widget = document.querySelector<HTMLElement>("[data-widget-shell]");
+      if (!widget) return;
+      const meeting = document.querySelector<HTMLElement>("[data-meeting-spacer]");
+      const w = widget.getBoundingClientRect();
+      const m = meeting?.getBoundingClientRect();
+      // Midpoint of search + Book a call — where the glow should sit.
+      const target = m
+        ? (w.top + m.bottom) / 2
+        : w.top + w.height * 0.55;
+      const shift = Math.round(target - NATURAL_BAND_MID);
+      bg.style.setProperty("--blob-shift", `${shift}px`);
+    };
+
+    let lastW = window.innerWidth;
+    const onResize = () => {
+      // Width-only: ignore URL-bar / keyboard height churn.
+      if (window.innerWidth === lastW && mq.matches) return;
+      lastW = window.innerWidth;
+      pin();
+    };
+
+    pin();
+    // After fonts + entrance layout (widget rise ~1.7s).
+    window.setTimeout(pin, 200);
+    window.setTimeout(pin, 900);
+    window.setTimeout(pin, 2000);
+    window.addEventListener("resize", onResize, { passive: true });
+    mq.addEventListener("change", pin);
+    document.fonts?.ready?.then?.(pin);
+
+    document.addEventListener("astro:after-swap", () => {
+      lastW = window.innerWidth;
+      pin();
+      window.setTimeout(pin, 200);
+      window.setTimeout(pin, 900);
+    });
+  }
+
+  initBlobAnchor();
+</script>
+
+<script>
   // Scroll-triggered reveals — transform/opacity only, one observer for the page.
   function initReveals() {
     const nodes = document.querySelectorAll<HTMLElement>("[data-reveal], [data-stagger]");

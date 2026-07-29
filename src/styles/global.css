@@ -204,7 +204,9 @@ input {
   background-position: center 300px;
   background-size: 100% auto;
   filter: blur(14px);
-  transform: translateX(-50%);
+  /* --blob-shift (mobile) slides the glow to the search cluster without
+     changing the layer's intrinsic geometry. */
+  transform: translateX(-50%) translateY(var(--blob-shift, 0px));
   /* Simple long fade like the loved original — keeps the core fully solid */
   -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 84%);
   mask-image: linear-gradient(to bottom, #000 50%, transparent 84%);
@@ -214,16 +216,13 @@ input {
 @media (max-width: 640px) {
   .site-bg {
     /* Mobile: a contained glow hugging the search cluster, NOT a wall of blue.
-       The blob is 1650px tall (px-anchored so keyboard / URL-bar changes never
-       shift it), but a phone viewport is only ~700-850px, so the mask must
-       clear the blob within roughly one screen height, otherwise its solid
-       core fills the whole lower hero. Smaller core + an early fade does that. */
+       Vertical placement is owned by --blob-shift (see Layout.astro) so the
+       glow stays behind the widget on every phone height. */
     height: 1650px;
     background-position: center 460px;
     background-size: 130% auto;
     /* Keep the glow OFF the headline (transparent up top), concentrate it lower
-       behind the search area, then fade out below. The band is what positions
-       the visible blue, so shifting it here raises/lowers the blob. */
+       behind the search area, then fade out below. */
     -webkit-mask-image: linear-gradient(
       to bottom,
       transparent 20%,
@@ -383,9 +382,9 @@ input {
    gradient down concentrates its colour), then blooms outward to rest.
    Transform/opacity only — compositor-cheap even on the big layer. */
 @keyframes load-bloom {
-  0%   { opacity: 0; transform: translateX(-50%) scale(0.16); }
+  0%   { opacity: 0; transform: translateX(-50%) translateY(var(--blob-shift, 0px)) scale(0.16); }
   40%  { opacity: 1; }
-  100% { opacity: 1; transform: translateX(-50%) scale(1); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(var(--blob-shift, 0px)) scale(1); }
 }
 @keyframes load-dots {
   from { opacity: 0; }
@@ -610,7 +609,7 @@ input {
     transform: none !important;
   }
   .site-bg {
-    transform: translateX(-50%) !important;
+    transform: translateX(-50%) translateY(var(--blob-shift, 0px)) !important;
   }
   .site-dots {
     transform: none !important;
