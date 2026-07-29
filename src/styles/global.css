@@ -319,6 +319,12 @@ input {
     margin-top: -6.5rem;
   }
 }
+/* Phones: don’t yank satellite into the first fold — hero owns the screen. */
+@media (max-width: 640px) {
+  .page-lower {
+    margin-top: 0;
+  }
+}
 
 /* Small uppercase section label */
 .section-label {
