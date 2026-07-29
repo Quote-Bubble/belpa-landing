@@ -212,12 +212,25 @@ input {
        clear the blob within roughly one screen height, otherwise its solid
        core fills the whole lower hero. Smaller core + an early fade does that. */
     height: 1650px;
-    background-position: center 260px;
-    background-size: 120% auto;
-    /* Solid behind the headline/search, then fully dissolved to clean white by
-       about the bottom of the hero (~52% of 1650px ≈ a phone's height). */
-    -webkit-mask-image: linear-gradient(to bottom, #000 22%, transparent 52%);
-    mask-image: linear-gradient(to bottom, #000 22%, transparent 52%);
+    background-position: center 520px;
+    background-size: 130% auto;
+    /* Keep the glow OFF the headline (transparent up top), concentrate it lower
+       behind the search area, then fade out below. The band is what positions
+       the visible blue, so pushing it down here lowers the blob. */
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 24%,
+      #000 36%,
+      #000 52%,
+      transparent 74%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 24%,
+      #000 36%,
+      #000 52%,
+      transparent 74%
+    );
   }
 }
 
