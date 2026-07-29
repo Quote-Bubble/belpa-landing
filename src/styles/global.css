@@ -47,6 +47,13 @@
   --q-shadow-room: calc(var(--q-collapsed-h) - var(--q-collapsed-bar-h));
   --q-embed-pad-x: 22px;
 }
+@media (max-width: 640px) {
+  :root {
+    --q-collapsed-bar-h: 62px;
+    --q-collapsed-h: 82px;
+    --q-embed-pad-x: 12px;
+  }
+}
 
 @property --dz-blur {
   syntax: "<length>";
