@@ -179,6 +179,11 @@ const COLLAPSED_H_MOBILE = 82;
     let restoreY = 0;
     let scrollLocked = false;
     let overlayMounted = false;
+    // Keeps the iframe fullscreen while the widget's close fade plays, so the
+    // exiting flow is never clipped back to the collapsed slot mid-fade.
+    let overlayCloseTimer = 0;
+    // Must match the widget overlay's exit transition (QuoteBubble ~0.26s).
+    const OVERLAY_EXIT_MS = 300;
 
     function applyOverlayFrameStyles() {
       const vv = window.visualViewport;
@@ -207,6 +212,11 @@ const COLLAPSED_H_MOBILE = 82;
     }
 
     function mountOverlayFrame() {
+      // Re-opened before a pending close finished — cancel the shrink.
+      if (overlayCloseTimer) {
+        window.clearTimeout(overlayCloseTimer);
+        overlayCloseTimer = 0;
+      }
       if (overlayMounted) {
         applyOverlayFrameStyles();
         return;
@@ -320,8 +330,17 @@ const COLLAPSED_H_MOBILE = 82;
       if (mode === "overlay") {
         resetLowerSections();
         mountOverlayFrame();
+      } else if (wasOverlay) {
+        // Closing the mobile flow: hold the iframe fullscreen while the
+        // widget's overlay fades out, THEN shrink + unlock in one step so the
+        // exiting flow is never clipped back to the collapsed slot. Do NOT set
+        // the collapsed height now — that would shrink the frame immediately.
+        if (overlayCloseTimer) window.clearTimeout(overlayCloseTimer);
+        overlayCloseTimer = window.setTimeout(() => {
+          overlayCloseTimer = 0;
+          if (holder.dataset.mode !== "overlay") unmountOverlayFrame();
+        }, OVERLAY_EXIT_MS);
       } else {
-        if (wasOverlay) unmountOverlayFrame();
         if (h) frame.style.height = `${h}px`;
       }
 
