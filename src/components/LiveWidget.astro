@@ -186,18 +186,19 @@ const COLLAPSED_H_MOBILE = 82;
     const OVERLAY_EXIT_MS = 300;
 
     function applyOverlayFrameStyles() {
-      const vv = window.visualViewport;
-      const top = vv?.offsetTop ?? 0;
-      const left = vv?.offsetLeft ?? 0;
-      const width = Math.ceil(vv?.width ?? window.innerWidth);
-      const height = Math.ceil(vv?.height ?? window.innerHeight);
+      // Size to the LAYOUT viewport, not the visual viewport. iOS shrinks the
+      // visual viewport when the software keyboard opens; sizing the iframe to
+      // it made the whole flow squeeze/reflow and shoved the Continue button up
+      // as the keyboard appeared. window.innerHeight stays constant across the
+      // keyboard on iOS, so the sheet keeps its full height and the keyboard
+      // simply OVERLAYS it — the widget scrolls the focused field into view.
       frame.style.position = "fixed";
-      frame.style.top = `${top}px`;
-      frame.style.left = `${left}px`;
+      frame.style.top = "0";
+      frame.style.left = "0";
       frame.style.right = "auto";
       frame.style.bottom = "auto";
-      frame.style.width = `${width}px`;
-      frame.style.height = `${height}px`;
+      frame.style.width = `${window.innerWidth}px`;
+      frame.style.height = `${window.innerHeight}px`;
       frame.style.zIndex = "2147483000";
       frame.style.background = "#ffffff";
       frame.style.border = "0";
@@ -207,7 +208,9 @@ const COLLAPSED_H_MOBILE = 82;
       frame.style.maxHeight = "none";
     }
 
-    function onVisualViewportChange() {
+    // Re-size only on real viewport changes (orientation / URL-bar), NOT on the
+    // keyboard — that's the whole point of using the layout viewport above.
+    function onViewportChange() {
       if (overlayMounted) applyOverlayFrameStyles();
     }
 
@@ -236,8 +239,8 @@ const COLLAPSED_H_MOBILE = 82;
       lenis?.stop?.();
 
       applyOverlayFrameStyles();
-      window.visualViewport?.addEventListener("resize", onVisualViewportChange);
-      window.visualViewport?.addEventListener("scroll", onVisualViewportChange);
+      window.addEventListener("resize", onViewportChange);
+      window.addEventListener("orientationchange", onViewportChange);
 
       scrollLocked = true;
       document.documentElement.classList.add("quoter-overlay-open");
@@ -252,14 +255,8 @@ const COLLAPSED_H_MOBILE = 82;
     function unmountOverlayFrame() {
       if (!overlayMounted && !scrollLocked) return;
       overlayMounted = false;
-      window.visualViewport?.removeEventListener(
-        "resize",
-        onVisualViewportChange,
-      );
-      window.visualViewport?.removeEventListener(
-        "scroll",
-        onVisualViewportChange,
-      );
+      window.removeEventListener("resize", onViewportChange);
+      window.removeEventListener("orientationchange", onViewportChange);
 
       frame.style.position = "";
       frame.style.top = "";
