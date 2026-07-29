@@ -182,10 +182,19 @@ export function initMeetingWipe() {
   const unbindLenis = bindLenisScroll("meeting", () => flight.kick(), fly);
 
   window.addEventListener("scroll", () => flight.kick(), { passive: true, signal });
+  // Only re-measure on a real WIDTH change. On mobile the URL bar toggling
+  // fires resize with a height-only change, and re-running measure() there
+  // recomputes the vh-based phases mid-scroll, which jolts the wipe (the
+  // "breaks on mobile" bug). The button's dock range is svh-stable regardless.
+  let lastW = window.innerWidth;
   window.addEventListener(
     "resize",
     () => {
-      measure();
+      const w = window.innerWidth;
+      if (w !== lastW) {
+        lastW = w;
+        measure();
+      }
       flight.measure();
       paint();
     },

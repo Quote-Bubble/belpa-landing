@@ -198,10 +198,20 @@ export function initBrandDock() {
     () => flight.kick(),
     { passive: true, signal },
   );
+  // On mobile the URL bar showing/hiding fires resize with only a HEIGHT
+  // change. Re-capturing the hero wordmark's position on that jolts the morph's
+  // range mid-scroll (that's the "breaks on mobile" bug). The hero is sized in
+  // svh, so its layout doesn't actually move when the URL bar does — only
+  // remeasure on a real WIDTH change (orientation / desktop resize).
+  let lastW = window.innerWidth;
   window.addEventListener(
     "resize",
     () => {
-      remeasure();
+      const w = window.innerWidth;
+      if (w !== lastW) {
+        lastW = w;
+        remeasure();
+      }
       flight.measure();
     },
     { passive: true, signal },
