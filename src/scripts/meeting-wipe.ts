@@ -24,7 +24,8 @@ export function initMeetingWipe() {
   const hero = document.querySelector<HTMLElement>("[data-meeting-spacer]");
   const label = document.querySelector<HTMLElement>("[data-meeting-label]");
   const glass = document.querySelector<HTMLElement>("[data-glass-nav]");
-  if (!fly || !hero || !label || !glass) return;
+  const slot = document.querySelector<HTMLElement>("[data-nav-meeting-slot]");
+  if (!fly || !hero || !label || !glass || !slot) return;
 
   const prev = (fly as unknown as { __morphAbort?: AbortController }).__morphAbort;
   prev?.abort();
@@ -43,16 +44,12 @@ export function initMeetingWipe() {
   let running = true;
 
   function measure() {
-    const padR = window.innerWidth < 640 ? 12 : 16;
-    const compact = window.innerWidth < 640;
-    const w = compact ? 102 : 132;
-    const h = compact ? 36 : 40;
-    const glassR = glass.getBoundingClientRect();
-    const y =
-      glassR.height > 0
-        ? glassR.top + (glassR.height - h) / 2
-        : Math.max(10, glassR.top || 10);
-    dock = { x: window.innerWidth - padR - w, y, w, h };
+    // Dock into the right-hand slot of the unified nav pill rather than the
+    // screen corner — the button reforms as part of the bar, not beside it.
+    // The slot is laid out even while the pill is transparent, so its rect is
+    // valid from boot.
+    const r0 = slot.getBoundingClientRect();
+    dock = { x: r0.left, y: r0.top, w: r0.width, h: r0.height };
 
     // Anchored to the button's own position, not the wordmark's, so it stays
     // put for most of the hero and only lets go near the top of the viewport.

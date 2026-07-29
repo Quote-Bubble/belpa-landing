@@ -31,6 +31,7 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
      element that flies into the nav on scroll. -->
 <div class="glass-nav" data-glass-nav inert>
   <span class="glass-nav-brand-slot" data-nav-brand-slot aria-hidden="true">Quoter</span>
+  <span class="glass-nav-meeting-slot" data-nav-meeting-slot aria-hidden="true"></span>
 </div>
 
 <!-- Mobile nav: the desktop scroll-morph can't stay smooth on touch (native
@@ -185,11 +186,13 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     z-index: 60;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 0;
-    width: 104px;
+    justify-content: space-between;
+    /* One unified bar: the wordmark docks into the left slot, "Book a call"
+       reforms into the right slot. Sized by its content — bigger left pad for
+       the wordmark, tight right pad so the button hugs the edge. */
+    gap: 26px;
     max-width: min(640px, calc(100vw - 24px));
-    padding: 6px 18px;
+    padding: 7px 7px 7px 22px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.55);
     backdrop-filter: blur(24px) saturate(1.7);
@@ -208,7 +211,7 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
   .glass-nav-brand-slot {
     flex: none;
     font-family: var(--font-display);
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
     letter-spacing: -0.045em;
     line-height: 0.92;
@@ -217,13 +220,13 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     pointer-events: none;
   }
 
-  @media (max-width: 639px) {
-    .glass-nav {
-      width: 96px;
-      max-width: min(100vw - 16px, 640px);
-      padding-left: 16px;
-      padding-right: 16px;
-    }
+  /* Transparent placeholder the docked "Book a call" button overlays exactly.
+     It reserves the button's box so the pill lays out at the right width. */
+  .glass-nav-meeting-slot {
+    flex: none;
+    width: 132px;
+    height: 40px;
+    border-radius: 999px;
   }
 
   @media (prefers-reduced-motion: reduce) {
