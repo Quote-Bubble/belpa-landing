@@ -165,56 +165,35 @@ const roofPath =
     .sat-panel-bg {
       top: -160px;
       bottom: -80px;
-      -webkit-mask-image:
-        linear-gradient(
-          to right,
-          transparent 0%,
-          rgba(0, 0, 0, 0.15) 4%,
-          rgba(0, 0, 0, 0.55) 9%,
-          #000 16%,
-          #000 84%,
-          rgba(0, 0, 0, 0.55) 91%,
-          rgba(0, 0, 0, 0.15) 96%,
-          transparent 100%
-        ),
-        linear-gradient(
-          to bottom,
-          transparent 0%,
-          rgba(0, 0, 0, 0.1) 6%,
-          rgba(0, 0, 0, 0.4) 13%,
-          rgba(0, 0, 0, 0.8) 20%,
-          #000 27%,
-          #000 78%,
-          rgba(0, 0, 0, 0.5) 89%,
-          rgba(0, 0, 0, 0.12) 96%,
-          transparent 100%
-        );
-      -webkit-mask-composite: source-in;
-      mask-image:
-        linear-gradient(
-          to right,
-          transparent 0%,
-          rgba(0, 0, 0, 0.15) 4%,
-          rgba(0, 0, 0, 0.55) 9%,
-          #000 16%,
-          #000 84%,
-          rgba(0, 0, 0, 0.55) 91%,
-          rgba(0, 0, 0, 0.15) 96%,
-          transparent 100%
-        ),
-        linear-gradient(
-          to bottom,
-          transparent 0%,
-          rgba(0, 0, 0, 0.1) 6%,
-          rgba(0, 0, 0, 0.4) 13%,
-          rgba(0, 0, 0, 0.8) 20%,
-          #000 27%,
-          #000 78%,
-          rgba(0, 0, 0, 0.5) 89%,
-          rgba(0, 0, 0, 0.12) 96%,
-          transparent 100%
-        );
-      mask-composite: intersect;
+      /* Full-bleed on phones: drop the left/right fades (they framed the blue
+         like a white box on a narrow screen) and keep only the top/bottom fade
+         for a clean handoff into the page above and below. */
+      -webkit-mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        rgba(0, 0, 0, 0.1) 6%,
+        rgba(0, 0, 0, 0.4) 13%,
+        rgba(0, 0, 0, 0.8) 20%,
+        #000 27%,
+        #000 78%,
+        rgba(0, 0, 0, 0.5) 89%,
+        rgba(0, 0, 0, 0.12) 96%,
+        transparent 100%
+      );
+      -webkit-mask-composite: source-over;
+      mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        rgba(0, 0, 0, 0.1) 6%,
+        rgba(0, 0, 0, 0.4) 13%,
+        rgba(0, 0, 0, 0.8) 20%,
+        #000 27%,
+        #000 78%,
+        rgba(0, 0, 0, 0.5) 89%,
+        rgba(0, 0, 0, 0.12) 96%,
+        transparent 100%
+      );
+      mask-composite: add;
     }
   }
   .sat-clouds {
