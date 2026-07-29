@@ -4,12 +4,12 @@ const year = new Date().getFullYear();
 
 <!-- Sharp closer: sends people back to the address field -->
 <section
-  class="footer-cta cv-auto relative mx-auto max-w-3xl px-4 pt-6 pb-14 text-center sm:px-6 sm:pt-8 sm:pb-16"
+  class="footer-cta cv-auto relative mx-auto max-w-3xl px-4 pt-5 pb-6 text-center sm:px-6 sm:pt-8 sm:pb-16"
   data-reveal="scale"
 >
   <p class="footer-cta-line font-display">Want free roof quotes on your website?</p>
   <button type="button" data-try class="footer-cta-link">
-    Try it free above
+    Try now
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
@@ -18,7 +18,7 @@ const year = new Date().getFullYear();
 
 <footer class="footer-giant relative">
   <div class="giant-wrap" data-reveal="brand-echo">
-    <div class="giant-word" aria-hidden="true">Quoter</div>
+    <div class="giant-word" aria-hidden="true" data-fx="punch">Quoter</div>
   </div>
 
   <div class="footer-legal">
@@ -146,12 +146,14 @@ const year = new Date().getFullYear();
       );
     }
     .giant-word {
-      margin-top: 2.75rem;
-      font-size: clamp(4.6rem, 28vw, 9rem);
+      /* Keep enough top air that the word sits in the blue band, not the
+         pale page fade that made white type disappear. */
+      margin-top: 2.25rem;
+      font-size: clamp(3.6rem, 24vw, 7rem);
     }
     .footer-legal {
-      padding-top: 14px;
-      padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+      padding: 14px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+      font-size: 12px;
     }
   }
 </style>
