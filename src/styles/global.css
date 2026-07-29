@@ -507,6 +507,16 @@ input {
   /* keep translateX(-50%) from base so load anim doesn't un-center the blob */
   animation: load-bloom 1.9s var(--ease-out-expo) 0.08s forwards;
 }
+/* Mobile: don't start the bloom until --blob-shift is set (is-anchored). */
+@media (max-width: 640px) {
+  .site-bg:not(.is-anchored) {
+    animation: none;
+    opacity: 0;
+  }
+  .site-bg.is-anchored {
+    animation: load-bloom 1.7s var(--ease-out-expo) 0s forwards;
+  }
+}
 .site-dots {
   opacity: 0;
   animation: load-dots 1.5s ease 1.2s forwards;

@@ -176,12 +176,9 @@ const {
 
 <script>
   /**
-   * Mobile only: slide the hero blob so its glow sits behind the search bar
-   * + Book a call cluster on every phone height. Fixed px placement drifted
-   * on short/tall screens once the hero was vertically centred.
-   *
-   * Uses --blob-shift (compose with load-bloom). Ignores keyboard
-   * visualViewport jumps — only width/orientation/layout settle.
+   * Mobile only: pin the hero blob behind the search + Book a call cluster.
+   * Hide until the first measure, then bloom from the correct place so the
+   * user never sees a default→shift jump.
    */
   function initBlobAnchor() {
     const bg = document.querySelector<HTMLElement>(".site-bg");
@@ -192,46 +189,71 @@ const {
     // ((32% + 48%) / 2) * 1650 + top(-90) ≈ 570px from document top at shift 0.
     const NATURAL_BAND_MID = -90 + 1650 * 0.4;
 
-    const pin = () => {
-      if (!mq.matches) {
-        bg.style.removeProperty("--blob-shift");
-        return;
-      }
+    const measureShift = (): number | null => {
       const widget = document.querySelector<HTMLElement>("[data-widget-shell]");
-      if (!widget) return;
+      if (!widget) return null;
       const meeting = document.querySelector<HTMLElement>("[data-meeting-spacer]");
       const w = widget.getBoundingClientRect();
       const m = meeting?.getBoundingClientRect();
-      // Midpoint of search + Book a call — where the glow should sit.
       const target = m
         ? (w.top + m.bottom) / 2
         : w.top + w.height * 0.55;
-      const shift = Math.round(target - NATURAL_BAND_MID);
-      bg.style.setProperty("--blob-shift", `${shift}px`);
+      return Math.round(target - NATURAL_BAND_MID);
     };
 
+    const reveal = () => {
+      // Force a style flush so the browser applies --blob-shift before bloom.
+      void bg.offsetWidth;
+      bg.classList.add("is-anchored");
+    };
+
+    const pinAndReveal = () => {
+      if (!mq.matches) {
+        bg.style.removeProperty("--blob-shift");
+        bg.classList.add("is-anchored");
+        return;
+      }
+      const shift = measureShift();
+      if (shift == null) {
+        // Widget not ready — try again next frame, still hidden.
+        requestAnimationFrame(pinAndReveal);
+        return;
+      }
+      bg.style.setProperty("--blob-shift", `${shift}px`);
+      reveal();
+    };
+
+    // Quiet re-pin on orientation / width change only (no mid-bloom nudges).
     let lastW = window.innerWidth;
     const onResize = () => {
-      // Width-only: ignore URL-bar / keyboard height churn.
-      if (window.innerWidth === lastW && mq.matches) return;
+      if (window.innerWidth === lastW) return;
       lastW = window.innerWidth;
-      pin();
+      if (!mq.matches) {
+        bg.style.removeProperty("--blob-shift");
+        bg.classList.add("is-anchored");
+        return;
+      }
+      const shift = measureShift();
+      if (shift != null) bg.style.setProperty("--blob-shift", `${shift}px`);
     };
 
-    pin();
-    // After fonts + entrance layout (widget rise ~1.7s).
-    window.setTimeout(pin, 200);
-    window.setTimeout(pin, 900);
-    window.setTimeout(pin, 2000);
+    // Double-rAF: layout has the centred hero before we measure.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(pinAndReveal);
+    });
+
     window.addEventListener("resize", onResize, { passive: true });
-    mq.addEventListener("change", pin);
-    document.fonts?.ready?.then?.(pin);
+    mq.addEventListener("change", () => {
+      bg.classList.remove("is-anchored");
+      pinAndReveal();
+    });
 
     document.addEventListener("astro:after-swap", () => {
       lastW = window.innerWidth;
-      pin();
-      window.setTimeout(pin, 200);
-      window.setTimeout(pin, 900);
+      bg.classList.remove("is-anchored");
+      requestAnimationFrame(() => {
+        requestAnimationFrame(pinAndReveal);
+      });
     });
   }
 
