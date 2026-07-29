@@ -659,6 +659,23 @@ html.quoter-flow-open .meeting-fly {
   transition: opacity 0.2s ease;
 }
 
+/* Fullscreen mobile quote flow: freeze the landing page and hide chrome that
+   would otherwise peek through / sit above the iframe on real iOS Safari.
+   (DevTools device mode often fails to reproduce the scroll-through bug.) */
+html.quoter-overlay-open,
+html.quoter-overlay-open body {
+  overscroll-behavior: none;
+}
+html.quoter-overlay-open .mobile-nav {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+html.quoter-overlay-open .site-bg,
+html.quoter-overlay-open .site-dots {
+  visibility: hidden !important;
+}
+
 /* When the widget expands into its panel it overlays downward and can spill
    over the section below (the panel is taller than the hero has room for).
    Rather than dim the page, we push the lower sections down so there's real

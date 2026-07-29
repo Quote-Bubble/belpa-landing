@@ -21,7 +21,7 @@
 // (e.g. a custom domain), change it in BOTH places. vercel.json can't read an
 // env var, so this stays a manual, hand-kept pair.
 // In `astro dev` this points at a locally-running quoter-widget-frontend so
-// widget changes are actually visible here. Without this the dev site embeds
+// widget changes are actually visible here. Without this the DEV site embeds
 // PRODUCTION, and local widget work appears to do nothing at all.
 // Override with PUBLIC_QUOTER_EMBED_ORIGIN; builds always use the live origin
 // (which is the one vercel.json's frame-src allows).
@@ -45,7 +45,6 @@ const COLLAPSED_H_MOBILE = 82;
     loading="eager"
     scrolling="no"
     sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-    style={`height:${COLLAPSED_H}px`}
   ></iframe>
 </div>
 
@@ -84,13 +83,16 @@ const COLLAPSED_H_MOBILE = 82;
   .q[data-mode="expanded"] iframe {
     z-index: 60;
   }
-  /* Mobile flow needs the whole screen. */
+  /* Mobile flow: true fullscreen sheet above everything on the host. */
   .q[data-mode="overlay"] iframe {
     position: fixed;
     inset: 0;
-    width: 100vw;
+    width: 100%;
+    width: 100dvw;
+    height: 100%;
     height: 100dvh;
-    z-index: 9999;
+    z-index: 2147483000;
+    background: #ffffff;
     transition: none;
   }
 </style>
@@ -166,6 +168,44 @@ const COLLAPSED_H_MOBILE = 82;
       else window.scrollTo({ top: target, behavior: "smooth" });
     }
 
+    // iOS-safe body scroll lock for the fullscreen mobile flow. DevTools
+    // emulation often hides this bug; real Safari still scrolls the host
+    // behind a fixed transparent iframe unless the document is pinned.
+    let lockedY = 0;
+    let scrollLocked = false;
+    function lockHostScroll() {
+      if (scrollLocked) return;
+      scrollLocked = true;
+      lockedY = window.scrollY || window.pageYOffset || 0;
+      const lenis = (window as unknown as {
+        __lenis?: { stop?: () => void };
+      }).__lenis;
+      lenis?.stop?.();
+      document.documentElement.classList.add("quoter-overlay-open");
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${lockedY}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.width = "100%";
+      document.body.style.overflow = "hidden";
+    }
+    function unlockHostScroll() {
+      if (!scrollLocked) return;
+      scrollLocked = false;
+      document.documentElement.classList.remove("quoter-overlay-open");
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.width = "";
+      document.body.style.overflow = "";
+      const lenis = (window as unknown as {
+        __lenis?: { start?: () => void };
+      }).__lenis;
+      lenis?.start?.();
+      window.scrollTo(0, lockedY);
+    }
+
     window.addEventListener("message", (e: MessageEvent) => {
       if (e.origin !== embedOrigin) return;
       const d = e.data;
@@ -174,6 +214,7 @@ const COLLAPSED_H_MOBILE = 82;
       const mode = typeof d.mode === "string" ? d.mode : "collapsed";
       const h = typeof d.height === "number" && d.height > 0 ? d.height : 0;
       const wasExpanded = holder.dataset.mode === "expanded";
+      const wasOverlay = holder.dataset.mode === "overlay";
 
       // Mirror stage + mode so host CSS/selectors keep working.
       if (typeof d.stage === "string") holder.dataset.stage = d.stage;
@@ -205,8 +246,13 @@ const COLLAPSED_H_MOBILE = 82;
       // clear any inline height left over from a previous mode.
       if (mode === "overlay") {
         frame.style.height = "";
+        lockHostScroll();
+        resetLowerSections();
       } else if (h) {
         frame.style.height = `${h}px`;
+        if (wasOverlay) unlockHostScroll();
+      } else if (wasOverlay) {
+        unlockHostScroll();
       }
 
       if (mode === "expanded") {
@@ -215,7 +261,7 @@ const COLLAPSED_H_MOBILE = 82;
         if (!wasExpanded) {
           window.setTimeout(scrollPanelIntoView, 320);
         }
-      } else {
+      } else if (mode !== "overlay") {
         resetLowerSections();
       }
     });
