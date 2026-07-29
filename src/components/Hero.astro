@@ -247,9 +247,11 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
 
   @media (max-width: 640px) {
     .hero-stage {
-      justify-content: flex-start;
-      padding-top: calc(env(safe-area-inset-top, 0px) + 4.75rem);
-      padding-bottom: 1.25rem;
+      /* Centre the hero content in the viewport so it sits balanced rather than
+         jammed near the top. Short phones fall back to top-anchored below. */
+      justify-content: center;
+      padding-top: calc(env(safe-area-inset-top, 0px) + 1.5rem);
+      padding-bottom: 2rem;
     }
     .hero-brand-spacer {
       font-size: clamp(3.4rem, 18vw, 4.75rem);
@@ -271,6 +273,8 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
 
   @media (max-width: 640px) and (max-height: 720px) {
     .hero-stage {
+      /* Short phones: top-anchor so the taller content block can't overflow. */
+      justify-content: flex-start;
       padding-top: calc(env(safe-area-inset-top, 0px) + 3.25rem);
     }
     .hero-brand-spacer {
