@@ -247,11 +247,12 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
 
   @media (max-width: 640px) {
     .hero-stage {
-      /* Centre the hero content in the viewport so it sits balanced rather than
-         jammed near the top. Short phones fall back to top-anchored below. */
+      /* Centre the hero content, biased slightly DOWN. A bigger top pad than
+         bottom pad shifts the optically-centred block below the true middle so
+         it doesn't read as jammed near the top. Short phones top-anchor below. */
       justify-content: center;
-      padding-top: calc(env(safe-area-inset-top, 0px) + 1.5rem);
-      padding-bottom: 2rem;
+      padding-top: calc(env(safe-area-inset-top, 0px) + 5.5rem);
+      padding-bottom: 1rem;
     }
     .hero-brand-spacer {
       font-size: clamp(3.4rem, 18vw, 4.75rem);
