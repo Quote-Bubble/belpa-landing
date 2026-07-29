@@ -275,11 +275,24 @@ export function initBrandDock() {
     if (brandBooted) remeasure();
   });
 
+  // The docked wordmark is a fixed element resting on the transparent brand
+  // slot. When the nav pill lengthens (Book a call revealed) the slot shifts,
+  // so expose a re-measure so that animation can keep the wordmark on its slot.
+  const brandSync = () => {
+    if (!ready) return;
+    measureDock();
+    paint();
+  };
+  (window as Window & { __brandDock?: { sync: () => void } | null }).__brandDock = {
+    sync: brandSync,
+  };
+
   signal.addEventListener("abort", () => {
     running = false;
     unsub();
     unbindLenis();
     document.documentElement.classList.remove("is-brand-morphing");
     glass.style.transition = "";
+    (window as Window & { __brandDock?: { sync: () => void } | null }).__brandDock = null;
   });
 }
