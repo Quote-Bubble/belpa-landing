@@ -27,6 +27,10 @@ export function initBrandDock() {
   let running = true;
   let latch = 0;
   let lastInteractive: boolean | null = null;
+  // font-size is constant for the whole flight (only the transform scales the
+  // wordmark down), so writing it every frame just forces a needless style
+  // recalc — a real source of mobile jank. Track it and only write on change.
+  let lastFs = -1;
 
   /**
    * Measure the hero wordmark's UNTRANSFORMED layout box.
@@ -126,16 +130,21 @@ export function initBrandDock() {
     const scale = Math.pow(dockW / from.w, t);
     const x = xFor(t, scale);
 
+    // Only the docked terminal uses the dock font size; the hero rest and the
+    // whole flight use the hero size (the transform's scale does the shrinking).
+    const targetFs = t > 0.996 ? dockFs : from.fs;
+    if (targetFs !== lastFs) {
+      fly.style.fontSize = `${targetFs}px`;
+      lastFs = targetFs;
+    }
+
     if (t < 0.004) {
-      fly.style.fontSize = `${from.fs}px`;
       fly.style.transform = `translate3d(${from.x}px, ${natY}px, 0)`;
       fly.style.willChange = "";
     } else if (t > 0.996) {
-      fly.style.fontSize = `${dockFs}px`;
       fly.style.transform = `translate3d(${dockX}px, ${dockY}px, 0)`;
       fly.style.willChange = "";
     } else {
-      fly.style.fontSize = `${from.fs}px`;
       fly.style.transform = `translate3d(${x}px, ${top}px, 0) scale(${scale})`;
       fly.style.willChange = "transform";
     }
@@ -160,6 +169,7 @@ export function initBrandDock() {
   function remeasure() {
     captureFrom();
     measureDock();
+    lastFs = -1; // font metrics may have changed; force a re-write next paint
   }
 
   function reveal() {

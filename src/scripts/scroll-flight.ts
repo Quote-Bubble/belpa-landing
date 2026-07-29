@@ -55,6 +55,9 @@ export function ensureScrollFlight(): ScrollFlight {
   const onResize = () => scheduleMeasure();
 
   window.addEventListener("scroll", onScroll, { passive: true });
+  // Mobile momentum scrolling can settle without a final `scroll` event, leaving
+  // the morph painted at a stale mid-flight position. Re-paint once it stops.
+  window.addEventListener("scrollend", onScroll, { passive: true });
   window.addEventListener("resize", onResize, { passive: true });
   window.addEventListener("pageshow", scheduleMeasure, { passive: true });
   window.addEventListener("quoter:lenis", schedulePaint as EventListener);
@@ -86,6 +89,7 @@ export function ensureScrollFlight(): ScrollFlight {
       cancelAnimationFrame(measureRaf);
       cancelAnimationFrame(paintRaf);
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scrollend", onScroll);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("pageshow", scheduleMeasure);
       window.removeEventListener("quoter:lenis", schedulePaint as EventListener);
