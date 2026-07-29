@@ -18,7 +18,7 @@ const roofPath =
   <div class="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
     <div class="sat-inner px-4 py-12 sm:px-10 sm:py-24 lg:px-12 lg:py-28">
       <div class="sat-layout">
-        <div class="sat-copy" data-reveal="left" data-fx="lift">
+        <div class="sat-copy" data-reveal="fade" data-fx="rush">
           <h2 class="font-display sat-title">
             It starts from space.
           </h2>
@@ -302,6 +302,8 @@ const roofPath =
     width: 100%;
     max-width: 560px;
     margin-inline: auto;
+    /* Depth for the .sat-card "orbit" Y-axis bank (section-fx). */
+    perspective: 1600px;
   }
   @media (min-width: 1024px) {
     .sat-wrap {

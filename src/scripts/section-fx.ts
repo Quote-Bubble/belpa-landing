@@ -33,29 +33,38 @@ export function initSectionFx(): () => void {
     return smoothstep(clamp01((vh - top) / (vh * 0.72)));
   }
 
+  // Every effect resolves to the element's untouched resting state at p=1
+  // (scale 1, no offset, no rotation) so nothing is left displaced or clipped.
   function apply(el: HTMLElement, fx: string, vh: number) {
     const p = enterP(el, vh);
     const inv = 1 - p;
     switch (fx) {
-      // Satellite: plunges in from orbit — small and low, zooming up to full.
+      // Satellite: BANKS in from orbit — swings around its Y axis while zooming,
+      // like a panel turning to face you. (3D on the Y axis.)
       case "orbit":
-        el.style.scale = (0.6 + 0.4 * p).toFixed(4);
-        el.style.translate = `0 ${(inv * 130).toFixed(1)}px`;
+        el.style.scale = (0.72 + 0.28 * p).toFixed(4);
+        el.style.rotate = `y ${(inv * 42).toFixed(2)}deg`;
+        el.style.translate = `${(inv * 70).toFixed(1)}px 0`;
         break;
-      // Dashboard: tips up out of a 3D lean into a flat, face-on panel.
+      // Dashboard: tips up out of a steep 3D lean into a flat, face-on panel.
+      // (3D on the X axis — the one you liked, pushed further.)
       case "tilt":
-        el.style.scale = (0.86 + 0.14 * p).toFixed(4);
-        el.style.translate = `0 ${(inv * 100).toFixed(1)}px`;
-        el.style.rotate = `x ${(inv * 20).toFixed(2)}deg`;
+        el.style.scale = (0.84 + 0.16 * p).toFixed(4);
+        el.style.translate = `0 ${(inv * 110).toFixed(1)}px`;
+        el.style.rotate = `x ${(inv * 28).toFixed(2)}deg`;
         break;
-      // Copy riding alongside a bigger neighbour — a gentle counter-rise.
-      case "lift":
-        el.style.translate = `0 ${(inv * -30).toFixed(1)}px`;
+      // Satellite copy: RUSHES in sideways with a slight cant, then straightens.
+      // (2D horizontal + Z-rotation — nothing else moves this way.)
+      case "rush":
+        el.style.translate = `${(-inv * 120).toFixed(1)}px 0`;
+        el.style.rotate = `${(-inv * 6).toFixed(2)}deg`;
+        el.style.scale = (0.9 + 0.1 * p).toFixed(4);
         break;
-      // Footer wordmark: swells up out of the floor as you hit the bottom.
-      case "giant":
-        el.style.scale = (0.82 + 0.26 * p).toFixed(4);
-        el.style.translate = `0 ${(inv * 80).toFixed(1)}px`;
+      // Footer wordmark: PUNCHES in from tiny to full, straight zoom, no tilt.
+      // Ends exactly at the designed size (scale 1) so it never clips.
+      case "punch":
+        el.style.scale = (0.48 + 0.52 * p).toFixed(4);
+        el.style.translate = `0 ${(inv * 44).toFixed(1)}px`;
         break;
     }
   }
