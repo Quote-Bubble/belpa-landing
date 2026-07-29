@@ -158,6 +158,17 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     padding-right: 8px;
   }
 
+  /* The docked pill + flying wordmark are the DESKTOP nav. Mobile uses the
+     plain fade bar (.mobile-nav) instead, so hard-hide these below the
+     breakpoint — the scroll-morph JS is already gated off there, this just
+     guarantees nothing leaks through on any viewport edge case. */
+  @media (max-width: 639px) {
+    .glass-nav,
+    .brand-fly {
+      display: none;
+    }
+  }
+
   .glass-nav-brand-slot {
     flex: none;
     font-family: var(--font-display);
