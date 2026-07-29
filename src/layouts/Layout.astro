@@ -212,3 +212,15 @@ const {
   initReveals();
   document.addEventListener("astro:after-swap", initReveals);
 </script>
+
+<script>
+  // Scroll-linked "cinematic" section effects (desktop). Composes with the
+  // reveals above via the individual scale/translate/rotate properties.
+  import { initSectionFx } from "../scripts/section-fx";
+
+  let cleanupFx = initSectionFx();
+  document.addEventListener("astro:after-swap", () => {
+    cleanupFx?.();
+    cleanupFx = initSectionFx();
+  });
+</script>

@@ -242,7 +242,7 @@ const NAV = [
 ---
 
 <section class="dd" aria-labelledby="dd-heading">
-  <div class="dd-frame" data-reveal="left">
+  <div class="dd-frame" data-reveal="fade" data-fx="tilt">
     <div class="dd-viewport">
       <!-- Static fit-to-frame scale (JS, resize-only). Real dashboard markup
            lives inside at true dashboard proportions, scaled as one block. -->
@@ -518,6 +518,13 @@ const NAV = [
     max-width: 76rem;
     margin-inline: auto;
     padding: clamp(4rem, 10vw, 8rem) 1.25rem;
+    /* Depth for the .dd-frame tilt (section-fx "tilt"): the panel rotates on
+       its X axis as it enters, so it needs a perspective ancestor to read as
+       real 3D rather than a flat squash. */
+    perspective: 1800px;
+  }
+  .dd-frame {
+    transform-origin: center 80%;
   }
   @media (min-width: 1024px) {
     .dd { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 3rem; }
