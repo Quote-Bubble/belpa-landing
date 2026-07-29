@@ -206,16 +206,18 @@ input {
 }
 @media (max-width: 640px) {
   .site-bg {
-    /* Mobile mirrors desktop: the blob's vibrant core sits directly BEHIND
-       the glass search bar (not below it), big enough to hug it with soft
-       edges. px-anchored so keyboard / URL-bar changes never shift it. */
+    /* Mobile: a contained glow hugging the search cluster, NOT a wall of blue.
+       The blob is 1650px tall (px-anchored so keyboard / URL-bar changes never
+       shift it), but a phone viewport is only ~700-850px, so the mask must
+       clear the blob within roughly one screen height, otherwise its solid
+       core fills the whole lower hero. Smaller core + an early fade does that. */
     height: 1650px;
-    background-position: center 380px;
-    background-size: 140% auto;
-    /* Mobile-tuned blend: stay solid through the widget zone, then a long
-       soft dissolve into the sky section */
-    -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 88%);
-    mask-image: linear-gradient(to bottom, #000 55%, transparent 88%);
+    background-position: center 260px;
+    background-size: 120% auto;
+    /* Solid behind the headline/search, then fully dissolved to clean white by
+       about the bottom of the hero (~52% of 1650px ≈ a phone's height). */
+    -webkit-mask-image: linear-gradient(to bottom, #000 22%, transparent 52%);
+    mask-image: linear-gradient(to bottom, #000 22%, transparent 52%);
   }
 }
 
