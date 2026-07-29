@@ -665,8 +665,26 @@ html.quoter-flow-open .meeting-fly {
 html.quoter-overlay-open,
 html.quoter-overlay-open body {
   overscroll-behavior: none;
+  background: #ffffff;
 }
-html.quoter-overlay-open .mobile-nav {
+/* Break transform/filter containing blocks so the iframe's position:fixed
+   is viewport-relative, not trapped inside the hero search slot. */
+html.quoter-overlay-open .hero,
+html.quoter-overlay-open .hero-stage,
+html.quoter-overlay-open .hero-cluster,
+html.quoter-overlay-open .hero-widget,
+html.quoter-overlay-open .widget-load,
+html.quoter-overlay-open #quoter-widget {
+  transform: none !important;
+  filter: none !important;
+  perspective: none !important;
+  contain: none !important;
+  will-change: auto !important;
+  animation: none !important;
+}
+html.quoter-overlay-open .mobile-nav,
+html.quoter-overlay-open .hero-scroll,
+html.quoter-overlay-open .page-lower {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;

@@ -83,13 +83,14 @@ const COLLAPSED_H_MOBILE = 82;
   .q[data-mode="expanded"] iframe {
     z-index: 60;
   }
-  /* Mobile flow: true fullscreen sheet above everything on the host. */
+  /* Mobile overlay: sized to the visual viewport in JS. CSS here is a
+     fallback if JS styles haven't applied yet. */
   .q[data-mode="overlay"] iframe {
-    position: fixed;
+    position: fixed !important;
     inset: 0;
-    width: 100%;
+    width: 100vw;
     width: 100dvw;
-    height: 100%;
+    height: 100vh;
     height: 100dvh;
     z-index: 2147483000;
     background: #ffffff;
@@ -123,6 +124,7 @@ const COLLAPSED_H_MOBILE = 82;
     // (expandedPanel 544 + shadow room). Prefer the live height EmbedFrame
     // posts so host layout stays correct if the widget changes sizes.
     let panelH = 574;
+    const desktopMq = window.matchMedia("(min-width: 640px)");
 
     // The panel overlays downward and, on a short hero, its bottom lands over
     // the section below. Push the lower sections down just enough to leave a
@@ -144,11 +146,11 @@ const COLLAPSED_H_MOBILE = 82;
       if (lower) lower.style.paddingTop = "";
     }
 
-    // Scroll the page just enough that the expanded panel sits fully in view.
-    // The panel overlays downward from the (in-flow) bar, so on a short hero
-    // its bottom lands below the fold — nudge down to reveal it, without
-    // pushing its top off the top of the screen.
+    // Desktop only: scroll so the expanded panel sits fully in view. On mobile
+    // the flow is a fullscreen overlay — this nudge freezes "It starts from
+    // space" into the locked backdrop and must never run.
     function scrollPanelIntoView() {
+      if (!desktopMq.matches) return;
       const rect = holder!.getBoundingClientRect();
       const vh = window.innerHeight;
       const topMargin = 24;
@@ -168,29 +170,102 @@ const COLLAPSED_H_MOBILE = 82;
       else window.scrollTo({ top: target, behavior: "smooth" });
     }
 
-    // iOS-safe body scroll lock for the fullscreen mobile flow. DevTools
-    // emulation often hides this bug; real Safari still scrolls the host
-    // behind a fixed transparent iframe unless the document is pinned.
-    let lockedY = 0;
+    // iOS-safe fullscreen. A transformed hero ancestor (.widget-load) traps
+    // position:fixed so the iframe only covers the search slot — then the
+    // locked backdrop shows "It starts from space" under the flow. We break
+    // that containing block via CSS, size the iframe to the visual viewport
+    // in place (no reparent — moving iframes can reload on some browsers),
+    // pin scroll to the top, and hide below-fold host copy.
+    let restoreY = 0;
     let scrollLocked = false;
-    function lockHostScroll() {
-      if (scrollLocked) return;
-      scrollLocked = true;
-      lockedY = window.scrollY || window.pageYOffset || 0;
+    let overlayMounted = false;
+
+    function applyOverlayFrameStyles() {
+      const vv = window.visualViewport;
+      const top = vv?.offsetTop ?? 0;
+      const left = vv?.offsetLeft ?? 0;
+      const width = Math.ceil(vv?.width ?? window.innerWidth);
+      const height = Math.ceil(vv?.height ?? window.innerHeight);
+      frame.style.position = "fixed";
+      frame.style.top = `${top}px`;
+      frame.style.left = `${left}px`;
+      frame.style.right = "auto";
+      frame.style.bottom = "auto";
+      frame.style.width = `${width}px`;
+      frame.style.height = `${height}px`;
+      frame.style.zIndex = "2147483000";
+      frame.style.background = "#ffffff";
+      frame.style.border = "0";
+      frame.style.transition = "none";
+      frame.style.margin = "0";
+      frame.style.maxWidth = "none";
+      frame.style.maxHeight = "none";
+    }
+
+    function onVisualViewportChange() {
+      if (overlayMounted) applyOverlayFrameStyles();
+    }
+
+    function mountOverlayFrame() {
+      if (overlayMounted) {
+        applyOverlayFrameStyles();
+        return;
+      }
+      overlayMounted = true;
+      restoreY = window.scrollY || window.pageYOffset || 0;
       const lenis = (window as unknown as {
-        __lenis?: { stop?: () => void };
+        __lenis?: {
+          stop?: () => void;
+          scrollTo?: (t: number, o?: unknown) => void;
+        };
       }).__lenis;
+      // Pin to top before locking so the frozen backdrop is the hero, not
+      // satellite copy that a desktop scroll-nudge may have revealed.
+      if (lenis?.scrollTo) lenis.scrollTo(0, { immediate: true, force: true });
+      else window.scrollTo(0, 0);
       lenis?.stop?.();
+
+      applyOverlayFrameStyles();
+      window.visualViewport?.addEventListener("resize", onVisualViewportChange);
+      window.visualViewport?.addEventListener("scroll", onVisualViewportChange);
+
+      scrollLocked = true;
       document.documentElement.classList.add("quoter-overlay-open");
       document.body.style.position = "fixed";
-      document.body.style.top = `-${lockedY}px`;
+      document.body.style.top = "0";
       document.body.style.left = "0";
       document.body.style.right = "0";
       document.body.style.width = "100%";
       document.body.style.overflow = "hidden";
     }
-    function unlockHostScroll() {
-      if (!scrollLocked) return;
+
+    function unmountOverlayFrame() {
+      if (!overlayMounted && !scrollLocked) return;
+      overlayMounted = false;
+      window.visualViewport?.removeEventListener(
+        "resize",
+        onVisualViewportChange,
+      );
+      window.visualViewport?.removeEventListener(
+        "scroll",
+        onVisualViewportChange,
+      );
+
+      frame.style.position = "";
+      frame.style.top = "";
+      frame.style.left = "";
+      frame.style.right = "";
+      frame.style.bottom = "";
+      frame.style.width = "";
+      frame.style.height = "";
+      frame.style.zIndex = "";
+      frame.style.background = "";
+      frame.style.border = "";
+      frame.style.transition = "";
+      frame.style.margin = "";
+      frame.style.maxWidth = "";
+      frame.style.maxHeight = "";
+
       scrollLocked = false;
       document.documentElement.classList.remove("quoter-overlay-open");
       document.body.style.position = "";
@@ -203,7 +278,7 @@ const COLLAPSED_H_MOBILE = 82;
         __lenis?: { start?: () => void };
       }).__lenis;
       lenis?.start?.();
-      window.scrollTo(0, lockedY);
+      window.scrollTo(0, restoreY);
     }
 
     window.addEventListener("message", (e: MessageEvent) => {
@@ -242,20 +317,15 @@ const COLLAPSED_H_MOBILE = 82;
         mode === "expanded",
       );
 
-      // Drive the iframe height. Overlay (mobile) is fully CSS-driven, so
-      // clear any inline height left over from a previous mode.
       if (mode === "overlay") {
-        frame.style.height = "";
-        lockHostScroll();
         resetLowerSections();
-      } else if (h) {
-        frame.style.height = `${h}px`;
-        if (wasOverlay) unlockHostScroll();
-      } else if (wasOverlay) {
-        unlockHostScroll();
+        mountOverlayFrame();
+      } else {
+        if (wasOverlay) unmountOverlayFrame();
+        if (h) frame.style.height = `${h}px`;
       }
 
-      if (mode === "expanded") {
+      if (mode === "expanded" && desktopMq.matches) {
         // Leave real space beneath the panel, then bring it fully into view.
         separateLowerSections();
         if (!wasExpanded) {
