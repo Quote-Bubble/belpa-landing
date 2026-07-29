@@ -4,7 +4,7 @@ const year = new Date().getFullYear();
 
 <!-- Sharp closer: sends people back to the address field -->
 <section
-  class="footer-cta cv-auto relative mx-auto max-w-3xl px-4 pt-6 pb-14 text-center sm:px-6 sm:pt-8 sm:pb-16"
+  class="footer-cta cv-auto relative mx-auto max-w-3xl px-4 pt-5 pb-6 text-center sm:px-6 sm:pt-8 sm:pb-16"
   data-reveal="scale"
 >
   <p class="footer-cta-line font-display">Want free roof quotes on your website?</p>
@@ -118,5 +118,19 @@ const year = new Date().getFullYear();
   }
   .footer-legal span {
     color: rgba(255, 255, 255, 0.75);
+  }
+
+  /* Trim the footer's vertical bulk on phones: less air above the brand echo,
+     a smaller word, and a tighter legal bar. */
+  @media (max-width: 640px) {
+    .giant-word {
+      margin-top: 0.5rem;
+      font-size: clamp(2.75rem, 18vw, 4.5rem);
+    }
+    .footer-legal {
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+      font-size: 12px;
+      gap: 4px 18px;
+    }
   }
 </style>
