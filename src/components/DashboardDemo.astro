@@ -26,10 +26,22 @@
  *   src/components/charts/LineChart.tsx    (SVG geometry, byte-identical)
  *   src/lib/format.ts                      (labels, status colours, money fmt)
  *
- * Not ported: RoofPlan (SVG roof-outline renderer) and the detail panel's
- * live contact/WhatsApp actions — the detail view is only glimpsed for ~2s
- * mid-loop while the cursor is already moving on, so full interactive parity
- * there isn't worth the added weight. Real typography/labels are still used.
+ * The expanded detail is ported from the REDESIGNED QuoteDetailPanel — an
+ * action rail (estimate, status, intent, contact) beside an evidence column
+ * (roof plan, then survey figures grouped into clusters). It was previously a
+ * hand-drawn four-cell strip, which is exactly what the paragraph above says
+ * this file doesn't do; the loop now holds on it long enough to be read, so
+ * it has to be the real thing.
+ *
+ * Not ported: RoofPlan's projection maths (lib/roof-plan.ts). The plan here is
+ * a fixed outline drawn with RoofPlan.tsx's own colours, grid pattern and
+ * span caption — there are no real polygon coords on a static page to project.
+ * The panel's controls are inert: StatusPicker's menu and the archive action
+ * have no state to change in a recording.
+ *
+ * Note the two screens carry DIFFERENT filter bars on purpose — Quotes has
+ * seven filters with counts (QuotesClient.tsx), Analytics has five plain ones
+ * (AnalyticsClient.tsx). They are not meant to match.
  *
  * PERFORMANCE: the real markup is authored at 1040x780 (sidebar 256px +
  * content) inside `.dd-fit`, then scaled to whatever size the frame renders
@@ -102,10 +114,13 @@ const JOB_LABELS: Record<Job, string> = {
   gutters_fascias_soffits: "Gutters, fascias & soffits",
   flat_roof_replacement: "Flat roof replacement",
 };
+// The internal value stays "won"; roofers see "Completed" (format.ts's
+// STATUS_LABELS). Both the table pill and the analytics breakdown card read
+// from here, exactly as the real app reads both from statusLabel().
 const STATUS_LABELS: Record<Status, string> = {
   new: "New",
   contacted: "Contacted",
-  won: "Won",
+  won: "Completed",
   lost: "Lost",
 };
 const STATUS_COLOR: Record<Status, { fg: string; bg: string }> = {
@@ -229,7 +244,61 @@ const inbox = [...LEADS]
 const newLead = { ...inbox[0], received: "just now" };
 const restRows = inbox.slice(1);
 
-const STATUS_FILTERS = ["All", "New", "Contacted", "Won", "Lost"];
+/**
+ * The real filter bar (QuotesClient.tsx's `order` + FILTER_COLORS, rendered by
+ * FilterBar.tsx): seven filters, each carrying a count, with the active one
+ * wearing a solid bubble in its own colour rather than a generic black pill.
+ * "Follow-up" is not a status — it's the estimate-only browsers, i.e. the
+ * intent tiering the detail panel now shows on the lead itself.
+ */
+const FILTER_COLORS: Record<string, { ink: string; solid: string }> = {
+  all: { ink: "#3d4148", solid: "#0a0b0d" },
+  new: { ink: "#1546c9", solid: "#2f6bff" },
+  contacted: { ink: "#6d28d9", solid: "#7c3aed" },
+  won: { ink: "#0d6b3c", solid: "#12915a" },
+  lost: { ink: "#c02626", solid: "#dc2626" },
+  followup: { ink: "#475569", solid: "#64748b" },
+  archived: { ink: "#9a6510", solid: "#d99a17" },
+};
+
+const statusCount = (s: Status) => LEADS.filter((l) => l.status === s).length;
+
+// Archived renders as an icon rather than a word, like FilterBar.tsx's
+// `{f.icon ?? f.label}`.
+const ARCHIVE_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-label="Archived"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg>`;
+
+// Counts come off the same 20-lead seed the tables and charts use, so the
+// numbers on the tabs agree with everything else on screen. Follow-up and
+// Archived are drawn from outside the visible inbox, so they carry standing
+// counts rather than ones derived from `status`.
+const QUOTE_FILTERS: {
+  key: string;
+  label: string;
+  count: number;
+  icon?: string;
+}[] = [
+  { key: "all", label: "All", count: LEADS.length },
+  { key: "new", label: STATUS_LABELS.new, count: statusCount("new") },
+  { key: "contacted", label: STATUS_LABELS.contacted, count: statusCount("contacted") },
+  { key: "won", label: STATUS_LABELS.won, count: statusCount("won") },
+  { key: "lost", label: STATUS_LABELS.lost, count: statusCount("lost") },
+  { key: "followup", label: "Follow-up", count: 3 },
+  { key: "archived", label: "Archived", count: 2, icon: ARCHIVE_ICON },
+];
+
+/**
+ * Analytics deliberately carries a DIFFERENT filter set from Quotes: five
+ * plain pills, no counts, no Follow-up/Archived (AnalyticsClient.tsx:35-38),
+ * styled bg-ink/white rather than per-filter colours. The two screens are not
+ * meant to match, so the demo keeps them apart too.
+ */
+const ANALYTICS_FILTERS = [
+  "All",
+  STATUS_LABELS.new,
+  STATUS_LABELS.contacted,
+  STATUS_LABELS.won,
+  STATUS_LABELS.lost,
+];
 
 // Ported verbatim from Sidebar.tsx's NAV array (same viewBox/paths).
 const iconProps = 'width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
@@ -288,9 +357,23 @@ const NAV = [
                 <h1 class="font-display text-3xl font-semibold tracking-tight text-ink">Quotes</h1>
                 <p class="mt-1 text-sm text-ink-soft">Every lead your widget has captured.</p>
 
-                <div class="mt-4 flex items-center gap-1.5">
-                  {STATUS_FILTERS.map((f, i) => (
-                    <span class:list={["rounded-full px-3 py-1 text-xs font-medium", i === 0 ? "bg-ink text-white" : "text-ink-soft"]}>{f}</span>
+                <div class="mt-4 flex items-center gap-1">
+                  {QUOTE_FILTERS.map((f, i) => (
+                    <span
+                      class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium leading-none"
+                      style={
+                        i === 0
+                          ? `background:${FILTER_COLORS[f.key].solid};color:#fff`
+                          : `color:${FILTER_COLORS[f.key].ink}`
+                      }
+                    >
+                      {f.icon ? (
+                        <span class="flex items-center" set:html={f.icon} />
+                      ) : (
+                        <span class="flex items-center">{f.label}</span>
+                      )}
+                      <span class="text-xs leading-none" style={`opacity:${i === 0 ? 0.8 : 0.55}`}>{f.count}</span>
+                    </span>
                   ))}
                   <label class="search-field field ml-auto flex items-center gap-2 px-3 py-1.5 text-sm text-muted">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -315,7 +398,7 @@ const NAV = [
                   <div class="dd-row-collapse">
                     <div class="dd-row-collapse-inner">
                       <div class="dd-row-grid dd-row--new relative items-center border-b border-line/60 px-6 text-sm transition-colors duration-150">
-                        <div class="dd-newdot absolute left-2 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-brand-500" aria-hidden="true"></div>
+                        <div class="dd-newdot absolute left-2 top-2 z-10 h-1.5 w-1.5 rounded-full bg-brand-500" aria-hidden="true"></div>
                         <div class="min-w-0">
                           <div class="truncate font-semibold text-ink">{newLead.name}</div>
                           <div class="truncate text-xs text-muted">{newLead.phone}</div>
@@ -335,23 +418,127 @@ const NAV = [
                     </div>
                   </div>
 
-                  <div class="dd-detail overflow-hidden bg-black/[0.015]">
-                    <div class="grid grid-cols-4 gap-4 px-6 py-4">
-                      <div>
-                        <p class="text-[11px] font-medium uppercase tracking-wide text-muted">Roof area</p>
-                        <p class="mt-0.5 text-sm font-semibold text-ink">78 m²</p>
-                      </div>
-                      <div>
-                        <p class="text-[11px] font-medium uppercase tracking-wide text-muted">Pitch</p>
-                        <p class="mt-0.5 text-sm font-semibold text-ink">35°</p>
-                      </div>
-                      <div>
-                        <p class="text-[11px] font-medium uppercase tracking-wide text-muted">Roof type</p>
-                        <p class="mt-0.5 text-sm font-semibold text-ink">Hip</p>
-                      </div>
-                      <div>
-                        <p class="text-[11px] font-medium uppercase tracking-wide text-muted">Chimneys</p>
-                        <p class="mt-0.5 text-sm font-semibold text-ink">1</p>
+                  <!-- The expanded lead, ported from the redesigned
+                       QuoteDetailPanel: an action rail (what you do with the
+                       lead) beside an evidence column (what you check). Opens
+                       via grid-template-rows 0fr->1fr like .dd-row-collapse
+                       above, so its height is whatever the content needs
+                       rather than a number guessed in the keyframes. -->
+                  <div class="dd-detail bg-black/[0.015]">
+                    <div class="dd-detail-inner">
+                      <div class="dd-panel grid gap-6 px-6 py-5">
+                        <!-- ---- action rail ---- -->
+                        <div class="flex flex-col border-r border-line pr-6">
+                          <p class="font-display text-2xl font-semibold text-ink">{money(newLead.value)}</p>
+                          <p class="mt-0.5 text-xs text-muted">ex. VAT</p>
+                          <p class="mt-1.5 text-sm font-medium text-ink-soft">{JOB_LABELS[newLead.job]}</p>
+
+                          <div class="mt-3.5 flex flex-wrap items-center gap-2">
+                            <span
+                              class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold"
+                              style={`color:${STATUS_COLOR[newLead.status].fg};background:${STATUS_COLOR[newLead.status].bg}`}
+                            >
+                              {STATUS_LABELS[newLead.status]}
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+                            </span>
+                            <!-- Intent: a fact about the lead, so it reads as a
+                                 quiet outlined tag, never a second status pill. -->
+                            <span
+                              class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
+                              style="color:#0f766e;background:#f0fdfa;border-color:#0f766e33"
+                            >Quote requested</span>
+                          </div>
+
+                          <p class="mt-2.5 flex items-center gap-2 text-sm text-ink-soft">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-muted" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.2 1.9"/></svg>
+                            {newLead.received}
+                          </p>
+
+                          <div class="mt-3.5 border-t border-line pt-3.5">
+                            <p class="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Contact</p>
+                            <span class="inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-[#25D366] bg-white px-3 py-2 text-sm font-semibold text-[#128a3f]">
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.96-.95 1.16-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.44-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51l-.57-.01c-.2 0-.52.07-.79.37-.27.3-1.04 1.01-1.04 2.47s1.06 2.87 1.21 3.07c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.62.71.23 1.36.2 1.87.12.57-.08 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35zM12.04 21.5h-.01a9.4 9.4 0 0 1-4.79-1.31l-.34-.2-3.56.93.95-3.47-.22-.36a9.38 9.38 0 0 1-1.44-5.01c0-5.19 4.23-9.41 9.43-9.41 2.52 0 4.88.98 6.66 2.76a9.35 9.35 0 0 1 2.76 6.66c-.01 5.19-4.24 9.41-9.4 9.41zm8.02-17.43A11.28 11.28 0 0 0 12.04.75C5.8.75.72 5.83.72 12.07c0 1.99.52 3.94 1.51 5.66L.63 23.5l5.9-1.55a11.3 11.3 0 0 0 5.5 1.4h.01c6.24 0 11.32-5.08 11.32-11.32 0-3.03-1.18-5.87-3.3-8z"/></svg>
+                              WhatsApp {newLead.name.split(" ")[0]}
+                            </span>
+                            <p class="mt-2.5 flex items-center gap-2 text-sm font-medium text-brand-600">
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-muted" aria-hidden="true"><path d="M4 5c0 8.3 6.7 15 15 15v-3.5l-4-1.5-2 2a12 12 0 0 1-6-6l2-2L11 5H4z"/></svg>
+                              {newLead.phone}
+                            </p>
+                            <p class="mt-2 flex items-start gap-2 text-sm font-medium text-ink">
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0 text-muted" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                              14 Ashcombe Road, HP12 4RN
+                            </p>
+                          </div>
+                        </div>
+
+                        <!-- ---- evidence ---- -->
+                        <div class="min-w-0">
+                          <!-- Same treatment as RoofPlan.tsx: a drawn outline on
+                               a dark grid, with the span read off the bottom
+                               right. The chips it used to carry are gone —
+                               those figures sit in the Roof cluster below. -->
+                          <figure class="relative h-[104px] overflow-hidden rounded-xl border border-line bg-[#0f1520]">
+                            <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" class="absolute inset-0 h-full w-full" aria-hidden="true">
+                              <defs>
+                                <pattern id="dd-roofgrid" width="10" height="10" patternUnits="userSpaceOnUse">
+                                  <path d="M10 0H0V10" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.5"/>
+                                </pattern>
+                              </defs>
+                              <rect width="100" height="100" fill="url(#dd-roofgrid)"/>
+                              <!-- Fitted to the viewBox with the same 10-unit
+                                   padding lib/roof-plan.ts's project() uses, so
+                                   the outline fills the plan the way a real one
+                                   does instead of floating small in the middle. -->
+                              <polygon points="10,20 90,20 90,80 50,80 50,62.5 10,62.5" fill="rgba(94,160,255,0.22)" stroke="#7cb0ff" stroke-width="1.2" stroke-linejoin="round"/>
+                            </svg>
+                            <span class="absolute bottom-2 right-3 text-[11px] font-medium text-white/60">≈ 14.2 m across</span>
+                          </figure>
+
+                          <div class="mt-4 grid grid-cols-2 gap-x-6 gap-y-4">
+                            <div>
+                              <p class="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Roof</p>
+                              <div class="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                                <div>
+                                  <p class="text-[11px] font-medium uppercase tracking-wide text-muted">Area</p>
+                                  <p class="mt-0.5 text-sm font-semibold text-ink">96 m²</p>
+                                </div>
+                                <div>
+                                  <p class="text-[11px] font-medium uppercase tracking-wide text-muted">Pitch</p>
+                                  <p class="mt-0.5 text-sm font-semibold text-ink">35°</p>
+                                </div>
+                                <div>
+                                  <p class="text-[11px] font-medium uppercase tracking-wide text-muted">Ground area</p>
+                                  <p class="mt-0.5 text-sm font-semibold text-ink">79 m²</p>
+                                </div>
+                                <div>
+                                  <p class="text-[11px] font-medium uppercase tracking-wide text-muted">Type</p>
+                                  <p class="mt-0.5 text-sm font-semibold text-ink">Hip</p>
+                                </div>
+                              </div>
+                            </div>
+                            <div>
+                              <p class="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Property</p>
+                              <div class="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                                <div>
+                                  <p class="text-[11px] font-medium uppercase tracking-wide text-muted">Type</p>
+                                  <p class="mt-0.5 text-sm font-semibold text-ink">Semi-detached</p>
+                                </div>
+                                <div>
+                                  <p class="text-[11px] font-medium uppercase tracking-wide text-muted">Storeys</p>
+                                  <p class="mt-0.5 text-sm font-semibold text-ink">Two</p>
+                                </div>
+                                <div>
+                                  <p class="text-[11px] font-medium uppercase tracking-wide text-muted">Material</p>
+                                  <p class="mt-0.5 text-sm font-semibold text-ink">Concrete tile</p>
+                                </div>
+                                <div>
+                                  <p class="text-[11px] font-medium uppercase tracking-wide text-muted">Chimneys</p>
+                                  <p class="mt-0.5 text-sm font-semibold text-ink">1</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -406,7 +593,7 @@ const NAV = [
                   </div>
 
                   <div class="mt-3 flex flex-wrap gap-1.5">
-                    {STATUS_FILTERS.map((f, i) => (
+                    {ANALYTICS_FILTERS.map((f, i) => (
                       <span class:list={["rounded-full px-3 py-1 text-xs font-medium", i === 0 ? "bg-ink text-white" : "text-ink-soft"]}>{f}</span>
                     ))}
                   </div>
@@ -650,10 +837,49 @@ const NAV = [
     overflow: hidden;
     min-height: 0;
   }
+  /* In the real table (QuotesTable.tsx:318-322) brand-50 marks the EXPANDED
+     row, not the new one — "new" is only ever the small dot. This used to tint
+     the row from the moment it arrived, which read as a permanent highlight
+     next to the name rather than a row you had opened, so the tint is now
+     driven by the click (see dd-rowbg) exactly as it is in the app. */
   .dd-row--new {
-    background: var(--color-brand-50);
+    background-color: transparent;
   }
-  .dd-detail { height: 0; }
+  /* Ported from globals.css's .pulse-dot — the real new-row dot pulses; the
+     demo's was a plain circle sitting mid-row like a bullet point. */
+  .dd-newdot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: inherit;
+    /* 1.875s, not the app's 1.8s: 15s / 8 divides the master loop exactly, so
+       the ring is at the same phase at 0% and 100% instead of drifting out of
+       sync and breaking the seam. Visually indistinguishable from 1.8s. */
+    animation: dd-pulse-ring 1.875s var(--ease-out-soft) infinite;
+  }
+  @keyframes dd-pulse-ring {
+    0%        { transform: scale(1);   opacity: 0.7; }
+    70%, 100% { transform: scale(2.4); opacity: 0; }
+  }
+  /* Opens on grid-template-rows, exactly like .dd-row-collapse above, rather
+     than the fixed `height` this used to animate. The ported panel is real
+     markup whose height depends on its content and the fit-scale, so a
+     hardcoded open height could only ever be a guess that drifts the moment
+     the panel changes — this tracks whatever the content actually needs. */
+  .dd-detail {
+    display: grid;
+    grid-template-rows: 0fr;
+  }
+  .dd-detail-inner {
+    overflow: hidden;
+    min-height: 0;
+  }
+  /* Mirrors the real panel's lg:grid-cols-[minmax(0,19rem)_1fr]; narrower here
+     because the demo canvas is narrower than a real dashboard viewport. */
+  .dd-panel {
+    grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+  }
 
   /* ---------- fonts used only at real dashboard scale (not clamped —
      .dd-fit's static scale shrinks everything uniformly, so real px sizes
@@ -738,6 +964,7 @@ const NAV = [
   .dd-frame.playing [data-chart="2"] .dd-chart-dot  { animation: dd-chart-dot-2  15s ease-in-out infinite; }
   .dd-frame.playing .dd-row-collapse { animation: dd-newrow 15s ease-in-out infinite; }
   .dd-frame.playing .dd-newdot { animation: dd-newdot 15s ease-in-out infinite; }
+  .dd-frame.playing .dd-row--new { animation: dd-rowbg 15s ease-in-out infinite; }
   .dd-frame.playing .dd-detail { animation: dd-detail 15s ease-in-out infinite; }
   .dd-frame.playing .dd-nav-item[data-nav="quotes"] { animation: dd-nav-quotes-text 15s ease-in-out infinite; }
   .dd-frame.playing .dd-nav-item[data-nav="quotes"] .dd-nav-pill { animation: dd-nav-quotes-pill 15s ease-in-out infinite; }
@@ -746,189 +973,218 @@ const NAV = [
   .dd-frame.playing .dd-nav-item[data-nav="analytics"] .dd-nav-pill { animation: dd-nav-analytics-pill 15s ease-in-out infinite; }
   .dd-frame.playing .dd-nav-item[data-nav="analytics"] .dd-nav-icon { animation: dd-nav-analytics-icon 15s ease-in-out infinite; }
 
-  /* Cursor: settles on a row, then the Analytics nav item, then tracks a
-     chart, then the bars. Percentages are the shared clock. */
-  /* Click targets below are computed from the actual authored layout (sidebar
-     padding/nav-item heights, view padding, chart-card grid math at 1040x780
-     natural size), not eyeballed — so the cursor lands on the real elements:
-       Quotes nav item center   ~ (7%, 16%)
-       Analytics nav item center ~ (7%, 22%)
-       New-lead row (open)       ~ (52%, 28%)
-       Stat cards (Quotes/Median/Win rate), chart centers ~ (39%,53%) (62%,53%) (86%,53%)
-       Bar cards (Value by job type / Won vs lost), post-scroll ~ (45%,54%) (80%,54%)
-     0% and 100% share the same idle position/opacity so the infinite loop has
-     no visible teleport at the seam — it fades out at rest and fades back in
-     at the same spot. */
+  /* Cursor: lands on the arriving quote, reads the panel it opens, then
+     crosses to Analytics and tours the charts. Percentages are the shared
+     15s clock.
+
+     Targets below were MEASURED off the rendered stage (getBoundingClientRect
+     as a percentage of .dd-stage) rather than estimated from the authored
+     layout — the previous estimates put the nav at 7% and the row at 52%,
+     when they actually sit at 12% and 62%, so the cursor clicked next to its
+     targets rather than on them:
+       Quotes nav item centre      ~ (12%, 15%)
+       Analytics nav item centre   ~ (12%, 21%)
+       New-lead row centre         ~ (62%, 30%)   spans x 28-97, y 26-34
+       Panel                       ~ (62%, 57%)   spans x 28-97, y 34-80
+       Panel action rail (money)   ~ (36%, 40%)
+       Panel contact block         ~ (36%, 62%)
+       Panel evidence column       ~ (75%, 50%)
+       Stat-card chart centres     ~ (39%,53%) (62%,53%) (86%,53%)
+       Breakdown cards, scrolled   ~ (45%,54%) (80%,54%)
+
+     SEAM CONTRACT — every track below holds IDENTICAL values at 0% and 100%,
+     and every reset happens either while the analytics view is opaque over
+     the top (52-92%) or after it has fully faded back out (96%+). A track
+     whose start and end differ, or which resets while visible, shows a jump
+     when the loop wraps. Check both properties when editing any of these. */
   @keyframes dd-cursor {
     0%    { opacity: 0; left: 60%; top: 88%; transform: scale(1); }
-    4%    { opacity: 1; left: 60%; top: 88%; transform: scale(1); }
+    3%    { opacity: 1; left: 60%; top: 88%; transform: scale(1); }
     /* travel to the new row, with a slight arc rather than a dead-straight line */
-    9%    { opacity: 1; left: 56%; top: 55%; transform: scale(1); }
-    13%   { opacity: 1; left: 52%; top: 28%; transform: scale(1); animation-timing-function: ease; }
-    16%   { opacity: 1; left: 52%; top: 28%; transform: scale(0.82); animation-timing-function: ease; }  /* click */
-    19%   { opacity: 1; left: 52%; top: 28%; transform: scale(1); }
-    29%   { opacity: 1; left: 48%; top: 30%; transform: scale(1); }     /* settles while the detail opens */
+    8%    { opacity: 1; left: 58%; top: 55%; transform: scale(1); }
+    12%   { opacity: 1; left: 62%; top: 30%; transform: scale(1); animation-timing-function: ease; }
+    15%   { opacity: 1; left: 62%; top: 30%; transform: scale(0.82); animation-timing-function: ease; }  /* click */
+    18%   { opacity: 1; left: 62%; top: 30%; transform: scale(1); }
+    /* read down the panel the click opened: rail, contact, then the evidence */
+    25%   { opacity: 1; left: 36%; top: 40%; transform: scale(1); }
+    33%   { opacity: 1; left: 36%; top: 62%; transform: scale(1); }
+    40%   { opacity: 1; left: 75%; top: 50%; transform: scale(1); }
     /* arc across to the Analytics nav item */
-    34%   { opacity: 1; left: 26%; top: 24%; transform: scale(1); }
-    40%   { opacity: 1; left: 7%;  top: 22%; transform: scale(1); animation-timing-function: ease; }
-    43%   { opacity: 1; left: 7%;  top: 22%; transform: scale(0.82); animation-timing-function: ease; }   /* click */
-    46%   { opacity: 1; left: 7%;  top: 22%; transform: scale(1); }
+    46%   { opacity: 1; left: 12%; top: 21%; transform: scale(1); animation-timing-function: ease; }
+    49%   { opacity: 1; left: 12%; top: 21%; transform: scale(0.82); animation-timing-function: ease; }  /* click */
+    52%   { opacity: 1; left: 12%; top: 21%; transform: scale(1); }
     /* sweep left to right across the three trend-card charts */
-    50%   { opacity: 1; left: 39%; top: 53%; transform: scale(1); }
-    58%   { opacity: 1; left: 62%; top: 53%; transform: scale(1); }
-    68%   { opacity: 1; left: 86%; top: 53%; transform: scale(1); }
+    57%   { opacity: 1; left: 39%; top: 53%; transform: scale(1); }
+    65%   { opacity: 1; left: 62%; top: 53%; transform: scale(1); }
+    73%   { opacity: 1; left: 86%; top: 53%; transform: scale(1); }
     /* down to the two breakdown cards, once the page has scrolled to them */
-    76%   { opacity: 1; left: 45%; top: 54%; transform: scale(1); }
-    84%   { opacity: 1; left: 80%; top: 54%; transform: scale(1); }
+    80%   { opacity: 1; left: 45%; top: 54%; transform: scale(1); }
+    87%   { opacity: 1; left: 80%; top: 54%; transform: scale(1); }
     /* back to Quotes — the loop closes with a click, not a fade */
-    90%   { opacity: 1; left: 7%;  top: 16%; transform: scale(1); animation-timing-function: ease; }
-    93%   { opacity: 1; left: 7%;  top: 16%; transform: scale(0.82); animation-timing-function: ease; }   /* click */
-    96%   { opacity: 1; left: 7%;  top: 16%; transform: scale(1); }
+    90%   { opacity: 1; left: 12%; top: 15%; transform: scale(1); animation-timing-function: ease; }
+    92%   { opacity: 1; left: 12%; top: 15%; transform: scale(0.82); animation-timing-function: ease; }  /* click */
+    94%   { opacity: 1; left: 12%; top: 15%; transform: scale(1); }
+    /* Fade out BEFORE returning to the idle spot, so the long diagonal back
+       to (60%, 88%) is travelled invisibly instead of read as a swoop. */
+    97%   { opacity: 0; left: 12%; top: 15%; transform: scale(1); }
     100%  { opacity: 0; left: 60%; top: 88%; transform: scale(1); }
   }
 
-  /* Camera: ONE push-in per act, not a zoom-in/zoom-out cycle per point of
-     interest — that repeated pulsing was the "goes left right and stuff"
-     feeling. Act 1 pushes in once for the new-row click, pulls fully back
-     while travelling to Analytics, then pushes in ONCE for the whole
-     analytics tour and just PANS (origin only, constant scale) across the
-     three charts and the two breakdown cards — a single sustained shot, the
-     way a real product video holds one framing and pans rather than
-     re-zooming on every element. Origins match the cursor's own targets
-     above so the camera is always centred on what the cursor is doing. */
+  /* Camera: ONE push-in per act, not a zoom cycle per point of interest.
+     Act 1 pushes in for the row click, then eases back to a slightly wider
+     framing that holds the WHOLE opened panel (rail + evidence) while the
+     cursor reads it — the panel is now a two-column layout, so framing it as
+     tightly as the old four-cell strip would crop half of it. Act 2 pushes in
+     once for the analytics tour and only PANS across it. */
   @keyframes dd-zoom {
-    0%, 6%    { transform: scale(1);    transform-origin: 50% 20%; }
-    13%, 27%  { transform: scale(1.7);  transform-origin: 52% 28%; }  /* new row + detail */
-    33%       { transform: scale(1);    transform-origin: 50% 24%; }
-    44%       { transform: scale(1);    transform-origin: 50% 20%; }
-    50%       { transform: scale(1.55); transform-origin: 39% 53%; }  /* push in once for Analytics */
-    58%       { transform: scale(1.55); transform-origin: 62% 53%; }  /* pan, same scale */
-    68%       { transform: scale(1.55); transform-origin: 86% 53%; }  /* pan, same scale */
-    76%       { transform: scale(1.4);  transform-origin: 45% 54%; }  /* ease down to the bars */
-    84%       { transform: scale(1.4);  transform-origin: 80% 54%; }  /* pan, same scale */
-    92%, 100% { transform: scale(1);    transform-origin: 50% 20%; }
+    0%, 5%    { transform: scale(1);    transform-origin: 50% 20%; }
+    /* transform-origin is NOT a camera centre. Scaling about O shows
+       [O - O/s, O + (W-O)/s], so the window is asymmetric about O and a
+       "centre the subject" origin crops it. Both framings below were solved
+       against the rendered boxes (row spans x 28-97 y 26-34; panel spans
+       x 28-97 y 34-80 of the stage) until the subject sat fully inside the
+       viewport — not derived from where the subject's centre is. */
+    12%, 20%  { transform: scale(1.4);  transform-origin: 92% 30%; }  /* whole row, cursor centred */
+    26%, 40%  { transform: scale(1.3);  transform-origin: 105% 50%; } /* whole panel in frame */
+    46%       { transform: scale(1);    transform-origin: 40% 24%; }
+    51%       { transform: scale(1);    transform-origin: 50% 20%; }
+    57%       { transform: scale(1.55); transform-origin: 39% 53%; }  /* push in once for Analytics */
+    65%       { transform: scale(1.55); transform-origin: 62% 53%; }  /* pan, same scale */
+    73%       { transform: scale(1.55); transform-origin: 86% 53%; }  /* pan, same scale */
+    80%       { transform: scale(1.4);  transform-origin: 45% 54%; }  /* ease down to the bars */
+    87%       { transform: scale(1.4);  transform-origin: 80% 54%; }  /* pan, same scale */
+    93%, 100% { transform: scale(1);    transform-origin: 50% 20%; }
   }
 
   /* Scrolls the analytics page down to the breakdown cards, then back. */
   @keyframes dd-scroll {
-    0%, 72%   { transform: translateY(0); }
-    78%, 86%  { transform: translateY(-26%); }
-    92%, 100% { transform: translateY(0); }
+    0%, 76%   { transform: translateY(0); }
+    82%, 89%  { transform: translateY(-26%); }
+    94%, 100% { transform: translateY(0); }
   }
 
-  /* Each chart draws in during the window the camera/cursor are actually
-     arriving at it (matching dd-cursor's 50%/58%/68% arrivals above), then
-     STAYS drawn while the camera moves on to the next one or the bars below
-     -- a real dashboard doesn't erase a chart just because you looked away
-     from it. All three reset together at 91-94%, hidden behind the view's
-     own opacity fade-out, so nothing visibly "un-draws" on screen. */
+  /* Each chart draws in as the camera arrives at it (matching dd-cursor's
+     57%/65%/73% arrivals), then STAYS drawn while the camera moves on — a real
+     dashboard doesn't erase a chart because you looked away. All three reset
+     together at 96-97%, after the analytics view has fully faded, so nothing
+     visibly un-draws. */
   @keyframes dd-chart-line-0 {
-    0%, 44%   { stroke-dashoffset: 1; }
-    50%, 91%  { stroke-dashoffset: 0; }
-    94%, 100% { stroke-dashoffset: 1; }
+    0%, 51%   { stroke-dashoffset: 1; }
+    57%, 96%  { stroke-dashoffset: 0; }
+    97%, 100% { stroke-dashoffset: 1; }
   }
   @keyframes dd-chart-area-0 {
-    0%, 46%   { opacity: 0; }
-    52%, 91%  { opacity: 0.1; }
-    94%, 100% { opacity: 0; }
+    0%, 53%   { opacity: 0; }
+    59%, 96%  { opacity: 0.1; }
+    97%, 100% { opacity: 0; }
   }
   @keyframes dd-chart-dot-0 {
-    0%, 49%   { opacity: 0; }
-    53%, 91%  { opacity: 1; }
-    94%, 100% { opacity: 0; }
+    0%, 56%   { opacity: 0; }
+    60%, 96%  { opacity: 1; }
+    97%, 100% { opacity: 0; }
   }
   @keyframes dd-chart-line-1 {
-    0%, 52%   { stroke-dashoffset: 1; }
-    58%, 91%  { stroke-dashoffset: 0; }
-    94%, 100% { stroke-dashoffset: 1; }
+    0%, 59%   { stroke-dashoffset: 1; }
+    65%, 96%  { stroke-dashoffset: 0; }
+    97%, 100% { stroke-dashoffset: 1; }
   }
   @keyframes dd-chart-area-1 {
-    0%, 54%   { opacity: 0; }
-    60%, 91%  { opacity: 0.1; }
-    94%, 100% { opacity: 0; }
+    0%, 61%   { opacity: 0; }
+    67%, 96%  { opacity: 0.1; }
+    97%, 100% { opacity: 0; }
   }
   @keyframes dd-chart-dot-1 {
-    0%, 57%   { opacity: 0; }
-    61%, 91%  { opacity: 1; }
-    94%, 100% { opacity: 0; }
+    0%, 64%   { opacity: 0; }
+    68%, 96%  { opacity: 1; }
+    97%, 100% { opacity: 0; }
   }
   @keyframes dd-chart-line-2 {
-    0%, 62%   { stroke-dashoffset: 1; }
-    68%, 91%  { stroke-dashoffset: 0; }
-    94%, 100% { stroke-dashoffset: 1; }
+    0%, 67%   { stroke-dashoffset: 1; }
+    73%, 96%  { stroke-dashoffset: 0; }
+    97%, 100% { stroke-dashoffset: 1; }
   }
   @keyframes dd-chart-area-2 {
-    0%, 64%   { opacity: 0; }
-    70%, 91%  { opacity: 0.1; }
-    94%, 100% { opacity: 0; }
+    0%, 69%   { opacity: 0; }
+    75%, 96%  { opacity: 0.1; }
+    97%, 100% { opacity: 0; }
   }
   @keyframes dd-chart-dot-2 {
-    0%, 67%   { opacity: 0; }
-    71%, 91%  { opacity: 1; }
-    94%, 100% { opacity: 0; }
+    0%, 72%   { opacity: 0; }
+    76%, 96%  { opacity: 1; }
+    97%, 100% { opacity: 0; }
   }
 
   /* Both views swap on a click, never a cross-fade to nothing. */
   @keyframes dd-quotes {
-    0%, 41%   { opacity: 1; }
-    45%, 91%  { opacity: 0; }
-    94%, 100% { opacity: 1; }
+    0%, 46%   { opacity: 1; }
+    51%, 92%  { opacity: 0; }
+    96%, 100% { opacity: 1; }
   }
   @keyframes dd-analytics {
-    0%, 41%   { opacity: 0; }
-    45%, 91%  { opacity: 1; }
-    94%, 100% { opacity: 0; }
+    0%, 46%   { opacity: 0; }
+    51%, 92%  { opacity: 1; }
+    96%, 100% { opacity: 0; }
   }
 
   /* The arriving quote slides open, gets clicked, then resets to closed WHILE
-     THE ANALYTICS VIEW IS COVERING IT (45–91%). Resetting it on screen would
+     THE ANALYTICS VIEW IS COVERING IT (51-92%). Resetting it on screen would
      read as the lead being deleted, and leaving it open would make the loop
      wrap visibly pop. */
   @keyframes dd-newrow {
     0%, 8%    { grid-template-rows: 0fr; }
-    12%, 62%  { grid-template-rows: 1fr; }
-    70%, 100% { grid-template-rows: 0fr; }
+    12%, 52%  { grid-template-rows: 1fr; }
+    58%, 100% { grid-template-rows: 0fr; }
+  }
+  /* The row tints only once it has been opened, matching the real table where
+     bg-brand-50 is the expanded state. Click lands at 15%. */
+  @keyframes dd-rowbg {
+    0%, 15%   { background-color: transparent; }
+    18%, 52%  { background-color: var(--color-brand-50); }
+    58%, 100% { background-color: transparent; }
   }
   @keyframes dd-newdot {
     0%, 9%    { scale: 0; opacity: 0; }
     13%       { scale: 1.6; opacity: 1; }
-    18%, 62%  { scale: 1; opacity: 1; }
-    70%, 100% { scale: 0; opacity: 0; }
+    18%, 52%  { scale: 1; opacity: 1; }
+    58%, 100% { scale: 0; opacity: 0; }
   }
+  /* Opens just after the click at 15% and HOLDS until the analytics view has
+     covered it. The old timing collapsed the panel on screen at 38%, several
+     beats before the view actually changed. */
   @keyframes dd-detail {
-    0%, 17%   { height: 0; }
-    23%, 33%  { height: 4.2rem; }
-    38%, 100% { height: 0; }
+    0%, 15%   { grid-template-rows: 0fr; }
+    21%, 52%  { grid-template-rows: 1fr; }
+    58%, 100% { grid-template-rows: 0fr; }
   }
   @keyframes dd-nav-quotes-text {
-    0%, 42%   { color: var(--color-brand-700); font-weight: 600; }
-    46%, 91%  { color: var(--color-ink-soft); font-weight: 500; }
-    94%, 100% { color: var(--color-brand-700); font-weight: 600; }
+    0%, 47%   { color: var(--color-brand-700); font-weight: 600; }
+    51%, 92%  { color: var(--color-ink-soft); font-weight: 500; }
+    96%, 100% { color: var(--color-brand-700); font-weight: 600; }
   }
   @keyframes dd-nav-quotes-pill {
-    0%, 42%   { background: var(--color-brand-50); }
-    46%, 91%  { background: transparent; }
-    94%, 100% { background: var(--color-brand-50); }
+    0%, 47%   { background: var(--color-brand-50); }
+    51%, 92%  { background: transparent; }
+    96%, 100% { background: var(--color-brand-50); }
   }
   @keyframes dd-nav-quotes-icon {
-    0%, 42%   { color: var(--color-brand-600); }
-    46%, 91%  { color: var(--color-muted); }
-    94%, 100% { color: var(--color-brand-600); }
+    0%, 47%   { color: var(--color-brand-600); }
+    51%, 92%  { color: var(--color-muted); }
+    96%, 100% { color: var(--color-brand-600); }
   }
   @keyframes dd-nav-analytics-text {
-    0%, 42%   { color: var(--color-ink-soft); font-weight: 500; }
-    46%, 91%  { color: var(--color-brand-700); font-weight: 600; }
-    94%, 100% { color: var(--color-ink-soft); font-weight: 500; }
+    0%, 47%   { color: var(--color-ink-soft); font-weight: 500; }
+    51%, 92%  { color: var(--color-brand-700); font-weight: 600; }
+    96%, 100% { color: var(--color-ink-soft); font-weight: 500; }
   }
   @keyframes dd-nav-analytics-pill {
-    0%, 42%   { background: transparent; }
-    46%, 91%  { background: var(--color-brand-50); }
-    94%, 100% { background: transparent; }
+    0%, 47%   { background: transparent; }
+    51%, 92%  { background: var(--color-brand-50); }
+    96%, 100% { background: transparent; }
   }
   @keyframes dd-nav-analytics-icon {
-    0%, 42%   { color: var(--color-muted); }
-    46%, 91%  { color: var(--color-brand-600); }
-    94%, 100% { color: var(--color-muted); }
+    0%, 47%   { color: var(--color-muted); }
+    51%, 92%  { color: var(--color-brand-600); }
+    96%, 100% { color: var(--color-muted); }
   }
 
   /* One honest static frame instead of motion. */
@@ -939,6 +1195,8 @@ const NAV = [
     .dd-frame.playing .dd-view--analytics,
     .dd-frame.playing .dd-row-collapse,
     .dd-frame.playing .dd-newdot,
+    .dd-frame.playing .dd-newdot::after,
+    .dd-frame.playing .dd-row--new,
     .dd-frame.playing .dd-detail,
     .dd-frame.playing .dd-scroll,
     .dd-frame.playing [data-chart] .dd-chart-line,
