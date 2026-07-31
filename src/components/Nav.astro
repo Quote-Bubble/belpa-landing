@@ -1,5 +1,10 @@
 ---
 const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
+// Roofer login. Points at the dashboard root, which auto-routes: logged-out to
+// /login, logged-in straight to /quotes. Env-overridable like the embed origin.
+const dashboardUrl =
+  import.meta.env.PUBLIC_DASHBOARD_URL ??
+  "https://quoter-dashboard-frontend.vercel.app";
 ---
 
 <!--
@@ -7,6 +12,19 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
   the "click". Spacer is layout-only; fly is always the visible Quoter once ready.
 -->
 <a href="/" class="brand-fly" data-brand-fly aria-label="Quoter home">Quoter</a>
+
+<!-- Roofer login. A quiet corner utility, deliberately kept physically apart
+     from the "Book a call" CTA so it never reads as a competing button. Faint
+     glass chip (no fill) so it stays legible over the dark sections lower down.
+     Desktop only — the mobile bar carries its own muted "Log in" instead. -->
+<a href={dashboardUrl} class="corner-login" aria-label="Log in to your dashboard">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M10 17l5-5-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <span>Log in</span>
+</a>
 
 <!-- Docked nav pill. Sits at its normal (wordmark-only) size until the hero's
      own "Book a call" has scrolled out of view; then a discrete, NON-scroll-
@@ -38,12 +56,17 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
      away and this plain bar fades in. -->
 <div class="mobile-nav" data-mobile-nav>
   <a href="/" class="mobile-nav-brand">Quoter</a>
-  <a
-    href={meetingUrl}
-    class="mobile-nav-cta"
-    target="_blank"
-    rel="noopener noreferrer"
-  >Book a call</a>
+  <div class="mobile-nav-actions">
+    <a href={dashboardUrl} class="mobile-nav-login" aria-label="Log in to your dashboard">
+      Log in
+    </a>
+    <a
+      href={meetingUrl}
+      class="mobile-nav-cta"
+      target="_blank"
+      rel="noopener noreferrer"
+    >Book a call</a>
+  </div>
 </div>
 
 <style>
@@ -137,8 +160,8 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
        on .glass-nav-cta-wrap, so the pill hugs the wordmark until .is-expanded
        fires — then the wrap animates open and the whole bar lengthens. */
     gap: 0;
-    max-width: min(720px, calc(100vw - 24px));
-    padding: 8px 32px;
+    max-width: min(880px, calc(100vw - 24px));
+    padding: 8px 44px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.55);
     backdrop-filter: blur(24px) saturate(1.7);
@@ -154,7 +177,7 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     box-sizing: border-box;
   }
   .glass-nav.is-expanded {
-    padding-left: 32px;
+    padding-left: 44px;
     padding-right: 8px;
   }
 
@@ -194,7 +217,7 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
   }
   .glass-nav.is-expanded .glass-nav-cta-wrap {
     grid-template-columns: 1fr;
-    margin-left: 22px;
+    margin-left: 26px;
   }
   /* The collapsing block: divider + button. overflow:hidden lives here so the
      0fr track clips the whole group to nothing when collapsed. */
@@ -258,10 +281,87 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     outline-offset: 3px;
   }
 
+  /* Corner login: a quiet, separate utility for returning roofers. A faint
+     glass chip (no fill) that stays subordinate to the filled "Book a call" and
+     legible over both the light hero and the dark sections below. Pinned top-
+     right so it clears the top-left brand and the centred pill. */
+  .corner-login {
+    position: fixed;
+    top: max(18px, calc(env(safe-area-inset-top, 0px) + 12px));
+    right: max(20px, env(safe-area-inset-right, 0px));
+    z-index: 62;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.72rem 1.4rem;
+    border-radius: 999px;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1;
+    color: var(--color-ink);
+    text-decoration: none;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(22px) saturate(1.7);
+    -webkit-backdrop-filter: blur(22px) saturate(1.7);
+    border: 1px solid rgba(16, 24, 40, 0.08);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.9) inset,
+      0 2px 8px rgba(16, 24, 40, 0.1),
+      0 16px 34px -14px rgba(23, 60, 160, 0.5);
+    /* Hidden until the wordmark docks into the nav — brand-fly gains .is-docked
+       at t>0.97 in brand-dock.ts. Synced to the DOCK, not the "Book a call"
+       reveal: login is nav chrome, so it enters as the nav forms, and the two
+       needn't arrive together. Pure CSS via the sibling selector below. */
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+    transition:
+      opacity 0.5s ease,
+      transform 0.55s var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1)),
+      color 0.2s ease,
+      background 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .brand-fly.is-docked ~ .corner-login {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .corner-login svg {
+    flex: none;
+    color: var(--color-brand-600);
+  }
+  .corner-login:hover {
+    color: var(--color-brand-600);
+    background: rgba(255, 255, 255, 1);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.9) inset,
+      0 2px 8px rgba(16, 24, 40, 0.12),
+      0 18px 36px -14px rgba(23, 60, 160, 0.55);
+  }
+  .corner-login:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 3px;
+  }
+  /* Mobile uses the fade-in bar's own "Log in"; hide the corner chip there. */
+  @media (max-width: 639px) {
+    .corner-login {
+      display: none;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .brand-fly.is-hero::after {
       content: none;
       animation: none;
+    }
+    /* Still dock-synced (hidden in the hero, revealed once docked), but no
+       vertical slide — a plain fade. */
+    .corner-login,
+    .brand-fly.is-docked ~ .corner-login {
+      transform: none;
     }
   }
   /* Mobile nav: hidden on desktop (the morph owns the nav there). On phones a
@@ -311,6 +411,22 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     line-height: 1;
     color: var(--color-ink);
     text-decoration: none;
+  }
+  .mobile-nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  /* Clear but still secondary to the filled "Book a call" — full ink, slightly
+     lighter weight, no fill. */
+  .mobile-nav-login {
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1;
+    color: var(--color-ink);
+    text-decoration: none;
+    white-space: nowrap;
   }
   .mobile-nav-cta {
     display: inline-flex;
