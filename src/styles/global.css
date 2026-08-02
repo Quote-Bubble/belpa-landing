@@ -99,9 +99,9 @@
 }
 
 html {
-  /* Match the composition that looked right at ~110% browser zoom, at 100%.
-     `zoom` scales layout + type + the embed the same way browser zoom does. */
-  zoom: 1.1;
+  /* ~10% larger type/spacing at 100% browser zoom — without CSS `zoom`,
+     which breaks the brand-dock morph (offset* vs getBoundingClientRect). */
+  font-size: 110%;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   /* auto — Lenis owns intentional smooth scrolls. CSS `smooth` also animates
