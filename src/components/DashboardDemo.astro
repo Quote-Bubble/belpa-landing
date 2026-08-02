@@ -228,31 +228,11 @@ const cCount = chart(countPoints, count);
 const cMedian = chart(medianPoints, compactMoney);
 const cWin = chart(winRatePoints, pct);
 
-const wonRevenue = wonRows.reduce((sum, row) => sum + row.value, 0);
-
 const STAT_CARDS = [
-  {
-    title: "Revenue brought in",
-    value: money(wonRevenue),
-    delta: `${wonRows.length} completed jobs`,
-    c: cCount,
-  },
-  {
-    title: "Typical quote value",
-    value: medianValue != null ? money(medianValue) : "—",
-    delta: "Median across your pipeline",
-    c: cMedian,
-  },
-  {
-    title: "Win rate",
-    value: winRate != null ? pct(winRate) : "—",
-    delta: `${wonRows.length} won · ${lostRows.length} lost`,
-    c: cWin,
-  },
+  { title: "Quotes received", value: count(totalCount), delta: "0 previous period", c: cCount },
+  { title: "Median quote value", value: medianValue != null ? money(medianValue) : "—", delta: "No quotes previous period", c: cMedian },
+  { title: "Win rate", value: winRate != null ? pct(winRate) : "—", delta: "No won/lost previous period", c: cWin },
 ];
-
-/** Status steps shown cycling on the featured quote (proof of workflow). */
-const STATUS_STEPS: Status[] = ["new", "contacted", "won"];
 
 // Most recent first, like the real inbox. The newest one is the quote that
 // "arrives" mid-demo — it is still one of the 20 seed leads, so the analytics
@@ -375,7 +355,7 @@ const NAV = [
               <!-- ============ QUOTES — ported from QuotesTable.tsx + PageHeader.tsx ============ -->
               <div class="dd-view dd-view--quotes absolute inset-0 overflow-hidden px-8 py-8">
                 <h1 class="font-display text-3xl font-semibold tracking-tight text-ink">Quotes</h1>
-                <p class="mt-1 text-sm text-ink-soft">Measured, priced, and ready to work.</p>
+                <p class="mt-1 text-sm text-ink-soft">Every lead your widget has captured.</p>
 
                 <div class="mt-4 flex items-center gap-1">
                   {QUOTE_FILTERS.map((f, i) => (
@@ -424,14 +404,12 @@ const NAV = [
                           <div class="truncate text-xs text-muted">{newLead.phone}</div>
                         </div>
                         <span class="truncate text-ink-soft">{JOB_LABELS[newLead.job]}</span>
-                        <span class="dd-money truncate font-semibold tabular-nums text-ink">{money(newLead.value)}</span>
-                        <span class="dd-status" aria-label="Status moves from New to Contacted to Completed">
-                          {STATUS_STEPS.map((step) => (
-                            <span
-                              class={`dd-status-pill dd-status-pill--${step}`}
-                              style={`color:${STATUS_COLOR[step].fg};background:${STATUS_COLOR[step].bg}`}
-                            >{STATUS_LABELS[step]}</span>
-                          ))}
+                        <span class="truncate font-medium tabular-nums text-ink">{money(newLead.value)}</span>
+                        <span>
+                          <span
+                            class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
+                            style={`color:${STATUS_COLOR[newLead.status].fg};background:${STATUS_COLOR[newLead.status].bg}`}
+                          >{STATUS_LABELS[newLead.status]}</span>
                         </span>
                         <span class="text-muted">{newLead.received}</span>
                         <span class="flex justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
@@ -451,21 +429,17 @@ const NAV = [
                       <div class="dd-panel grid gap-6 px-6 py-5">
                         <!-- ---- action rail ---- -->
                         <div class="flex flex-col border-r border-line pr-6">
-                          <p class="dd-estimate-value font-display font-semibold text-ink">{money(newLead.value)}</p>
-                          <p class="mt-0.5 text-xs font-medium text-muted">Estimate · ex. VAT</p>
-                          <p class="mt-1.5 text-sm font-semibold text-ink-soft">{JOB_LABELS[newLead.job]}</p>
+                          <p class="font-display text-2xl font-semibold text-ink">{money(newLead.value)}</p>
+                          <p class="mt-0.5 text-xs text-muted">ex. VAT</p>
+                          <p class="mt-1.5 text-sm font-medium text-ink-soft">{JOB_LABELS[newLead.job]}</p>
 
                           <div class="mt-3.5 flex flex-wrap items-center gap-2">
-                            <span class="dd-status dd-status--panel" aria-hidden="true">
-                              {STATUS_STEPS.map((step) => (
-                                <span
-                                  class={`dd-status-pill dd-status-pill--${step}`}
-                                  style={`color:${STATUS_COLOR[step].fg};background:${STATUS_COLOR[step].bg}`}
-                                >
-                                  {STATUS_LABELS[step]}
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-                                </span>
-                              ))}
+                            <span
+                              class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold"
+                              style={`color:${STATUS_COLOR[newLead.status].fg};background:${STATUS_COLOR[newLead.status].bg}`}
+                            >
+                              {STATUS_LABELS[newLead.status]}
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
                             </span>
                             <!-- Intent: a fact about the lead, so it reads as a
                                  quiet outlined tag, never a second status pill. -->
@@ -523,8 +497,8 @@ const NAV = [
                               ["Chimneys", "1"],
                             ].map(([label, value]) => (
                               <div class="flex items-baseline gap-1.5">
-                                <dt class="dd-figure-label text-[11px] font-semibold uppercase tracking-wide text-muted">{label}</dt>
-                                <dd class="dd-figure-value text-sm font-semibold text-ink">{value}</dd>
+                                <dt class="text-[10.5px] font-medium uppercase tracking-wide text-muted">{label}</dt>
+                                <dd class="text-[13px] font-semibold text-ink">{value}</dd>
                               </div>
                             ))}
                           </dl>
@@ -540,7 +514,7 @@ const NAV = [
                         <div class="truncate text-xs text-muted">{r.phone}</div>
                       </div>
                       <span class="truncate text-ink-soft">{JOB_LABELS[r.job]}</span>
-                      <span class="dd-money truncate font-semibold tabular-nums text-ink">{money(r.value)}</span>
+                      <span class="truncate font-medium tabular-nums text-ink">{money(r.value)}</span>
                       <span>
                         <span
                           class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
@@ -559,18 +533,18 @@ const NAV = [
               <div class="dd-view dd-view--analytics absolute inset-0 overflow-hidden px-8 py-8">
                 <div class="dd-scroll">
                   <h1 class="font-display text-3xl font-semibold tracking-tight text-ink">Analytics</h1>
-                  <p class="mt-1 text-sm text-ink-soft">Wins, losses, and what the website earned.</p>
+                  <p class="mt-1 text-sm text-ink-soft">Quote volume and estimated value across your pipeline.</p>
 
                   <div class="mt-4 grid grid-cols-2 gap-4">
                     <div class="surface rounded-2xl p-4">
-                      <p class="dd-stat-label text-xs font-semibold text-ink-soft">Quotes today</p>
-                      <p class="dd-stat-value mt-0.5 font-semibold text-ink">{todayRows.length}</p>
-                      <p class="text-xs font-medium text-muted">{yesterdayRows.length} yesterday</p>
+                      <p class="text-xs font-medium text-ink-soft">Quotes today</p>
+                      <p class="mt-0.5 text-xl font-semibold text-ink">{todayRows.length}</p>
+                      <p class="text-xs text-muted">{yesterdayRows.length} yesterday</p>
                     </div>
                     <div class="surface rounded-2xl p-4">
-                      <p class="dd-stat-label text-xs font-semibold text-ink-soft">Typical estimate today</p>
-                      <p class="dd-stat-value mt-0.5 font-semibold text-ink">{todayMedian != null ? money(todayMedian) : "—"}</p>
-                      <p class="text-xs font-medium text-muted">Ready to chase</p>
+                      <p class="text-xs font-medium text-ink-soft">Median estimate today</p>
+                      <p class="mt-0.5 text-xl font-semibold text-ink">{todayMedian != null ? money(todayMedian) : "—"}</p>
+                      <p class="text-xs text-muted">— yesterday</p>
                     </div>
                   </div>
 
@@ -591,9 +565,9 @@ const NAV = [
                   <div class="mt-3 grid grid-cols-3 gap-4">
                     {STAT_CARDS.map((card, i) => (
                       <div class="surface rounded-2xl p-4" data-chart={i}>
-                        <p class="dd-stat-label text-xs font-semibold text-ink-soft">{card.title}</p>
-                        <p class="dd-stat-value mt-0.5 font-semibold text-ink">{card.value}</p>
-                        <p class="text-xs font-medium text-muted">{card.delta}</p>
+                        <p class="text-xs font-medium text-ink-soft">{card.title}</p>
+                        <p class="mt-0.5 text-xl font-semibold text-ink">{card.value}</p>
+                        <p class="text-xs text-muted">{card.delta}</p>
                         <div class="dd-chart relative mt-3">
                           <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" class="w-full" style="height:90px" aria-hidden="true">
                             {card.c.grid.map((g) => (
@@ -619,8 +593,8 @@ const NAV = [
 
                   <div class="mt-4 grid grid-cols-2 gap-4">
                     <div class="surface rounded-2xl p-4">
-                      <p class="dd-stat-label text-xs font-semibold text-ink-soft">Value by job type</p>
-                      <p class="text-xs font-medium text-muted">What each job typically quotes at</p>
+                      <p class="text-xs font-medium text-ink-soft">Value by job type</p>
+                      <p class="text-xs text-muted">Median estimate, this range</p>
                       <div class="mt-3 space-y-2.5">
                         {jobRows.map((r) => (
                           <div>
@@ -637,8 +611,8 @@ const NAV = [
                     </div>
 
                     <div class="surface rounded-2xl p-4">
-                      <p class="dd-stat-label text-xs font-semibold text-ink-soft">Won vs lost</p>
-                      <p class="text-xs font-medium text-muted">What you closed — and what slipped</p>
+                      <p class="text-xs font-medium text-ink-soft">Won vs. lost value</p>
+                      <p class="text-xs text-muted">Median estimate, this range</p>
                       <div class="mt-3 space-y-2.5">
                         {([["won", wonMedian, wonRows.length], ["lost", lostMedian, lostRows.length]] as const).map(
                           ([key, med, n]) => (
@@ -676,11 +650,12 @@ const NAV = [
   </div>
 
   <div class="dd-copy" data-reveal="right" data-delay="1">
-    <p class="dd-kicker">Status, wins, and revenue.</p>
+    <p class="dd-kicker">It ends up on your desk.</p>
     <h2 id="dd-heading">Every quote is sorted automatically.</h2>
     <p class="dd-body">
-      Quotes arrive already measured and priced, and you can instantly see
-      status, wins and losses, and revenue generated.
+      Every quote that comes in goes straight into your dashboard, already
+      priced and measured. You can see which ones you won, which ones you
+      lost, and how much the website is actually bringing in for you.
     </p>
   </div>
 </section>
@@ -755,55 +730,7 @@ const NAV = [
     height: 100%;
     font-family: var(--font-sans);
     color: #0a0b0d;
-    font-size: 16px;
-  }
-
-  /* Larger money / status so the proof reads at demo scale. */
-  .dd-money {
-    font-size: 1.05rem;
-    letter-spacing: -0.02em;
-  }
-  .dd-estimate-value {
-    font-size: 2.15rem;
-    letter-spacing: -0.04em;
-    line-height: 1.05;
-  }
-  .dd-stat-value {
-    font-size: 1.65rem;
-    letter-spacing: -0.03em;
-    line-height: 1.1;
-  }
-  .dd-stat-label {
-    letter-spacing: 0.01em;
-  }
-  .dd-figure-value {
-    font-size: 0.95rem;
-  }
-
-  /* Stacked status pills — one visible at a time as the workflow advances. */
-  .dd-status {
-    position: relative;
-    display: inline-grid;
-    vertical-align: middle;
-  }
-  .dd-status-pill {
-    grid-area: 1 / 1;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    border-radius: 999px;
-    padding: 0.3rem 0.7rem;
-    font-size: 0.8rem;
-    font-weight: 700;
-    line-height: 1.1;
-    white-space: nowrap;
-    opacity: 0;
-    transform: scale(0.94);
-  }
-  /* Idle / reduced-motion: show Completed so the proof still reads. */
-  .dd-status-pill--won {
-    opacity: 1;
-    transform: scale(1);
+    font-size: 15px;
   }
 
   /* ---------- sidebar (real Sidebar.tsx + DashboardShell.tsx values) ---------- */
@@ -952,52 +879,19 @@ const NAV = [
   }
 
   /* ---------- copy ---------- */
-  .dd-copy {
-    text-align: center;
-    max-width: 28rem;
-    margin-inline: auto;
-    /* Opaque wash so type stays crisp over the blue glow / sky. */
-    padding: 1.15rem 1.35rem 1.25rem;
-    border-radius: 1.15rem;
-    background: rgba(255, 255, 255, 0.88);
-    border: 1px solid rgba(255, 255, 255, 0.95);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.9) inset,
-      0 12px 32px -18px rgba(15, 40, 100, 0.28);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-  }
+  .dd-copy { text-align: center; max-width: 28rem; margin-inline: auto; }
   @media (min-width: 1024px) {
-    .dd-copy {
-      text-align: right;
-      margin-inline: 0 0 0 auto;
-      max-width: 23rem;
-      padding: 1.35rem 1.5rem 1.45rem;
-    }
+    .dd-copy { text-align: right; margin-inline: 0 0 0 auto; max-width: 22rem; }
   }
-  .dd-kicker {
-    margin: 0;
-    color: var(--color-brand-700);
-    font-size: 0.9rem;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-  }
+  .dd-kicker { margin: 0; color: var(--color-brand-600); font-weight: 600; }
   .dd-copy h2 {
-    margin: 0.4rem 0 0.85rem;
+    margin: 0.45rem 0 1rem;
     font-family: var(--font-display);
-    font-size: clamp(2.05rem, 3.8vw, 3.15rem);
-    font-weight: 600;
+    font-size: clamp(2.1rem, 4vw, 3.4rem);
     letter-spacing: -0.045em;
-    line-height: 1.05;
-    color: var(--color-ink);
+    line-height: 1.02;
   }
-  .dd-body {
-    margin: 0;
-    color: #1c2430;
-    font-size: 1.05rem;
-    font-weight: 500;
-    line-height: 1.55;
-  }
+  .dd-body { margin: 0; color: var(--color-ink-soft); line-height: 1.6; }
   @media (min-width: 1024px) {
     .dd-body { margin-left: auto; }
   }
@@ -1036,9 +930,6 @@ const NAV = [
   .dd-frame.playing .dd-newdot { animation: dd-newdot 15s ease-in-out infinite; }
   .dd-frame.playing .dd-row--new { animation: dd-rowbg 15s ease-in-out infinite; }
   .dd-frame.playing .dd-detail { animation: dd-detail 15s ease-in-out infinite; }
-  .dd-frame.playing .dd-status-pill--new { animation: dd-status-new 15s ease-in-out infinite; }
-  .dd-frame.playing .dd-status-pill--contacted { animation: dd-status-contacted 15s ease-in-out infinite; }
-  .dd-frame.playing .dd-status-pill--won { animation: dd-status-won 15s ease-in-out infinite; }
   .dd-frame.playing .dd-nav-item[data-nav="quotes"] { animation: dd-nav-quotes-text 15s ease-in-out infinite; }
   .dd-frame.playing .dd-nav-item[data-nav="quotes"] .dd-nav-pill { animation: dd-nav-quotes-pill 15s ease-in-out infinite; }
   .dd-frame.playing .dd-nav-item[data-nav="quotes"] .dd-nav-icon { animation: dd-nav-quotes-icon 15s ease-in-out infinite; }
@@ -1111,10 +1002,14 @@ const NAV = [
      once for the analytics tour and only PANS across it. */
   @keyframes dd-zoom {
     0%, 5%    { transform: scale(1);    transform-origin: 50% 20%; }
-    /* Hold tighter on the quote card while status advances New → Contacted
-       → Completed, then ease out to the full opened panel. */
-    12%, 24%  { transform: scale(1.55); transform-origin: 88% 30%; }  /* quote card + status */
-    28%, 40%  { transform: scale(1.32); transform-origin: 105% 50%; } /* whole panel in frame */
+    /* transform-origin is NOT a camera centre. Scaling about O shows
+       [O - O/s, O + (W-O)/s], so the window is asymmetric about O and a
+       "centre the subject" origin crops it. Both framings below were solved
+       against the rendered boxes (row spans x 28-97 y 26-34; panel spans
+       x 28-97 y 34-80 of the stage) until the subject sat fully inside the
+       viewport — not derived from where the subject's centre is. */
+    12%, 20%  { transform: scale(1.4);  transform-origin: 92% 30%; }  /* whole row, cursor centred */
+    26%, 40%  { transform: scale(1.3);  transform-origin: 105% 50%; } /* whole panel in frame */
     46%       { transform: scale(1);    transform-origin: 40% 24%; }
     51%       { transform: scale(1);    transform-origin: 50% 20%; }
     57%       { transform: scale(1.55); transform-origin: 39% 53%; }  /* push in once for Analytics */
@@ -1123,23 +1018,6 @@ const NAV = [
     80%       { transform: scale(1.4);  transform-origin: 45% 54%; }  /* ease down to the bars */
     87%       { transform: scale(1.4);  transform-origin: 80% 54%; }  /* pan, same scale */
     93%, 100% { transform: scale(1);    transform-origin: 50% 20%; }
-  }
-
-  /* Status workflow on the featured quote — readable at a glance. */
-  @keyframes dd-status-new {
-    0%, 11%   { opacity: 0; transform: scale(0.94); }
-    13%, 17%  { opacity: 1; transform: scale(1); }
-    20%, 100% { opacity: 0; transform: scale(0.94); }
-  }
-  @keyframes dd-status-contacted {
-    0%, 18%   { opacity: 0; transform: scale(0.94); }
-    21%, 26%  { opacity: 1; transform: scale(1); }
-    29%, 100% { opacity: 0; transform: scale(0.94); }
-  }
-  @keyframes dd-status-won {
-    0%, 27%   { opacity: 0; transform: scale(0.94); }
-    30%, 52%  { opacity: 1; transform: scale(1); }
-    58%, 100% { opacity: 0; transform: scale(0.94); }
   }
 
   /* Scrolls the analytics page down to the breakdown cards, then back. */
@@ -1293,13 +1171,7 @@ const NAV = [
     .dd-frame.playing .dd-nav-item[data-nav="quotes"] .dd-nav-icon,
     .dd-frame.playing .dd-nav-item[data-nav="analytics"],
     .dd-frame.playing .dd-nav-item[data-nav="analytics"] .dd-nav-pill,
-    .dd-frame.playing .dd-nav-item[data-nav="analytics"] .dd-nav-icon,
-    .dd-frame.playing .dd-status-pill--new,
-    .dd-frame.playing .dd-status-pill--contacted,
-    .dd-frame.playing .dd-status-pill--won { animation: none; }
-    .dd-status-pill--new,
-    .dd-status-pill--contacted { opacity: 0; }
-    .dd-status-pill--won { opacity: 1; transform: scale(1); }
+    .dd-frame.playing .dd-nav-item[data-nav="analytics"] .dd-nav-icon { animation: none; }
     .dd-view--analytics { opacity: 1; }
     .dd-view--quotes { opacity: 0; }
     /* Static frame shows Analytics permanently, so its charts should read
