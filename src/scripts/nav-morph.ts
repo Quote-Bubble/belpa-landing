@@ -2,7 +2,7 @@ import { bindLenisScroll, clamp01, getScroll, smoothstep } from "./scroll-helper
 import { ensureScrollFlight } from "./scroll-flight";
 
 /**
- * Scroll-links the floating glass hero nav into the compact full-bleed bar.
+ * Scroll-links the light hero glass strip into the familiar docked sticky bar.
  * Progress is pure scroll — no CSS transitions on --nav-t (those would lag).
  */
 export function initNavMorph() {
