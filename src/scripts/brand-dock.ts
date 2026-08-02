@@ -152,17 +152,16 @@ export function initBrandDock() {
     fly.classList.toggle("is-hero", t < 0.04);
     fly.classList.toggle("is-docked", t > 0.97);
 
-    // The pill has no business appearing until the wordmark is most of the way
-    // home, or it reads as two unrelated things moving at once.
-    const alpha = clamp01((t - 0.45) / 0.28);
+    // Hybrid header stays visible (nav links / CTAs). --nav-alpha only
+    // strengthens the frosted bar as the wordmark docks — never hide chrome.
+    const alpha = clamp01((t - 0.35) / 0.4);
     glass.style.setProperty("--nav-alpha", String(alpha));
-    glass.style.opacity = String(alpha);
-    const interactive = alpha > 0.6;
-    if (interactive !== lastInteractive) {
-      lastInteractive = interactive;
-      glass.style.pointerEvents = interactive ? "auto" : "none";
-      if (interactive) glass.removeAttribute("inert");
-      else glass.setAttribute("inert", "");
+    glass.classList.toggle("is-brand-near", alpha > 0.25);
+    glass.classList.toggle("is-brand-docked", t > 0.97);
+    if (lastInteractive !== true) {
+      lastInteractive = true;
+      glass.style.pointerEvents = "auto";
+      glass.removeAttribute("inert");
     }
   }
 
@@ -196,7 +195,10 @@ export function initBrandDock() {
 
   document.documentElement.classList.remove("is-brand-morphing");
   fly.classList.remove("is-ready", "is-active", "is-docked", "is-hero");
+  glass.classList.remove("is-brand-near", "is-brand-docked");
   glass.style.transition = "none";
+  glass.style.pointerEvents = "auto";
+  glass.removeAttribute("inert");
 
   const unsub = flight.on(() => {
     if (ready) paint();

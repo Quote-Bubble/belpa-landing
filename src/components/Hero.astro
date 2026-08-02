@@ -1,15 +1,14 @@
 ---
 import LiveWidget from "./LiveWidget.astro";
 
-// Keep in sync with Nav.astro meetingUrl
 const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
 ---
 
 <!--
-  Widget-first hero. Brand spacer is layout-only; Nav owns the visible flying wordmark.
-  Meeting CTA spacer is layout-only; Nav owns the flying “Book a call” button.
+  Hybrid hero: morph spacer (brand-dock target) + one live quote embed.
+  No second fake form. Book a call is secondary; trust strip sits under the embed.
 -->
-<section class="hero relative flex min-h-[100svh] flex-col">
+<section class="hero relative flex min-h-[100svh] flex-col" aria-labelledby="hero-heading">
   <div
     class="hero-stage relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col items-center px-5 text-center sm:px-6"
   >
@@ -17,23 +16,30 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
       <h1 class="font-display hero-brand" aria-label="Quoter">
         <span class="hero-brand-spacer" data-brand-spacer aria-hidden="true">Quoter</span>
       </h1>
-      <p class="font-display hero-promise sub-load">
+      <p id="hero-heading" class="font-display hero-promise sub-load">
         Stop losing leads with slow quotes.
       </p>
       <p class="hero-support sub-load sub-load-late">
         We'll give potential clients visiting your site accurate, instant quotes using satellite imagery.
       </p>
 
-      <div class="hero-widget mx-auto w-full max-w-[740px] widget-load" data-widget-shell>
-        <!-- Holds layout while #quoter-widget is position:fixed during the dock morph -->
+      <div
+        class="hero-widget mx-auto w-full max-w-[740px] widget-load"
+        id="demo"
+        data-widget-shell
+      >
         <div class="hero-widget-spacer" data-widget-spacer aria-hidden="true"></div>
         <LiveWidget />
       </div>
 
-      <!--
-        Takeoff button: clickable in-flow until the Nav flyer morphs in,
-        then hidden (same handoff pattern as the Quoter wordmark).
-      -->
+      <p class="hero-helper">Instant estimate. No payment needed. Beta.</p>
+
+      <ul class="hero-trust" aria-label="Trust signals">
+        <li>Powered by satellite imagery</li>
+        <li>No payment needed</li>
+        <li>Beta</li>
+      </ul>
+
       <a
         href={meetingUrl}
         class="hero-meeting-takeoff meeting-load"
@@ -71,7 +77,8 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
 <style>
   .hero-stage {
     justify-content: center;
-    padding-top: max(3.5rem, calc(env(safe-area-inset-top, 0px) + 2.5rem));
+    /* Clear the fixed hybrid header */
+    padding-top: max(4.75rem, calc(env(safe-area-inset-top, 0px) + 3.75rem));
     padding-bottom: clamp(1.25rem, 3.5svh, 2.75rem);
   }
 
@@ -80,11 +87,10 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     line-height: 0.92;
   }
 
-  /* Solid wordmark + sheen overlay that sweeps through (letters stay put) */
   .hero-brand-spacer {
     position: relative;
     display: inline-block;
-    font-size: clamp(4.25rem, 14vw, 8.5rem);
+    font-size: clamp(3.6rem, 11vw, 6.75rem);
     font-weight: 600;
     letter-spacing: -0.045em;
     line-height: 0.92;
@@ -124,7 +130,6 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     -webkit-text-fill-color: transparent;
     animation: brand-sheen 9s linear 1.4s infinite;
   }
-  /* Hidden only after the fixed wordmark is placed — no mid-scroll handoff */
   :global(html.is-brand-morphing) .hero-brand-spacer {
     visibility: hidden;
   }
@@ -167,7 +172,7 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
   }
 
   .hero-promise {
-    margin: 1.35rem auto 0;
+    margin: 0.85rem auto 0;
     max-width: 20em;
     font-size: clamp(1.55rem, 3.8vw, 2.25rem);
     font-weight: 600;
@@ -177,18 +182,18 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
   }
 
   .hero-support {
-    margin: 1.15rem auto 0;
+    margin: 0.65rem auto 0;
     max-width: 38rem;
     font-size: clamp(1.02rem, 1.8vw, 1.15rem);
     font-weight: 500;
     letter-spacing: -0.015em;
-    line-height: 1.65;
-    color: var(--color-ink-soft);
+    line-height: 1.55;
+    color: #1c2430;
   }
 
   .hero-widget {
     position: relative;
-    margin-top: clamp(1.45rem, 3.6svh, 2.6rem);
+    margin-top: clamp(1.2rem, 3svh, 2.1rem);
   }
   .hero-widget-spacer {
     width: 100%;
@@ -196,7 +201,38 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     visibility: hidden;
   }
 
-  /* Soft-rect sibling of the quote shell — same brand blue as Get my quote */
+  .hero-helper {
+    margin: 0.7rem auto 0;
+    font-size: 0.86rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #3d4148;
+  }
+
+  .hero-trust {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem 0.6rem;
+    margin: 0.85rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .hero-trust li {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.9rem;
+    padding: 0.35rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid rgba(16, 24, 40, 0.1);
+    background: rgba(255, 255, 255, 0.9);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: #1c2430;
+  }
+
+  /* Secondary outline — not the same filled primary as the embed CTA */
   .hero-meeting-takeoff {
     display: inline-flex;
     align-items: center;
@@ -205,131 +241,62 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     position: relative;
     z-index: 2;
     width: min(100% - var(--q-embed-pad-x) * 2, 620px);
-    margin: calc(0.9rem - var(--q-shadow-room)) auto 0;
+    margin: calc(0.85rem - var(--q-shadow-room)) auto 0;
     padding: 0.8rem 1.05rem;
     border-radius: 28px;
-    border: 0;
-    background: linear-gradient(180deg, var(--color-brand-500), var(--color-brand-600));
+    border: 1.5px solid rgba(31, 87, 240, 0.35);
+    background: rgba(255, 255, 255, 0.78);
     font-size: 0.9rem;
     font-weight: 600;
     letter-spacing: -0.02em;
     line-height: 1;
-    color: #fff;
+    color: var(--color-brand-700);
     text-decoration: none;
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.28) inset,
-      0 8px 20px -8px rgba(31, 87, 240, 0.5);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset;
     box-sizing: border-box;
-    /* `filter` is owned per-frame by meeting-wipe.ts and must NOT transition:
-       a 0.25s ease here out-specifies `.is-dissolving { transition: none }`,
-       so scrolling back up animated the button from solid → blurred and it
-       flashed in at full strength before catching up. Same reason hover uses
-       box-shadow alone rather than filter: brightness(). */
-    transition: box-shadow 0.35s var(--ease-out-expo, ease);
+    transition: box-shadow 0.35s var(--ease-out-expo, ease), background 0.2s ease;
   }
   .hero-meeting-takeoff:hover {
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.32) inset,
-      0 12px 28px -8px rgba(31, 87, 240, 0.58);
+    background: #fff;
+    border-color: rgba(31, 87, 240, 0.55);
+    box-shadow: 0 8px 22px -14px rgba(31, 87, 240, 0.45);
   }
   .hero-meeting-takeoff:focus-visible {
-    outline: 2px solid var(--color-brand-500);
+    outline: 2px solid var(--color-brand-600);
     outline-offset: 3px;
   }
   .hero-meeting-takeoff svg {
     flex: none;
   }
-  /* Visibility during the wipe handoff is owned by meeting-wipe.ts. */
-
-  /* Once morph boots, the real widget is fixed — spacer is the in-flow box */
-  /* Pinned to body by JS — keep styles global so portal still looks right */
-
 
   @media (max-width: 640px) {
     .hero {
-      /* One screen tall on first paint — content centred inside it. */
       min-height: 100svh;
     }
     .hero-stage {
-      /* True vertical centre in the visible phone viewport (matches shot 2).
-         No downward bias — that was shoving Book a call up and letting
-         satellite section bleed into the first fold. */
       justify-content: center;
-      padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+      padding-top: max(4.25rem, calc(env(safe-area-inset-top, 0px) + 3.5rem));
       padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
     }
     .hero-brand-spacer {
-      /* Readable logo size — not zoomed-out marketing type */
-      font-size: clamp(3.75rem, 12vw, 4.75rem);
-    }
-    .hero-promise {
-      margin-top: 0.95rem;
-      font-size: clamp(1.45rem, 5.2vw, 1.7rem);
-      max-width: 16em;
-      line-height: 1.2;
-    }
-    .hero-support {
-      margin-top: 0.8rem;
-      font-size: 1.05rem;
-      line-height: 1.45;
-      max-width: 22rem;
-      color: var(--color-ink-soft);
-    }
-    .hero-widget {
-      margin-top: 1.5rem;
-    }
-    .hero-meeting-takeoff {
-      margin: calc(0.85rem - var(--q-shadow-room, 0px)) auto 0;
-      font-size: 0.95rem;
-      padding: 0.85rem 1.05rem;
-    }
-    .hero-scroll {
-      /* Keep the cue inside the hero, above Safari chrome */
-      bottom: max(0.65rem, calc(env(safe-area-inset-bottom, 0px) + 0.35rem));
-    }
-  }
-
-  @media (max-width: 640px) and (max-height: 720px) {
-    .hero-stage {
-      /* Short phones: still centre, lightly compress — keep type readable. */
-      justify-content: center;
-      padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
-      padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
-    }
-    .hero-brand-spacer {
-      font-size: clamp(3.35rem, 11vw, 4rem);
+      font-size: clamp(3.1rem, 11vw, 4.25rem);
     }
     .hero-promise {
       margin-top: 0.75rem;
-      font-size: clamp(1.35rem, 4.8vw, 1.55rem);
+      font-size: clamp(1.4rem, 5vw, 1.65rem);
     }
     .hero-support {
-      margin-top: 0.6rem;
-      font-size: 1rem;
-    }
-    .hero-widget {
-      margin-top: 1.2rem;
-    }
-    .hero-meeting-takeoff {
-      margin: calc(0.7rem - var(--q-shadow-room, 0px)) auto 0;
-    }
-  }
-
-  @media (min-width: 641px) and (max-height: 740px) {
-    .hero-stage {
-      justify-content: flex-start;
-      padding-top: 3.25rem;
-      padding-bottom: 1rem;
-    }
-    .hero-brand-spacer {
-      font-size: clamp(3.5rem, 9vw, 5.5rem);
+      margin-top: 0.55rem;
+      font-size: 1.02rem;
     }
     .hero-widget {
       margin-top: 1.25rem;
     }
+    .hero-scroll {
+      bottom: max(0.65rem, calc(env(safe-area-inset-bottom, 0px) + 0.35rem));
+    }
   }
 
-  /* Late, quiet scroll cue — appears after entrance, leaves on first scroll */
   .hero-scroll {
     position: absolute;
     left: 50%;
@@ -377,11 +344,6 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     outline-offset: 2px;
     border-radius: 999px;
   }
-  .hero-scroll svg {
-    width: 24px;
-    height: 24px;
-  }
-
   @keyframes hero-scroll-drift {
     0%,
     100% {
@@ -391,13 +353,6 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
       transform: translate3d(-50%, 5px, 0);
     }
   }
-
-  @media (max-height: 700px) {
-    .hero-scroll {
-      bottom: 0.35rem;
-    }
-  }
-
   @media (prefers-reduced-motion: reduce) {
     .hero-scroll.is-shown {
       animation: none;
@@ -412,26 +367,25 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     document.querySelectorAll("[data-try]").forEach((btn) => {
       if ((btn as HTMLElement).dataset.tryBound === "1") return;
       (btn as HTMLElement).dataset.tryBound = "1";
-      btn.addEventListener("click", () => {
-        // Always return to the top search (hero or docked nav)
+      btn.addEventListener("click", (event) => {
+        event.preventDefault();
+        const demo = document.getElementById("demo");
         const lenis = window.__lenis;
-        if (lenis?.scrollTo) lenis.scrollTo(0, { duration: 1.1 });
-        else window.scrollTo({ top: 0, behavior: "smooth" });
-        // The search input lives inside the widget iframe now — focus it
-        // across the frame boundary via the host bridge.
-        const focusEmbed = (window as unknown as { __quoterFocus?: () => void })
-          .__quoterFocus;
-        const input = card.querySelector("[data-input]") as HTMLInputElement | null;
+        if (demo) {
+          if (lenis?.scrollTo) lenis.scrollTo(demo, { offset: -96, duration: 1.0 });
+          else demo.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else if (lenis?.scrollTo) {
+          lenis.scrollTo(0, { duration: 1.1 });
+        } else {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
         window.setTimeout(() => {
-          if (focusEmbed) focusEmbed();
-          else input?.focus({ preventScroll: true });
-        }, 650);
+          (window as unknown as { __quoterFocus?: () => void }).__quoterFocus?.();
+        }, 550);
       });
     });
   }
 
-  // Freeze the rise at its end state so the compositor doesn't snap when
-  // keyframes finish (and so morph can measure a clean layout box).
   function settleWidgetLoad() {
     const shell = document.querySelector<HTMLElement>("[data-widget-shell]");
     if (!shell || shell.dataset.settleBound === "1") return;
@@ -475,7 +429,6 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
 
     const show = () => {
       if (gone) return;
-      // Already scrolled (e.g. restored) — never flash the cue
       const y = window.__lenis?.scroll ?? window.scrollY;
       if (y > 24) {
         dismiss();
@@ -491,15 +444,15 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
       if (y > 18) dismiss();
     };
     window.addEventListener("scroll", onScroll, { passive: true });
-    const lenis = window.__lenis;
-    lenis?.on?.("scroll", onScroll);
+    window.__lenis?.on?.("scroll", onScroll);
 
     cue.addEventListener("click", () => {
       dismiss();
-      const target = document.querySelector("#tech") || document.querySelector("#how");
+      const target =
+        document.querySelector("#product") || document.querySelector("#pricing");
       if (!target) return;
       const l = window.__lenis;
-      if (l?.scrollTo) l.scrollTo(target as HTMLElement, { offset: -24, duration: 1.2 });
+      if (l?.scrollTo) l.scrollTo(target as HTMLElement, { offset: -72, duration: 1.2 });
       else (target as HTMLElement).scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
@@ -509,6 +462,9 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
   settleMeetingLoad();
   initHeroScrollCue();
   document.addEventListener("astro:after-swap", () => {
+    document.querySelectorAll("[data-try]").forEach((btn) => {
+      delete (btn as HTMLElement).dataset.tryBound;
+    });
     initTryCta();
     settleWidgetLoad();
     settleMeetingLoad();

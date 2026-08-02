@@ -1,80 +1,127 @@
 ---
 const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
-// Roofer login. Points at the dashboard root, which auto-routes: logged-out to
-// /login, logged-in straight to /quotes. Env-overridable like the embed origin.
 const dashboardUrl =
   import.meta.env.PUBLIC_DASHBOARD_URL ??
   "https://quoter-dashboard-frontend.vercel.app";
+
+const links = [
+  { href: "#product", label: "Product" },
+  { href: "#pricing", label: "Pricing" },
+  { href: "/privacy", label: "Docs" },
+  { href: "#contact", label: "Contact" },
+] as const;
 ---
 
 <!--
-  One fixed wordmark for the whole journey. No handoff at the top — that was
-  the "click". Spacer is layout-only; fly is always the visible Quoter once ready.
+  Hybrid header: always-visible landing chrome + morph dock targets.
+  data-brand-fly / data-nav-brand-slot / data-glass-nav keep brand-dock working:
+  the hero Quoter still flies into the left slot on scroll.
 -->
 <a href="/" class="brand-fly" data-brand-fly aria-label="Quoter home">Quoter</a>
 
-<!-- Roofer login. A quiet corner utility, deliberately kept physically apart
-     from the "Book a call" CTA so it never reads as a competing button. Faint
-     glass chip (no fill) so it stays legible over the dark sections lower down.
-     Desktop only — the mobile bar carries its own muted "Log in" instead. -->
-<a href={dashboardUrl} class="corner-login" aria-label="Log in to your dashboard">
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M10 17l5-5-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-  <span>Log in</span>
-</a>
+<header class="site-header" data-site-header data-glass-nav inert>
+  <div class="site-header-inner">
+    <div class="site-brand">
+      <!-- Transparent sizing slot — brand-dock lands the flying wordmark here. -->
+      <span class="site-brand-slot" data-nav-brand-slot aria-hidden="true">Quoter</span>
+    </div>
 
-<!-- Docked nav pill. Sits at its normal (wordmark-only) size until the hero's
-     own "Book a call" has scrolled out of view; then a discrete, NON-scroll-
-     linked animation lengthens the pill and reveals the CTA next to the
-     wordmark (the .is-expanded toggle is driven by initNavExpand below). -->
-<div class="glass-nav" data-glass-nav inert>
-  <span class="glass-nav-brand-slot" data-nav-brand-slot aria-hidden="true">Quoter</span>
-  <span class="glass-nav-cta-wrap" data-nav-cta-wrap>
-    <span class="glass-nav-cta-inner">
-      <span class="glass-nav-divider" aria-hidden="true"></span>
+    <nav class="site-nav" aria-label="Primary">
+      <ul class="site-nav-list">
+        {
+          links.map((link) => (
+            <li>
+              <a href={link.href} class="site-nav-link">
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="site-header-actions">
+      <a
+        href={dashboardUrl}
+        class="site-header-login"
+        aria-label="Log in to your dashboard"
+      >
+        Log in
+      </a>
+
+      <!-- Collapses until hero Book a call scrolls away (initNavExpand). -->
+      <span class="site-header-book-wrap" data-nav-cta-wrap>
+        <span class="site-header-book-inner">
+          <a
+            href={meetingUrl}
+            class="site-header-book"
+            data-nav-book
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Book a call
+          </a>
+        </span>
+      </span>
+
+      <a href="#demo" class="site-header-demo" data-try>
+        Get instant estimate
+      </a>
+
+      <button
+        type="button"
+        class="site-header-menu"
+        data-nav-menu
+        aria-expanded="false"
+        aria-controls="site-mobile-panel"
+        aria-label="Open menu"
+      >
+        <span class="site-header-menu-bars" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+
+  <div id="site-mobile-panel" class="site-mobile-panel" data-nav-panel hidden>
+    <nav aria-label="Mobile">
+      <ul class="site-mobile-list">
+        {
+          links.map((link) => (
+            <li>
+              <a href={link.href} class="site-mobile-link" data-nav-close>
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+    <div class="site-mobile-actions">
       <a
         href={meetingUrl}
-        class="glass-nav-cta"
+        class="site-mobile-book"
+        data-nav-close
         target="_blank"
         rel="noopener noreferrer"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <rect x="3" y="5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="2"/>
-          <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        <span class="glass-nav-cta-label">Book a call</span>
+        Book a call
       </a>
-    </span>
-  </span>
-</div>
-
-<!-- Mobile nav: the desktop scroll-morph can't stay smooth on touch (native
-     momentum + blur recompositing), so on phones the hero wordmark just scrolls
-     away and this plain bar fades in. -->
-<div class="mobile-nav" data-mobile-nav>
-  <a href="/" class="mobile-nav-brand">Quoter</a>
-  <div class="mobile-nav-actions">
-    <a href={dashboardUrl} class="mobile-nav-login" aria-label="Log in to your dashboard">
-      Log in
-    </a>
-    <a
-      href={meetingUrl}
-      class="mobile-nav-cta"
-      target="_blank"
-      rel="noopener noreferrer"
-    >Book a call</a>
+      <a href="#demo" class="site-mobile-demo" data-try data-nav-close>
+        Get instant estimate
+      </a>
+      <a href={dashboardUrl} class="site-mobile-login" data-nav-close>Log in</a>
+    </div>
   </div>
-</div>
+</header>
+
+<!-- Mobile fallback wordmark when the morph flyer is hidden. -->
+<a href="/" class="site-mobile-logo" aria-label="Quoter home">Quoter</a>
 
 <style>
   .brand-fly {
     position: fixed;
     top: 0;
     left: 0;
-    z-index: 70;
+    z-index: 90;
     margin: 0;
     padding: 0;
     border: 0;
@@ -88,7 +135,6 @@ const dashboardUrl =
     color: var(--color-ink);
     -webkit-text-fill-color: var(--color-ink);
     -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
     text-rendering: geometricPrecision;
     opacity: 0;
     visibility: hidden;
@@ -99,10 +145,6 @@ const dashboardUrl =
     visibility: visible;
     pointer-events: auto;
   }
-  /*
-    Solid wordmark always. A highlight layer sweeps through the glyphs —
-    the logo itself never slides away.
-  */
   .brand-fly.is-hero::after {
     content: "Quoter";
     position: absolute;
@@ -134,9 +176,7 @@ const dashboardUrl =
     content: none;
     animation: none;
   }
-
   @keyframes brand-sheen {
-    /* Pass through, then a long rest before the next sweep */
     0% {
       background-position: 200% 50%;
     }
@@ -147,53 +187,60 @@ const dashboardUrl =
       background-position: -200% 50%;
     }
   }
-
-  .glass-nav {
-    position: fixed;
-    top: max(10px, env(safe-area-inset-top, 0px));
-    left: 50%;
-    z-index: 60;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    /* Starts wordmark-only. The CTA collapses to zero width via the grid trick
-       on .glass-nav-cta-wrap, so the pill hugs the wordmark until .is-expanded
-       fires — then the wrap animates open and the whole bar lengthens. */
-    gap: 0;
-    max-width: min(55rem, calc(100vw - 1.5rem));
-    padding: 0.5rem 2.75rem;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.55);
-    backdrop-filter: blur(24px) saturate(1.7);
-    -webkit-backdrop-filter: blur(24px) saturate(1.7);
-    border: 1px solid rgba(255, 255, 255, 0.65);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.7) inset,
-      0 2px 6px rgba(16, 24, 40, 0.05),
-      0 18px 44px -18px rgba(23, 60, 160, 0.35);
-    transform: translate(-50%, 0);
-    opacity: 0;
-    pointer-events: none;
-    box-sizing: border-box;
-  }
-  .glass-nav.is-expanded {
-    padding-left: 2.75rem;
-    padding-right: 0.5rem;
-  }
-
-  /* The docked pill + flying wordmark are the DESKTOP nav. Mobile uses the
-     plain fade bar (.mobile-nav) instead, so hard-hide these below the
-     breakpoint — the scroll-morph JS is already gated off there, this just
-     guarantees nothing leaks through on any viewport edge case. */
   @media (max-width: 639px) {
-    .glass-nav,
     .brand-fly {
       display: none;
     }
   }
 
-  .glass-nav-brand-slot {
-    flex: none;
+  .site-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 80;
+    /* brand-dock drives --nav-alpha for background strength as the logo docks */
+    --nav-alpha: 0;
+    background: rgba(
+      255,
+      255,
+      255,
+      calc(0.72 + (var(--nav-alpha, 0) * 0.24))
+    );
+    backdrop-filter: blur(18px) saturate(1.5);
+    -webkit-backdrop-filter: blur(18px) saturate(1.5);
+    border-bottom: 1px solid
+      rgba(16, 24, 40, calc(0.04 + (var(--nav-alpha, 0) * 0.08)));
+    box-shadow: 0 8px 28px -20px
+      rgba(15, 40, 100, calc(var(--nav-alpha, 0) * 0.4));
+    transition: box-shadow 0.25s ease;
+  }
+  .site-header.is-scrolled,
+  .site-header.is-brand-docked {
+    --nav-alpha: 1;
+  }
+
+  .site-header-inner {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    width: min(100%, 72rem);
+    margin-inline: auto;
+    padding: 0.7rem 1.25rem;
+    padding-top: max(0.7rem, env(safe-area-inset-top, 0px));
+  }
+  @media (min-width: 1024px) {
+    .site-header-inner {
+      padding-inline: 1.5rem;
+    }
+  }
+
+  .site-brand {
+    min-width: 4.5rem;
+  }
+  .site-brand-slot {
+    display: inline-block;
     font-family: var(--font-display);
     font-size: 1.25rem;
     font-weight: 600;
@@ -204,151 +251,278 @@ const dashboardUrl =
     pointer-events: none;
   }
 
-  /* Collapsible CTA. grid-template-columns 0fr → 1fr animates the child from
-     zero to its natural width (the standard animate-to-auto trick), so the
-     pill lengthens smoothly when .is-expanded toggles. */
-  .glass-nav-cta-wrap {
-    display: grid;
-    grid-template-columns: 0fr;
-    margin-left: 0;
-    transition:
-      grid-template-columns 0.55s var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1)),
-      margin-left 0.55s var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1));
+  .site-nav {
+    display: none;
+    justify-content: center;
   }
-  .glass-nav.is-expanded .glass-nav-cta-wrap {
-    grid-template-columns: 1fr;
-    margin-left: 26px;
+  @media (min-width: 900px) {
+    .site-nav {
+      display: flex;
+    }
   }
-  /* The collapsing block: divider + button. overflow:hidden lives here so the
-     0fr track clips the whole group to nothing when collapsed. */
-  .glass-nav-cta-inner {
-    overflow: hidden;
-    min-width: 0;
+  .site-nav-list {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 0.1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
-  .glass-nav-divider {
-    flex: none;
-    width: 1px;
-    height: 30px;
-    border-radius: 1px;
-    background: rgba(16, 24, 40, 0.16);
-    opacity: 0;
-    transition: opacity 0.3s ease 0.12s;
-  }
-  .glass-nav.is-expanded .glass-nav-divider {
-    opacity: 1;
-  }
-  .glass-nav-cta {
-    flex: none;
+  .site-nav-link {
     display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.78rem 1.35rem;
+    padding: 0.45rem 0.7rem;
     border-radius: 999px;
-    background: linear-gradient(180deg, var(--color-brand-500), var(--color-brand-600));
     font-size: 0.92rem;
     font-weight: 600;
-    letter-spacing: -0.02em;
-    line-height: 1;
-    color: #fff;
+    letter-spacing: -0.015em;
+    color: #1c2430;
     text-decoration: none;
+  }
+  .site-nav-link:hover {
+    background: rgba(47, 107, 255, 0.08);
+    color: var(--color-brand-700);
+  }
+  .site-nav-link:focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 2px;
+  }
+
+  .site-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.45rem;
+  }
+
+  .site-header-login {
+    display: none;
+    padding: 0.4rem 0.55rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1c2430;
+    text-decoration: none;
+  }
+  .site-header-login:hover {
+    color: var(--color-brand-700);
+  }
+  .site-header-login:focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 2px;
+  }
+  @media (min-width: 900px) {
+    .site-header-login {
+      display: inline-flex;
+    }
+  }
+
+  .site-header-book-wrap {
+    display: none;
+    grid-template-columns: 0fr;
+    transition: grid-template-columns 0.55s
+      var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1));
+  }
+  @media (min-width: 640px) {
+    .site-header-book-wrap {
+      display: grid;
+    }
+  }
+  .site-header.is-expanded .site-header-book-wrap {
+    grid-template-columns: 1fr;
+  }
+  .site-header-book-inner {
+    overflow: hidden;
+    min-width: 0;
+  }
+  .site-header-book {
+    display: inline-flex;
+    align-items: center;
     white-space: nowrap;
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.28) inset,
-      0 8px 20px -8px rgba(31, 87, 240, 0.55);
+    padding: 0.45rem 0.7rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-brand-700);
+    text-decoration: none;
     opacity: 0;
     transform: translateX(-6px);
     pointer-events: none;
     transition:
-      opacity 0.35s ease 0.1s,
-      transform 0.45s var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1)) 0.1s;
+      opacity 0.35s ease 0.08s,
+      transform 0.45s var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1)) 0.08s;
   }
-  .glass-nav.is-expanded .glass-nav-cta {
+  .site-header.is-expanded .site-header-book {
     opacity: 1;
     transform: translateX(0);
     pointer-events: auto;
   }
-  .glass-nav-cta svg {
-    flex: none;
+  .site-header-book:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
-  .glass-nav-cta:hover {
+  .site-header-book:focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 2px;
+  }
+
+  .site-header-demo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.62rem 1.05rem;
+    border-radius: 999px;
+    background: linear-gradient(
+      180deg,
+      var(--color-brand-500),
+      var(--color-brand-600)
+    );
+    color: #fff;
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    text-decoration: none;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.28) inset,
+      0 8px 18px -8px rgba(31, 87, 240, 0.55);
+  }
+  .site-header-demo:hover {
     filter: brightness(1.05);
   }
-  .glass-nav-cta:focus-visible {
-    outline: 2px solid var(--color-brand-500);
+  .site-header-demo:focus-visible {
+    outline: 2px solid var(--color-brand-700);
     outline-offset: 3px;
   }
 
-  /* Corner login: a quiet, separate utility for returning roofers. A faint
-     glass chip (no fill) that stays subordinate to the filled "Book a call" and
-     legible over both the light hero and the dark sections below. Pinned top-
-     right so it clears the top-left brand and the centred pill. */
-  .corner-login {
-    position: fixed;
-    top: max(18px, calc(env(safe-area-inset-top, 0px) + 12px));
-    right: max(20px, env(safe-area-inset-right, 0px));
-    z-index: 62;
+  .site-header-menu {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.72rem 1.4rem;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid rgba(16, 24, 40, 0.12);
     border-radius: 999px;
-    font-size: 1rem;
+    background: #fff;
+    color: var(--color-ink);
+    cursor: pointer;
+  }
+  .site-header-menu:focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 2px;
+  }
+  .site-header-menu-bars,
+  .site-header-menu-bars::before,
+  .site-header-menu-bars::after {
+    display: block;
+    width: 1rem;
+    height: 2px;
+    border-radius: 1px;
+    background: currentColor;
+  }
+  .site-header-menu-bars {
+    position: relative;
+  }
+  .site-header-menu-bars::before,
+  .site-header-menu-bars::after {
+    content: "";
+    position: absolute;
+    left: 0;
+  }
+  .site-header-menu-bars::before {
+    top: -5px;
+  }
+  .site-header-menu-bars::after {
+    top: 5px;
+  }
+  @media (min-width: 900px) {
+    .site-header-menu {
+      display: none;
+    }
+  }
+
+  .site-mobile-panel {
+    border-top: 1px solid rgba(16, 24, 40, 0.08);
+    background: rgba(255, 255, 255, 0.98);
+    padding: 0.75rem 1.25rem 1.15rem;
+  }
+  .site-mobile-panel[hidden] {
+    display: none;
+  }
+  @media (min-width: 900px) {
+    .site-mobile-panel {
+      display: none !important;
+    }
+  }
+  .site-mobile-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .site-mobile-link {
+    display: block;
+    padding: 0.85rem 0.15rem;
+    border-bottom: 1px solid rgba(16, 24, 40, 0.06);
+    font-size: 1.05rem;
     font-weight: 600;
-    letter-spacing: -0.015em;
-    line-height: 1;
     color: var(--color-ink);
     text-decoration: none;
-    white-space: nowrap;
-    background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(22px) saturate(1.7);
-    -webkit-backdrop-filter: blur(22px) saturate(1.7);
-    border: 1px solid rgba(16, 24, 40, 0.08);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.9) inset,
-      0 2px 8px rgba(16, 24, 40, 0.1),
-      0 16px 34px -14px rgba(23, 60, 160, 0.5);
-    /* Hidden until the wordmark docks into the nav — brand-fly gains .is-docked
-       at t>0.97 in brand-dock.ts. Synced to the DOCK, not the "Book a call"
-       reveal: login is nav chrome, so it enters as the nav forms, and the two
-       needn't arrive together. Pure CSS via the sibling selector below. */
-    opacity: 0;
-    transform: translateY(-10px);
-    pointer-events: none;
-    transition:
-      opacity 0.5s ease,
-      transform 0.55s var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1)),
-      color 0.2s ease,
-      background 0.2s ease,
-      box-shadow 0.2s ease;
   }
-  .brand-fly.is-docked ~ .corner-login {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
+  .site-mobile-actions {
+    display: grid;
+    gap: 0.65rem;
+    margin-top: 1rem;
   }
-  .corner-login svg {
-    flex: none;
-    color: var(--color-brand-600);
+  .site-mobile-book,
+  .site-mobile-demo,
+  .site-mobile-login {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
   }
-  .corner-login:hover {
-    color: var(--color-brand-600);
-    background: rgba(255, 255, 255, 1);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.9) inset,
-      0 2px 8px rgba(16, 24, 40, 0.12),
-      0 18px 36px -14px rgba(23, 60, 160, 0.55);
+  .site-mobile-book {
+    border: 1.5px solid rgba(31, 87, 240, 0.35);
+    color: var(--color-brand-700);
+    background: #fff;
   }
-  .corner-login:focus-visible {
-    outline: 2px solid var(--color-brand-500);
-    outline-offset: 3px;
+  .site-mobile-demo {
+    background: linear-gradient(
+      180deg,
+      var(--color-brand-500),
+      var(--color-brand-600)
+    );
+    color: #fff;
   }
-  /* Mobile uses the fade-in bar's own "Log in"; hide the corner chip there. */
+  .site-mobile-login {
+    color: #1c2430;
+  }
+
+  /* Static logo for mobile — morph flyer is desktop-only. */
+  .site-mobile-logo {
+    display: none;
+  }
   @media (max-width: 639px) {
-    .corner-login {
-      display: none;
+    .site-mobile-logo {
+      position: fixed;
+      top: max(0.95rem, calc(env(safe-area-inset-top, 0px) + 0.85rem));
+      left: 1.35rem;
+      z-index: 85;
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: -0.045em;
+      line-height: 1;
+      color: var(--color-ink);
+      text-decoration: none;
+      pointer-events: auto;
+    }
+    .site-brand {
+      /* Room for the fixed mobile logo; slot still sizes layout. */
+      visibility: hidden;
     }
   }
 
@@ -357,97 +531,6 @@ const dashboardUrl =
       content: none;
       animation: none;
     }
-    /* Still dock-synced (hidden in the hero, revealed once docked), but no
-       vertical slide — a plain fade. */
-    .corner-login,
-    .brand-fly.is-docked ~ .corner-login {
-      transform: none;
-    }
-  }
-  /* Mobile nav: hidden on desktop (the morph owns the nav there). On phones a
-     plain fixed bar that fades in once you scroll past the hero — opacity only,
-     no per-frame scroll morph, so it stays smooth. */
-  .mobile-nav {
-    display: none;
-  }
-  @media (max-width: 639px) {
-    .mobile-nav {
-      position: fixed;
-      top: max(8px, env(safe-area-inset-top, 0px));
-      left: 12px;
-      right: 12px;
-      z-index: 65;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 7px 8px 7px 16px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.72);
-      backdrop-filter: blur(20px) saturate(1.7);
-      -webkit-backdrop-filter: blur(20px) saturate(1.7);
-      border: 1px solid rgba(255, 255, 255, 0.65);
-      box-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.7) inset,
-        0 10px 30px -14px rgba(23, 60, 160, 0.4);
-      opacity: 0;
-      transform: translateY(-8px);
-      pointer-events: none;
-      transition:
-        opacity 0.3s ease,
-        transform 0.34s var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1));
-    }
-    .mobile-nav.is-shown {
-      opacity: 1;
-      transform: translateY(0);
-      pointer-events: auto;
-    }
-  }
-  .mobile-nav-brand {
-    font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 18px;
-    letter-spacing: -0.045em;
-    line-height: 1;
-    color: var(--color-ink);
-    text-decoration: none;
-  }
-  .mobile-nav-actions {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  /* Clear but still secondary to the filled "Book a call" — full ink, slightly
-     lighter weight, no fill. */
-  .mobile-nav-login {
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: -0.015em;
-    line-height: 1;
-    color: var(--color-ink);
-    text-decoration: none;
-    white-space: nowrap;
-  }
-  .mobile-nav-cta {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.6rem 1rem;
-    border-radius: 999px;
-    background: linear-gradient(
-      180deg,
-      var(--color-brand-500),
-      var(--color-brand-600)
-    );
-    color: #fff;
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    line-height: 1;
-    text-decoration: none;
-    white-space: nowrap;
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.28) inset,
-      0 8px 18px -8px rgba(31, 87, 240, 0.55);
   }
 </style>
 
@@ -455,44 +538,56 @@ const dashboardUrl =
   import { ensureScrollFlight } from "../scripts/scroll-flight";
   import { initBrandDock } from "../scripts/brand-dock";
 
-  let mobileNavCleanup: (() => void) | null = null;
   let navExpandCleanup: (() => void) | null = null;
+  let scrollChromeCleanup: (() => void) | null = null;
 
-  // Mobile: no scroll-linked morph. Just fade a plain fixed bar in once the
-  // hero has mostly scrolled away. A class toggle + CSS transition — cheap and
-  // smooth, unlike the per-frame position morph.
-  function initMobileNav() {
-    const nav = document.querySelector<HTMLElement>("[data-mobile-nav]");
-    if (!nav) return;
-    let shown = false;
-    const update = () => {
-      const should = window.scrollY > window.innerHeight * 0.6;
-      if (should !== shown) {
-        shown = should;
-        nav.classList.toggle("is-shown", should);
-      }
+  function initHeaderChrome() {
+    const header = document.querySelector<HTMLElement>("[data-site-header]");
+    if (!header) return;
+
+    const onScroll = () => {
+      const y = window.__lenis?.scroll ?? window.scrollY;
+      header.classList.toggle("is-scrolled", y > 12);
     };
-    update();
-    window.addEventListener("scroll", update, { passive: true });
-    mobileNavCleanup = () => window.removeEventListener("scroll", update);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.__lenis?.on?.("scroll", onScroll);
+    scrollChromeCleanup = () => {
+      window.removeEventListener("scroll", onScroll);
+      window.__lenis?.off?.("scroll", onScroll);
+    };
+
+    const menu = header.querySelector<HTMLButtonElement>("[data-nav-menu]");
+    const panel = header.querySelector<HTMLElement>("[data-nav-panel]");
+    const setOpen = (open: boolean) => {
+      if (!menu || !panel) return;
+      menu.setAttribute("aria-expanded", open ? "true" : "false");
+      menu.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+      panel.hidden = !open;
+    };
+    menu?.addEventListener("click", () => {
+      setOpen(menu.getAttribute("aria-expanded") !== "true");
+    });
+    header.querySelectorAll("[data-nav-close]").forEach((el) => {
+      el.addEventListener("click", () => setOpen(false));
+    });
+
+    // Header is always interactive for nav — brand-dock no longer sets inert.
+    header.removeAttribute("inert");
+    header.style.pointerEvents = "auto";
   }
 
-  // Desktop: the pill lengthens and reveals "Book a call" once the hero's own
-  // CTA has scrolled out of sight. This is a THRESHOLD trigger, not a scroll-
-  // linked morph — crossing the line flips a class and CSS runs the (fixed-
-  // duration) animation, so it plays smoothly regardless of scroll speed.
-  // Hysteresis on the two edges stops it flickering right at the boundary.
   function initNavExpand() {
-    const nav = document.querySelector<HTMLElement>("[data-glass-nav]");
+    const header = document.querySelector<HTMLElement>("[data-site-header]");
     const heroCta = document.querySelector<HTMLElement>("[data-meeting-spacer]");
-    if (!nav || !heroCta) return;
+    if (!header || !heroCta) return;
+    if (!window.matchMedia("(min-width: 640px)").matches) {
+      header.classList.add("is-expanded");
+      return;
+    }
+
     let expanded = false;
     let raf = 0;
-
-    // The pill widens/narrows over ~0.55s of CSS transition, sliding the brand
-    // slot sideways. The docked wordmark is a fixed element pinned to that
-    // slot, so re-measure it every frame for the length of the animation or it
-    // ends up sitting under the button.
     let syncRaf = 0;
     let syncUntil = 0;
     const syncBrand = () =>
@@ -511,15 +606,13 @@ const dashboardUrl =
     const evaluate = () => {
       raf = 0;
       const bottom = heroCta.getBoundingClientRect().bottom;
-      // Expand once the hero CTA is fully gone above the top; collapse only
-      // after it comes well back into view.
       if (!expanded && bottom < 6) {
         expanded = true;
-        nav.classList.add("is-expanded");
+        header.classList.add("is-expanded");
         trackExpand();
       } else if (expanded && bottom > 56) {
         expanded = false;
-        nav.classList.remove("is-expanded");
+        header.classList.remove("is-expanded");
         trackExpand();
       }
     };
@@ -528,32 +621,39 @@ const dashboardUrl =
     };
     evaluate();
     window.addEventListener("scroll", onScroll, { passive: true });
+    const onLenis = () => onScroll();
+    window.__lenis?.on?.("scroll", onLenis);
     navExpandCleanup = () => {
       if (raf) cancelAnimationFrame(raf);
       if (syncRaf) cancelAnimationFrame(syncRaf);
       window.removeEventListener("scroll", onScroll);
+      window.__lenis?.off?.("scroll", onLenis);
     };
   }
 
   function bootNavMotion() {
-    // The scroll-morph is a desktop showpiece; on touch it can't stay smooth
-    // (native momentum + blur recompositing), so phones get a plain fade nav.
+    initHeaderChrome();
     if (window.matchMedia("(min-width: 640px)").matches) {
       ensureScrollFlight();
       initBrandDock();
       initNavExpand();
     } else {
-      initMobileNav();
+      // Mobile: no morph — expand book call, show static logo.
+      const header = document.querySelector<HTMLElement>("[data-site-header]");
+      header?.classList.add("is-expanded", "is-brand-docked");
+      header?.removeAttribute("inert");
     }
   }
 
   bootNavMotion();
   document.addEventListener("astro:after-swap", () => {
-    (window as Window & { __scrollFlight?: { destroy?: () => void } | null }).__scrollFlight?.destroy?.();
-    mobileNavCleanup?.();
-    mobileNavCleanup = null;
+    (
+      window as Window & { __scrollFlight?: { destroy?: () => void } | null }
+    ).__scrollFlight?.destroy?.();
     navExpandCleanup?.();
     navExpandCleanup = null;
+    scrollChromeCleanup?.();
+    scrollChromeCleanup = null;
     bootNavMotion();
   });
 </script>
