@@ -683,7 +683,6 @@ html.quoter-overlay-open #quoter-widget {
   animation: none !important;
 }
 html.quoter-overlay-open .mobile-nav,
-html.quoter-overlay-open .site-header,
 html.quoter-overlay-open .hero-scroll,
 html.quoter-overlay-open .page-lower {
   opacity: 0 !important;
