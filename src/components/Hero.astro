@@ -1,33 +1,52 @@
 ---
 import LiveWidget from "./LiveWidget.astro";
+
+// Keep in sync with Nav.astro meetingUrl
+const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
 ---
 
 <!--
-  Hero without brand wordmark — Quoter lives in the glass nav.
-  One live quote embed; headline leads.
+  Widget-first hero. Brand spacer is layout-only; Nav owns the visible flying wordmark.
+  Meeting CTA spacer is layout-only; Nav owns the flying “Book a call” button.
 -->
-<section class="hero relative flex min-h-[100svh] flex-col" aria-labelledby="hero-heading">
+<section class="hero relative flex min-h-[100svh] flex-col">
   <div
     class="hero-stage relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col items-center px-5 text-center sm:px-6"
   >
     <div class="hero-cluster w-full">
-      <h1 id="hero-heading" class="font-display hero-promise sub-load">
-        Stop losing leads with slow quotes.
+      <h1 class="font-display hero-brand" aria-label="Quoter">
+        <span class="hero-brand-spacer" data-brand-spacer aria-hidden="true">Quoter</span>
       </h1>
+      <p class="font-display hero-promise sub-load">
+        Stop losing leads with slow quotes.
+      </p>
       <p class="hero-support sub-load sub-load-late">
         We'll give potential clients visiting your site accurate, instant quotes using satellite imagery.
       </p>
 
-      <div
-        class="hero-widget mx-auto w-full max-w-[740px] widget-load"
-        id="demo"
-        data-widget-shell
-      >
+      <div class="hero-widget mx-auto w-full max-w-[740px] widget-load" data-widget-shell>
+        <!-- Holds layout while #quoter-widget is position:fixed during the dock morph -->
         <div class="hero-widget-spacer" data-widget-spacer aria-hidden="true"></div>
         <LiveWidget />
       </div>
 
-      <p class="hero-helper">Instant estimate. No payment needed. Beta.</p>
+      <!--
+        Takeoff button: clickable in-flow until the Nav flyer morphs in,
+        then hidden (same handoff pattern as the Quoter wordmark).
+      -->
+      <a
+        href={meetingUrl}
+        class="hero-meeting-takeoff meeting-load"
+        data-meeting-spacer
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="2"/>
+          <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Book a call
+      </a>
     </div>
   </div>
 
@@ -52,33 +71,124 @@ import LiveWidget from "./LiveWidget.astro";
 <style>
   .hero-stage {
     justify-content: center;
-    padding-top: max(5.5rem, calc(env(safe-area-inset-top, 0px) + 4.5rem));
+    padding-top: max(3.5rem, calc(env(safe-area-inset-top, 0px) + 2.5rem));
     padding-bottom: clamp(1.25rem, 3.5svh, 2.75rem);
   }
 
-  .hero-promise {
-    margin: 0 auto;
-    max-width: 16em;
-    font-size: clamp(2rem, 5.2vw, 3.15rem);
+  .hero-brand {
+    margin: 0;
+    line-height: 0.92;
+  }
+
+  /* Solid wordmark + sheen overlay that sweeps through (letters stay put) */
+  .hero-brand-spacer {
+    position: relative;
+    display: inline-block;
+    font-size: clamp(4.25rem, 14vw, 8.5rem);
     font-weight: 600;
-    letter-spacing: -0.042em;
-    line-height: 1.08;
+    letter-spacing: -0.045em;
+    line-height: 0.92;
+    user-select: none;
+    pointer-events: none;
+    color: var(--color-ink);
+    opacity: 0;
+    transform: translateY(0.4em) scale(1.55);
+    filter: blur(14px);
+    transform-origin: 50% 100%;
+    animation: brand-enter 1.2s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) 0.18s forwards;
+  }
+  .hero-brand-spacer::after {
+    content: "Quoter";
+    position: absolute;
+    left: 0;
+    top: 0;
+    font: inherit;
+    letter-spacing: inherit;
+    line-height: inherit;
+    white-space: nowrap;
+    pointer-events: none;
+    background-image: linear-gradient(
+      105deg,
+      transparent 0%,
+      transparent 42%,
+      rgba(91, 140, 255, 0.9) 50%,
+      transparent 58%,
+      transparent 100%
+    );
+    background-size: 220% 100%;
+    background-repeat: no-repeat;
+    background-position: 200% 50%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    animation: brand-sheen 9s linear 1.4s infinite;
+  }
+  /* Hidden only after the fixed wordmark is placed — no mid-scroll handoff */
+  :global(html.is-brand-morphing) .hero-brand-spacer {
+    visibility: hidden;
+  }
+
+  @keyframes brand-enter {
+    50% {
+      opacity: 1;
+      filter: blur(2.5px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+  }
+  @keyframes brand-sheen {
+    0% {
+      background-position: 200% 50%;
+    }
+    32% {
+      background-position: -200% 50%;
+    }
+    100% {
+      background-position: -200% 50%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-brand-spacer {
+      animation: none;
+      opacity: 1;
+      transform: none;
+      filter: none;
+      color: var(--color-ink);
+    }
+    .hero-brand-spacer::after {
+      content: none;
+      animation: none;
+    }
+  }
+
+  .hero-promise {
+    margin: 1.35rem auto 0;
+    max-width: 20em;
+    font-size: clamp(1.55rem, 3.8vw, 2.25rem);
+    font-weight: 600;
+    letter-spacing: -0.038em;
+    line-height: 1.15;
     color: var(--color-ink);
   }
 
   .hero-support {
-    margin: 0.85rem auto 0;
+    margin: 1.15rem auto 0;
     max-width: 38rem;
     font-size: clamp(1.02rem, 1.8vw, 1.15rem);
     font-weight: 500;
     letter-spacing: -0.015em;
-    line-height: 1.55;
-    color: #1c2430;
+    line-height: 1.65;
+    color: var(--color-ink-soft);
   }
 
   .hero-widget {
     position: relative;
-    margin-top: clamp(1.35rem, 3.4svh, 2.25rem);
+    margin-top: clamp(1.45rem, 3.6svh, 2.6rem);
   }
   .hero-widget-spacer {
     width: 100%;
@@ -86,39 +196,140 @@ import LiveWidget from "./LiveWidget.astro";
     visibility: hidden;
   }
 
-  .hero-helper {
-    margin: 0.7rem auto 0;
-    font-size: 0.86rem;
+  /* Soft-rect sibling of the quote shell — same brand blue as Get my quote */
+  .hero-meeting-takeoff {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    position: relative;
+    z-index: 2;
+    width: min(100% - var(--q-embed-pad-x) * 2, 620px);
+    margin: calc(0.9rem - var(--q-shadow-room)) auto 0;
+    padding: 0.8rem 1.05rem;
+    border-radius: 28px;
+    border: 0;
+    background: linear-gradient(180deg, var(--color-brand-500), var(--color-brand-600));
+    font-size: 0.9rem;
     font-weight: 600;
-    letter-spacing: -0.01em;
-    color: #3d4148;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: #fff;
+    text-decoration: none;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.28) inset,
+      0 8px 20px -8px rgba(31, 87, 240, 0.5);
+    box-sizing: border-box;
+    /* `filter` is owned per-frame by meeting-wipe.ts and must NOT transition:
+       a 0.25s ease here out-specifies `.is-dissolving { transition: none }`,
+       so scrolling back up animated the button from solid → blurred and it
+       flashed in at full strength before catching up. Same reason hover uses
+       box-shadow alone rather than filter: brightness(). */
+    transition: box-shadow 0.35s var(--ease-out-expo, ease);
   }
+  .hero-meeting-takeoff:hover {
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.32) inset,
+      0 12px 28px -8px rgba(31, 87, 240, 0.58);
+  }
+  .hero-meeting-takeoff:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 3px;
+  }
+  .hero-meeting-takeoff svg {
+    flex: none;
+  }
+  /* Visibility during the wipe handoff is owned by meeting-wipe.ts. */
+
+  /* Once morph boots, the real widget is fixed — spacer is the in-flow box */
+  /* Pinned to body by JS — keep styles global so portal still looks right */
+
 
   @media (max-width: 640px) {
     .hero {
+      /* One screen tall on first paint — content centred inside it. */
       min-height: 100svh;
     }
     .hero-stage {
+      /* True vertical centre in the visible phone viewport (matches shot 2).
+         No downward bias — that was shoving Book a call up and letting
+         satellite section bleed into the first fold. */
       justify-content: center;
-      padding-top: max(5rem, calc(env(safe-area-inset-top, 0px) + 4.1rem));
+      padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
       padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
     }
+    .hero-brand-spacer {
+      /* Readable logo size — not zoomed-out marketing type */
+      font-size: clamp(3.75rem, 12vw, 4.75rem);
+    }
     .hero-promise {
-      font-size: clamp(1.7rem, 7.2vw, 2.15rem);
-      max-width: 14em;
+      margin-top: 0.95rem;
+      font-size: clamp(1.45rem, 5.2vw, 1.7rem);
+      max-width: 16em;
+      line-height: 1.2;
     }
     .hero-support {
-      margin-top: 0.65rem;
-      font-size: 1.02rem;
+      margin-top: 0.8rem;
+      font-size: 1.05rem;
+      line-height: 1.45;
+      max-width: 22rem;
+      color: var(--color-ink-soft);
     }
     .hero-widget {
-      margin-top: 1.35rem;
+      margin-top: 1.5rem;
+    }
+    .hero-meeting-takeoff {
+      margin: calc(0.85rem - var(--q-shadow-room, 0px)) auto 0;
+      font-size: 0.95rem;
+      padding: 0.85rem 1.05rem;
     }
     .hero-scroll {
+      /* Keep the cue inside the hero, above Safari chrome */
       bottom: max(0.65rem, calc(env(safe-area-inset-bottom, 0px) + 0.35rem));
     }
   }
 
+  @media (max-width: 640px) and (max-height: 720px) {
+    .hero-stage {
+      /* Short phones: still centre, lightly compress — keep type readable. */
+      justify-content: center;
+      padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+      padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+    }
+    .hero-brand-spacer {
+      font-size: clamp(3.35rem, 11vw, 4rem);
+    }
+    .hero-promise {
+      margin-top: 0.75rem;
+      font-size: clamp(1.35rem, 4.8vw, 1.55rem);
+    }
+    .hero-support {
+      margin-top: 0.6rem;
+      font-size: 1rem;
+    }
+    .hero-widget {
+      margin-top: 1.2rem;
+    }
+    .hero-meeting-takeoff {
+      margin: calc(0.7rem - var(--q-shadow-room, 0px)) auto 0;
+    }
+  }
+
+  @media (min-width: 641px) and (max-height: 740px) {
+    .hero-stage {
+      justify-content: flex-start;
+      padding-top: 3.25rem;
+      padding-bottom: 1rem;
+    }
+    .hero-brand-spacer {
+      font-size: clamp(3.5rem, 9vw, 5.5rem);
+    }
+    .hero-widget {
+      margin-top: 1.25rem;
+    }
+  }
+
+  /* Late, quiet scroll cue — appears after entrance, leaves on first scroll */
   .hero-scroll {
     position: absolute;
     left: 50%;
@@ -166,6 +377,11 @@ import LiveWidget from "./LiveWidget.astro";
     outline-offset: 2px;
     border-radius: 999px;
   }
+  .hero-scroll svg {
+    width: 24px;
+    height: 24px;
+  }
+
   @keyframes hero-scroll-drift {
     0%,
     100% {
@@ -175,6 +391,13 @@ import LiveWidget from "./LiveWidget.astro";
       transform: translate3d(-50%, 5px, 0);
     }
   }
+
+  @media (max-height: 700px) {
+    .hero-scroll {
+      bottom: 0.35rem;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .hero-scroll.is-shown {
       animation: none;
@@ -189,25 +412,26 @@ import LiveWidget from "./LiveWidget.astro";
     document.querySelectorAll("[data-try]").forEach((btn) => {
       if ((btn as HTMLElement).dataset.tryBound === "1") return;
       (btn as HTMLElement).dataset.tryBound = "1";
-      btn.addEventListener("click", (event) => {
-        event.preventDefault();
-        const demo = document.getElementById("demo");
+      btn.addEventListener("click", () => {
+        // Always return to the top search (hero or docked nav)
         const lenis = window.__lenis;
-        if (demo) {
-          if (lenis?.scrollTo) lenis.scrollTo(demo, { offset: -96, duration: 1.0 });
-          else demo.scrollIntoView({ behavior: "smooth", block: "center" });
-        } else if (lenis?.scrollTo) {
-          lenis.scrollTo(0, { duration: 1.1 });
-        } else {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }
+        if (lenis?.scrollTo) lenis.scrollTo(0, { duration: 1.1 });
+        else window.scrollTo({ top: 0, behavior: "smooth" });
+        // The search input lives inside the widget iframe now — focus it
+        // across the frame boundary via the host bridge.
+        const focusEmbed = (window as unknown as { __quoterFocus?: () => void })
+          .__quoterFocus;
+        const input = card.querySelector("[data-input]") as HTMLInputElement | null;
         window.setTimeout(() => {
-          (window as unknown as { __quoterFocus?: () => void }).__quoterFocus?.();
-        }, 550);
+          if (focusEmbed) focusEmbed();
+          else input?.focus({ preventScroll: true });
+        }, 650);
       });
     });
   }
 
+  // Freeze the rise at its end state so the compositor doesn't snap when
+  // keyframes finish (and so morph can measure a clean layout box).
   function settleWidgetLoad() {
     const shell = document.querySelector<HTMLElement>("[data-widget-shell]");
     if (!shell || shell.dataset.settleBound === "1") return;
@@ -219,6 +443,19 @@ import LiveWidget from "./LiveWidget.astro";
       shell.removeEventListener("animationend", done);
     };
     shell.addEventListener("animationend", done);
+  }
+
+  function settleMeetingLoad() {
+    const btn = document.querySelector<HTMLElement>("[data-meeting-spacer]");
+    if (!btn || btn.dataset.settleBound === "1") return;
+    btn.dataset.settleBound = "1";
+    const done = (e: AnimationEvent) => {
+      if (e.target !== btn) return;
+      if (e.animationName !== "widget-rise") return;
+      btn.classList.add("is-settled");
+      btn.removeEventListener("animationend", done);
+    };
+    btn.addEventListener("animationend", done);
   }
 
   function initHeroScrollCue() {
@@ -238,6 +475,7 @@ import LiveWidget from "./LiveWidget.astro";
 
     const show = () => {
       if (gone) return;
+      // Already scrolled (e.g. restored) — never flash the cue
       const y = window.__lenis?.scroll ?? window.scrollY;
       if (y > 24) {
         dismiss();
@@ -246,35 +484,34 @@ import LiveWidget from "./LiveWidget.astro";
       cue.classList.add("is-shown");
     };
 
-    window.setTimeout(show, reduce ? 400 : 2200);
+    window.setTimeout(show, reduce ? 400 : 2600);
 
     const onScroll = () => {
       const y = window.__lenis?.scroll ?? window.scrollY;
       if (y > 18) dismiss();
     };
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.__lenis?.on?.("scroll", onScroll);
+    const lenis = window.__lenis;
+    lenis?.on?.("scroll", onScroll);
 
     cue.addEventListener("click", () => {
       dismiss();
-      const target =
-        document.querySelector("#product") || document.querySelector("#pricing");
+      const target = document.querySelector("#tech") || document.querySelector("#how");
       if (!target) return;
       const l = window.__lenis;
-      if (l?.scrollTo) l.scrollTo(target as HTMLElement, { offset: -72, duration: 1.2 });
+      if (l?.scrollTo) l.scrollTo(target as HTMLElement, { offset: -24, duration: 1.2 });
       else (target as HTMLElement).scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
   initTryCta();
   settleWidgetLoad();
+  settleMeetingLoad();
   initHeroScrollCue();
   document.addEventListener("astro:after-swap", () => {
-    document.querySelectorAll("[data-try]").forEach((btn) => {
-      delete (btn as HTMLElement).dataset.tryBound;
-    });
     initTryCta();
     settleWidgetLoad();
+    settleMeetingLoad();
     const cue = document.querySelector<HTMLElement>("[data-hero-scroll]");
     if (cue) delete cue.dataset.bound;
     initHeroScrollCue();
