@@ -8,10 +8,10 @@ const year = new Date().getFullYear();
   data-reveal="scale"
 >
   <p class="footer-cta-line font-display">Want free roof quotes on your website?</p>
-  <button type="button" data-try class="footer-cta-link">
+  <button type="button" data-try class="footer-cta-btn">
     Try now
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   </button>
 </section>
@@ -46,28 +46,51 @@ const year = new Date().getFullYear();
     color: var(--color-ink);
   }
 
-  .footer-cta-link {
+  .footer-cta-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    margin-top: 0.85rem;
-    padding: 0.35rem 0.25rem;
+    justify-content: center;
+    gap: 0.45rem;
+    margin-top: 1.15rem;
+    padding: 0.9rem 1.55rem;
     border: 0;
-    background: none;
+    border-radius: 999px;
+    background: linear-gradient(
+      180deg,
+      var(--color-brand-500),
+      var(--color-brand-600)
+    );
     font-size: 1.05rem;
     font-weight: 600;
     letter-spacing: -0.02em;
-    color: var(--color-brand-600);
+    line-height: 1;
+    color: #fff;
     cursor: pointer;
-    transition: color 0.15s ease, transform 0.2s var(--ease-out-soft, ease);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.28) inset,
+      0 12px 28px -10px rgba(31, 87, 240, 0.55);
+    transition:
+      filter 0.15s ease,
+      transform 0.2s var(--ease-out-soft, ease),
+      box-shadow 0.2s ease;
   }
-  .footer-cta-link:hover {
-    color: var(--color-brand-700);
+  .footer-cta-btn:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.3) inset,
+      0 16px 32px -10px rgba(31, 87, 240, 0.6);
   }
-  .footer-cta-link:focus-visible {
-    outline: 2px solid var(--color-brand-500);
-    outline-offset: 4px;
-    border-radius: 6px;
+  .footer-cta-btn:active {
+    transform: translateY(0);
+    filter: brightness(0.98);
+  }
+  .footer-cta-btn:focus-visible {
+    outline: 2px solid var(--color-brand-700);
+    outline-offset: 3px;
+  }
+  .footer-cta-btn svg {
+    flex: none;
   }
 
   /* —— Desktop footer (unchanged drama) —— */
@@ -152,9 +175,10 @@ const year = new Date().getFullYear();
     .footer-cta-line {
       font-size: 1.45rem;
     }
-    .footer-cta-link {
-      margin-top: 0.55rem;
-      font-size: 0.98rem;
+    .footer-cta-btn {
+      margin-top: 0.85rem;
+      padding: 0.85rem 1.35rem;
+      font-size: 1rem;
     }
 
     .footer-giant {
