@@ -25,7 +25,7 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
       </p>
 
       <div class="hero-widget mx-auto w-full max-w-[740px] widget-load" data-widget-shell>
-        <!-- Holds layout while #quoter-widget is position:fixed during the dock morph -->
+        <!-- Holds layout while #belpa-widget is position:fixed during the dock morph -->
         <div class="hero-widget-spacer" data-widget-spacer aria-hidden="true"></div>
         <LiveWidget />
       </div>
@@ -407,7 +407,7 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
 
 <script>
   function initTryCta() {
-    const card = document.getElementById("quoter-widget");
+    const card = document.getElementById("belpa-widget");
     if (!card) return;
     document.querySelectorAll("[data-try]").forEach((btn) => {
       if ((btn as HTMLElement).dataset.tryBound === "1") return;
@@ -419,8 +419,8 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
         else window.scrollTo({ top: 0, behavior: "smooth" });
         // The search input lives inside the widget iframe now — focus it
         // across the frame boundary via the host bridge.
-        const focusEmbed = (window as unknown as { __quoterFocus?: () => void })
-          .__quoterFocus;
+        const focusEmbed = (window as unknown as { __belpaFocus?: () => void })
+          .__belpaFocus;
         const input = card.querySelector("[data-input]") as HTMLInputElement | null;
         window.setTimeout(() => {
           if (focusEmbed) focusEmbed();

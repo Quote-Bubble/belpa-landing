@@ -53,8 +53,8 @@ const {
 
     {/*
       Real Belpa widget embed goes here when it's ready, e.g.:
-      <script src="https://cdn.quoter.app/embed.js" data-quoter="YOUR_SITE_KEY" defer></script>
-      It replaces the placeholder demo in DemoSection.astro (#quoter-widget).
+      <script src="https://cdn.belpa.app/embed.js" data-belpa="YOUR_SITE_KEY" defer></script>
+      It replaces the placeholder demo in DemoSection.astro (#belpa-widget).
     */}
 
     <SpeedInsights />
@@ -95,7 +95,7 @@ const {
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     });
     window.__lenis = lenis;
-    window.dispatchEvent(new CustomEvent("quoter:lenis"));
+    window.dispatchEvent(new CustomEvent("belpa:lenis"));
 
     function raf(time: number) {
       lenis.raf(time);

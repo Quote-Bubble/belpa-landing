@@ -1,6 +1,6 @@
 ---
 // The real, working Belpa widget — embedded via iframe from
-// quoter-widget-frontend. Replaces the former in-page mock.
+// belpa-widget-frontend. Replaces the former in-page mock.
 //
 // The widget has exactly two on-screen sizes: a fixed collapsed search bar
 // and a fixed expanded panel. The iframe is ALWAYS absolutely positioned over
@@ -10,36 +10,36 @@
 // gap, the hero jump, the morph recomputes) that the old dynamic-resize iframe
 // caused.
 //
-//   embed -> host : { source:"quoter-embed", mode, height, stage }
-//   host  -> embed: { source:"quoter-host", action:"focus" }
+//   embed -> host : { source:"belpa-embed", mode, height, stage }
+//   host  -> embed: { source:"belpa-host", action:"focus" }
 //
 // mode is one of: collapsed | suggesting | expanded | overlay. `stage` is
-// mirrored onto #quoter-widget so existing selectors keep working.
+// mirrored onto #belpa-widget so existing selectors keep working.
 // ⚠️ COUPLED WITH vercel.json — the CSP `frame-src` there MUST list this exact
 // origin or the browser silently blocks this iframe (no error on the page, only
 // a CSP violation in the console). If you ever move the widget to a new URL
 // (e.g. a custom domain), change it in BOTH places. vercel.json can't read an
 // env var, so this stays a manual, hand-kept pair.
-// In `astro dev` this points at a locally-running quoter-widget-frontend so
+// In `astro dev` this points at a locally-running belpa-widget-frontend so
 // widget changes are actually visible here. Without this the DEV site embeds
 // PRODUCTION, and local widget work appears to do nothing at all.
-// Override with PUBLIC_QUOTER_EMBED_ORIGIN; builds always use the live origin
+// Override with PUBLIC_BELPA_EMBED_ORIGIN; builds always use the live origin
 // (which is the one vercel.json's frame-src allows).
 const EMBED_ORIGIN =
-  import.meta.env.PUBLIC_QUOTER_EMBED_ORIGIN ??
+  import.meta.env.PUBLIC_BELPA_EMBED_ORIGIN ??
   (import.meta.env.DEV
     ? "http://localhost:3000"
-    : "https://quoter-widget-frontend.vercel.app");
-const EMBED_SRC = `${EMBED_ORIGIN}/embed?roofer=quoter-landing-demo`;
+    : "https://belpa-widget-frontend.vercel.app");
+const EMBED_SRC = `${EMBED_ORIGIN}/embed?roofer=belpa-landing-demo`;
 
 // Keep in sync with QUOTE_SIZES in the widget repo (lib/motion.ts).
 const COLLAPSED_H = 120;
 const COLLAPSED_H_MOBILE = 82;
 ---
 
-<div class="q" id="quoter-widget" data-stage="input" data-mode="collapsed">
+<div class="q" id="belpa-widget" data-stage="input" data-mode="collapsed">
   <iframe
-    data-quoter-frame
+    data-belpa-frame
     src={EMBED_SRC}
     title="Get an instant, free roof quote"
     loading="eager"
@@ -99,17 +99,17 @@ const COLLAPSED_H_MOBILE = 82;
 </style>
 
 <script>
-  function initQuoterEmbed() {
-    const holder = document.getElementById("quoter-widget");
+  function initBelpaEmbed() {
+    const holder = document.getElementById("belpa-widget");
     if (!holder || holder.dataset.embedBound === "1") return;
     holder.dataset.embedBound = "1";
     const frame = holder.querySelector(
-      "[data-quoter-frame]",
+      "[data-belpa-frame]",
     ) as HTMLIFrameElement | null;
     if (!frame) return;
 
     // Only trust messages that actually came from the widget's origin. The
-    // `source: "quoter-embed"` marker below is just a field inside the payload
+    // `source: "belpa-embed"` marker below is just a field inside the payload
     // — any page or iframe can send that — so it identifies the protocol, it
     // does not authenticate the sender. Derived from the iframe's own src so
     // it stays correct if the embed moves.
@@ -243,7 +243,7 @@ const COLLAPSED_H_MOBILE = 82;
       window.addEventListener("orientationchange", onViewportChange);
 
       scrollLocked = true;
-      document.documentElement.classList.add("quoter-overlay-open");
+      document.documentElement.classList.add("belpa-overlay-open");
       document.body.style.position = "fixed";
       document.body.style.top = "0";
       document.body.style.left = "0";
@@ -274,7 +274,7 @@ const COLLAPSED_H_MOBILE = 82;
       frame.style.maxHeight = "";
 
       scrollLocked = false;
-      document.documentElement.classList.remove("quoter-overlay-open");
+      document.documentElement.classList.remove("belpa-overlay-open");
       document.body.style.position = "";
       document.body.style.top = "";
       document.body.style.left = "";
@@ -291,7 +291,7 @@ const COLLAPSED_H_MOBILE = 82;
     window.addEventListener("message", (e: MessageEvent) => {
       if (e.origin !== embedOrigin) return;
       const d = e.data;
-      if (!d || d.source !== "quoter-embed") return;
+      if (!d || d.source !== "belpa-embed") return;
 
       const mode = typeof d.mode === "string" ? d.mode : "collapsed";
       const h = typeof d.height === "number" && d.height > 0 ? d.height : 0;
@@ -311,16 +311,16 @@ const COLLAPSED_H_MOBILE = 82;
       // Both toggles map to the same global.css rules that hide the button
       // and its nav flying-clone.
       document.documentElement.classList.toggle(
-        "quoter-flow-open",
+        "belpa-flow-open",
         mode === "expanded" || mode === "overlay",
       );
       document.documentElement.classList.toggle(
-        "quoter-suggesting",
+        "belpa-suggesting",
         mode === "suggesting",
       );
       // Marks the expanded state for host CSS (panel elevation).
       document.documentElement.classList.toggle(
-        "quoter-expanded",
+        "belpa-expanded",
         mode === "expanded",
       );
 
@@ -353,13 +353,13 @@ const COLLAPSED_H_MOBILE = 82;
     });
 
     // Bridge for [data-try] buttons: focus the sealed input across the frame.
-    (window as unknown as { __quoterFocus?: () => void }).__quoterFocus = () => {
+    (window as unknown as { __belpaFocus?: () => void }).__belpaFocus = () => {
       frame.contentWindow?.postMessage(
-        { source: "quoter-host", action: "focus" },
+        { source: "belpa-host", action: "focus" },
         embedOrigin!,
       );
     };
   }
-  initQuoterEmbed();
-  document.addEventListener("astro:after-swap", initQuoterEmbed);
+  initBelpaEmbed();
+  document.addEventListener("astro:after-swap", initBelpaEmbed);
 </script>

@@ -1,12 +1,12 @@
 ---
 /**
- * A replica of the real roofer dashboard (quoter-dashboard-frontend), played
+ * A replica of the real roofer dashboard (belpa-dashboard-frontend), played
  * back as a looping fake screen recording.
  *
  * Unlike a hand-drawn approximation, the markup below is PORTED VERBATIM from
  * the real dashboard components — same Tailwind utility classes, same JSX
  * structure, same SVG icon paths, same chart geometry constants. This works
- * because quoter-landing and quoter-dashboard-frontend share one design-token
+ * because belpa-landing and belpa-dashboard-frontend share one design-token
  * system (see src/styles/global.css's @theme block vs the dashboard's
  * src/app/globals.css — both define identical --color-brand-*, --color-ink,
  * --shadow-soft etc.), so the same class names resolve to the same pixels in
@@ -15,7 +15,7 @@
  * here scoped to this component (Astro <style> is scoped by default) rather
  * than touching the global stylesheet for a landing-page-only need.
  *
- * Sources ported from (quoter-dashboard-frontend):
+ * Sources ported from (belpa-dashboard-frontend):
  *   src/components/DashboardShell.tsx      (sidebar width/glass, main padding)
  *   src/components/Sidebar.tsx             (wordmark, nav icons, roofer card)
  *   src/components/PageHeader.tsx          (title/subtitle typography)

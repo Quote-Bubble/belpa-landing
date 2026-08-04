@@ -41,7 +41,7 @@
 }
 
 :root {
-  /* Keep in sync with QUOTE_SIZES in quoter-widget-frontend/lib/motion.ts. */
+  /* Keep in sync with QUOTE_SIZES in belpa-widget-frontend/lib/motion.ts. */
   --q-collapsed-bar-h: 90px;
   --q-collapsed-h: 120px;
   --q-shadow-room: calc(var(--q-collapsed-h) - var(--q-collapsed-bar-h));
@@ -640,8 +640,8 @@ input {
 /* While the embedded widget's address suggestions are open, hide the
    "Book a call" button so the dropdown (which floats over the page from the
    iframe) has a clean area and nothing punches through it. */
-html.quoter-suggesting .hero-meeting-takeoff,
-html.quoter-suggesting .meeting-fly {
+html.belpa-suggesting .hero-meeting-takeoff,
+html.belpa-suggesting .meeting-fly {
   opacity: 0 !important;
   pointer-events: none !important;
   visibility: hidden !important;
@@ -654,8 +654,8 @@ html.quoter-suggesting .meeting-fly {
    original .hero-meeting-takeoff is already visibility:hidden), so both must
    be covered. !important is required: the flyer is painted with inline styles
    and the original's entrance keyframes forwards-fill opacity:1. */
-html.quoter-flow-open .hero-meeting-takeoff,
-html.quoter-flow-open .meeting-fly {
+html.belpa-flow-open .hero-meeting-takeoff,
+html.belpa-flow-open .meeting-fly {
   opacity: 0 !important;
   pointer-events: none !important;
   visibility: hidden !important;
@@ -665,19 +665,19 @@ html.quoter-flow-open .meeting-fly {
 /* Fullscreen mobile quote flow: freeze the landing page and hide chrome that
    would otherwise peek through / sit above the iframe on real iOS Safari.
    (DevTools device mode often fails to reproduce the scroll-through bug.) */
-html.quoter-overlay-open,
-html.quoter-overlay-open body {
+html.belpa-overlay-open,
+html.belpa-overlay-open body {
   overscroll-behavior: none;
   background: #ffffff;
 }
 /* Break transform/filter containing blocks so the iframe's position:fixed
    is viewport-relative, not trapped inside the hero search slot. */
-html.quoter-overlay-open .hero,
-html.quoter-overlay-open .hero-stage,
-html.quoter-overlay-open .hero-cluster,
-html.quoter-overlay-open .hero-widget,
-html.quoter-overlay-open .widget-load,
-html.quoter-overlay-open #quoter-widget {
+html.belpa-overlay-open .hero,
+html.belpa-overlay-open .hero-stage,
+html.belpa-overlay-open .hero-cluster,
+html.belpa-overlay-open .hero-widget,
+html.belpa-overlay-open .widget-load,
+html.belpa-overlay-open #belpa-widget {
   transform: none !important;
   filter: none !important;
   perspective: none !important;
@@ -685,15 +685,15 @@ html.quoter-overlay-open #quoter-widget {
   will-change: auto !important;
   animation: none !important;
 }
-html.quoter-overlay-open .mobile-nav,
-html.quoter-overlay-open .hero-scroll,
-html.quoter-overlay-open .page-lower {
+html.belpa-overlay-open .mobile-nav,
+html.belpa-overlay-open .hero-scroll,
+html.belpa-overlay-open .page-lower {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
 }
-html.quoter-overlay-open .site-bg,
-html.quoter-overlay-open .site-dots {
+html.belpa-overlay-open .site-bg,
+html.belpa-overlay-open .site-dots {
   visibility: hidden !important;
 }
 
@@ -706,6 +706,6 @@ html.quoter-overlay-open .site-dots {
   transition: padding-top 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 /* Keep the panel above the lower sections while it overlays them. */
-html.quoter-expanded #quoter-widget {
+html.belpa-expanded #belpa-widget {
   z-index: 30;
 }
