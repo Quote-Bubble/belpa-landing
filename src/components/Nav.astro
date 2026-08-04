@@ -8,9 +8,9 @@ const dashboardUrl =
 
 <!--
   One fixed wordmark for the whole journey. No handoff at the top — that was
-  the "click". Spacer is layout-only; fly is always the visible Quoter once ready.
+  the "click". Spacer is layout-only; fly is always the visible Belpa once ready.
 -->
-<a href="/" class="brand-fly" data-brand-fly aria-label="Quoter home">Quoter</a>
+<a href="/" class="brand-fly" data-brand-fly aria-label="Belpa home">Belpa</a>
 
 <!-- Roofer login. A quiet corner utility, deliberately kept physically apart
      from the "Book a call" CTA so it never reads as a competing button. Faint
@@ -30,7 +30,7 @@ const dashboardUrl =
      linked animation lengthens the pill and reveals the CTA next to the
      wordmark (the .is-expanded toggle is driven by initNavExpand below). -->
 <div class="glass-nav" data-glass-nav inert>
-  <span class="glass-nav-brand-slot" data-nav-brand-slot aria-hidden="true">Quoter</span>
+  <span class="glass-nav-brand-slot" data-nav-brand-slot aria-hidden="true">Belpa</span>
   <span class="glass-nav-cta-wrap" data-nav-cta-wrap>
     <span class="glass-nav-cta-inner">
       <span class="glass-nav-divider" aria-hidden="true"></span>
@@ -54,7 +54,7 @@ const dashboardUrl =
      momentum + blur recompositing), so on phones the hero wordmark just scrolls
      away and this plain bar fades in. -->
 <div class="mobile-nav" data-mobile-nav>
-  <a href="/" class="mobile-nav-brand">Quoter</a>
+  <a href="/" class="mobile-nav-brand">Belpa</a>
   <div class="mobile-nav-actions">
     <a href={dashboardUrl} class="mobile-nav-login" aria-label="Log in to your dashboard">
       Log in
@@ -103,7 +103,7 @@ const dashboardUrl =
     the logo itself never slides away.
   */
   .brand-fly.is-hero::after {
-    content: "Quoter";
+    content: "Belpa";
     position: absolute;
     left: 0;
     top: 0;
