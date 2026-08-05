@@ -72,8 +72,11 @@ const { ratio = "wide" } = Astro.props;
 
   <div class="rs-vignette"></div>
 
-  <!-- Read-out. Sits over the image bottom, staggered in after the trace. -->
-  <figcaption class="rs-facts">
+  <!-- Read-out. One panel divided into cells rather than four loose pills:
+       the values are a single measurement of one roof, so they should read as
+       one instrument, and separate lozenges made them look like unrelated
+       tags. Slides up as a unit after the trace, cells filling left to right. -->
+  <figcaption class="rs-readout">
     {facts.map((f, i) => (
       <span class="rs-fact" style={`--i:${i}`}>
         <span class="rs-fact-label">{f.label}</span>
@@ -81,11 +84,6 @@ const { ratio = "wide" } = Astro.props;
       </span>
     ))}
   </figcaption>
-
-  <span class="rs-chip">
-    <span class="rs-chip-dot"></span>
-    Satellite measurement
-  </span>
 </figure>
 
 <style>
@@ -195,76 +193,57 @@ const { ratio = "wide" } = Astro.props;
     );
   }
 
-  .rs-facts {
+  /* Flat scrim, never backdrop-filter: the hero card animates `filter: blur()`
+     on entrance and global.css documents that a glass child snaps the
+     compositor when those keyframes finish. */
+  .rs-readout {
     position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: clamp(0.7rem, 2.5%, 1.1rem);
+    right: clamp(0.7rem, 2.5%, 1.1rem);
+    bottom: clamp(0.7rem, 2.5%, 1.1rem);
     z-index: 3;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    padding: 2.75rem clamp(0.7rem, 2.5%, 1.1rem) clamp(0.7rem, 2.5%, 1.1rem);
-    background: linear-gradient(180deg, transparent, rgba(6, 14, 34, 0.72) 62%);
-  }
-  .rs-fact {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.4rem;
-    padding: 0.34rem 0.65rem;
-    border-radius: 999px;
-    background: rgba(9, 20, 42, 0.78);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(7, 17, 38, 0.78);
     border: 1px solid rgba(255, 255, 255, 0.16);
-    white-space: nowrap;
+    box-shadow: 0 10px 30px -14px rgba(4, 12, 32, 0.85);
     opacity: 0;
-    transform: translate3d(0, 8px, 0);
-  }
-  .rs-fact-label {
-    font-size: 0.68rem;
-    font-weight: 500;
-    letter-spacing: -0.005em;
-    color: rgba(255, 255, 255, 0.62);
-  }
-  .rs-fact-value {
-    font-size: 0.82rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: #fff;
+    transform: translate3d(0, 10px, 0);
   }
 
-  .rs-chip {
-    position: absolute;
-    top: clamp(0.7rem, 2.5%, 1.1rem);
-    left: clamp(0.7rem, 2.5%, 1.1rem);
-    z-index: 3;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.4rem 0.78rem;
-    border-radius: 999px;
-    /* Flat scrim, not backdrop-filter: the hero card animates `filter: blur()`
-       on entrance and global.css documents that a glass child snaps the
-       compositor when those keyframes finish. */
-    background: rgba(9, 20, 42, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    font-size: 0.75rem;
+  .rs-fact {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.6rem 0.75rem 0.65rem;
+    min-width: 0;
+    /* Hairline dividers make it one instrument rather than four tags. */
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    opacity: 0;
+  }
+  .rs-fact:first-child {
+    border-left: 0;
+  }
+  .rs-fact-label {
+    font-size: 0.6rem;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
     line-height: 1;
-    color: rgba(255, 255, 255, 0.95);
+    color: rgba(255, 255, 255, 0.52);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .rs-chip-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 999px;
-    background: #6ea8ff;
-    box-shadow: 0 0 0 3px rgba(110, 168, 255, 0.25);
-    animation: rs-blink 2.4s ease-in-out infinite;
-  }
-  @keyframes rs-blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.35; }
+  .rs-fact-value {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    color: #fff;
+    white-space: nowrap;
   }
 
   /* ——— the loop ———
@@ -291,11 +270,15 @@ const { ratio = "wide" } = Astro.props;
   .rs-card.is-playing .rs-roof-fill {
     animation: rs-fill var(--rs-cycle) ease infinite;
   }
-  /* Each fact is offset by its index so they read left to right, like the
-     scan is working them out in order. */
+  /* The panel arrives as one object; the cells then fill left to right, each
+     offset by its index, like the scan is working them out in order. Cells
+     fade only — translating them individually would tear the panel apart. */
+  .rs-card.is-playing .rs-readout {
+    animation: rs-panel var(--rs-cycle) cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
   .rs-card.is-playing .rs-fact {
-    animation: rs-fact var(--rs-cycle) cubic-bezier(0.16, 1, 0.3, 1) infinite;
-    animation-delay: calc(var(--i) * 0.5s);
+    animation: rs-fact var(--rs-cycle) ease infinite;
+    animation-delay: calc(var(--i) * 0.35s);
   }
 
   @keyframes rs-zoom {
@@ -326,28 +309,31 @@ const { ratio = "wide" } = Astro.props;
     80% { opacity: 0.9; }
     90%, 100% { opacity: 0.65; }
   }
+  @keyframes rs-panel {
+    0%, 42% { opacity: 0; transform: translate3d(0, 10px, 0); }
+    52%, 80% { opacity: 1; transform: translate3d(0, 0, 0); }
+    88%, 100% { opacity: 0; transform: translate3d(0, 6px, 0); }
+  }
   @keyframes rs-fact {
-    0%, 46% { opacity: 0; transform: translate3d(0, 8px, 0); }
-    54%, 78% { opacity: 1; transform: translate3d(0, 0, 0); }
-    86%, 100% { opacity: 0; transform: translate3d(0, 4px, 0); }
+    0%, 46% { opacity: 0; }
+    56%, 80% { opacity: 1; }
+    88%, 100% { opacity: 0; }
   }
 
-  /* Phones: the card is small enough that four chips wrap into a block that
-     swallows the roof. Show the two that matter and let the copy do the rest. */
+  /* Phones: four cells across a ~330px card leaves no room for the labels, so
+     drop to the two that matter most and let them breathe. */
   @media (max-width: 640px) {
-    .rs-facts {
-      gap: 0.3rem;
-      padding-bottom: 0.6rem;
+    .rs-readout {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .rs-fact:nth-child(n + 3) {
       display: none;
     }
     .rs-fact {
-      padding: 0.3rem 0.55rem;
+      padding: 0.5rem 0.65rem 0.55rem;
     }
-    .rs-fact-label { font-size: 0.64rem; }
-    .rs-fact-value { font-size: 0.76rem; }
-    .rs-chip { font-size: 0.7rem; padding: 0.34rem 0.62rem; }
+    .rs-fact-label { font-size: 0.56rem; }
+    .rs-fact-value { font-size: 0.92rem; }
   }
 
   /* Reduced motion: show the finished state — traced, filled, facts read out —
@@ -358,8 +344,8 @@ const { ratio = "wide" } = Astro.props;
     .rs-card.is-playing .rs-roof-line,
     .rs-card.is-playing .rs-roof-glow,
     .rs-card.is-playing .rs-roof-fill,
-    .rs-card.is-playing .rs-fact,
-    .rs-chip-dot {
+    .rs-card.is-playing .rs-readout,
+    .rs-card.is-playing .rs-fact {
       animation: none;
     }
     .rs-stage { transform: scale(1.26); }
@@ -368,7 +354,8 @@ const { ratio = "wide" } = Astro.props;
     .rs-roof-glow { stroke-dashoffset: 0; }
     .rs-roof-glow { opacity: 1; }
     .rs-roof-fill { opacity: 1; }
-    .rs-fact { opacity: 1; transform: none; }
+    .rs-readout { opacity: 1; transform: none; }
+    .rs-fact { opacity: 1; }
   }
 </style>
 
