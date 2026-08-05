@@ -7,9 +7,14 @@ interface Props {
   description?: string;
 }
 
+// Channel-neutral on purpose. Belpa ships two distribution routes — the embed,
+// and the hosted /l/<slug> page with a QR code for roofers with no website,
+// which is the dashboard's default install. This is the copy Google shows, so
+// it must not tell a roofer without a website that the product isn't for them.
 const {
-  title = "Belpa: Free roof quotes on your website",
-  description = "Free roof quotes on your website. Customers type an address and see a price. You don’t need to drive out first.",
+  title = "Belpa: instant roof quotes for UK roofers",
+  description =
+    "Your customers get a price for their roof in seconds, worked out from satellite imagery. You get their details and the price they were shown. Use it on your website or hand out a link and QR code.",
 } = Astro.props;
 ---
 
