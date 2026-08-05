@@ -35,9 +35,22 @@ const {
     <meta name="theme-color" content="#1f57f0" />
     <!-- The blob is the page visual anchor: fetch it before the CSS asks -->
     <link rel="preload" as="image" href="/bg-v3.webp" fetchpriority="high" />
-    <!-- Header wordmark + the hero's aerial scan: both above the fold -->
+    <!-- Header wordmark + the hero's aerial scan: both above the fold.
+         This preloaded /roof-scan.webp until the hero was rebuilt around
+         RoofScan.astro, which moved that image below the fold into
+         DashboardDemo — so the browser was racing to fetch a below-fold image
+         at high priority while the real LCP image queued behind it.
+         srcset/sizes must stay identical to the <img> in RoofScan.astro,
+         otherwise the preload fetches one file and the paint uses another. -->
     <link rel="preload" as="image" href="/belpa-wordmark.png" fetchpriority="high" />
-    <link rel="preload" as="image" href="/roof-scan.webp" fetchpriority="high" />
+    <link
+      rel="preload"
+      as="image"
+      href="/satellite-roof.webp"
+      imagesrcset="/satellite-roof-760.webp 760w, /satellite-roof.webp 1280w"
+      imagesizes="(min-width: 1024px) 46vw, 92vw"
+      fetchpriority="high"
+    />
     <!--
       Kill scroll restoration before first paint. Otherwise refresh-on-hero
       restores a few px (or animates there) while fonts/morph shift layout.

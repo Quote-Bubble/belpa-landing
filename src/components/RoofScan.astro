@@ -120,12 +120,18 @@ const { ratio = "wide" } = Astro.props;
 
 <figure class={`rs-card rs-card--${ratio}`} data-roof-scan aria-hidden="true">
   <div class="rs-stage">
+    <!-- Two sizes, because this is the heaviest asset on the site and the card
+         renders at ~660px on desktop but ~330px on a phone. Keep the srcset and
+         sizes IDENTICAL to the preload in Layout.astro or the browser fetches
+         one file to satisfy the preload and a different one to paint. -->
     <img
       class="rs-photo"
       src="/satellite-roof.webp"
+      srcset="/satellite-roof-760.webp 760w, /satellite-roof.webp 1280w"
+      sizes="(min-width: 1024px) 46vw, 92vw"
       alt=""
-      width="640"
-      height="480"
+      width="1280"
+      height="960"
       loading="eager"
       fetchpriority="high"
       decoding="async"
