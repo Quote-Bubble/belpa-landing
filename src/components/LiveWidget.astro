@@ -293,8 +293,25 @@ const COLLAPSED_H_MOBILE = 82;
       const d = e.data;
       if (!d || d.source !== "belpa-embed") return;
 
-      const mode = typeof d.mode === "string" ? d.mode : "collapsed";
-      const h = typeof d.height === "number" && d.height > 0 ? d.height : 0;
+      // The embed picks overlay-vs-panel from ITS OWN width, but inside a hero
+      // column that width is ~581px — under the widget's 640px mobile
+      // breakpoint. So on a desktop page the embed asks for the fullscreen
+      // mobile overlay; mounting it makes the iframe window-wide, the embed
+      // re-reads itself as desktop and asks for `expanded`, we shrink it back
+      // to 581px, and it asks for overlay again. That flapped ~15 times per
+      // submit and re-ran the postcode lookup every cycle (16 duplicate
+      // /api/geocode calls), which is what made the live site look broken.
+      //
+      // Only the HOST knows the real device context — the embed can only ever
+      // measure its own box — so the host wins: on a desktop viewport an
+      // overlay request is served as the expanded panel.
+      const rawMode = typeof d.mode === "string" ? d.mode : "collapsed";
+      const coercedFromOverlay = rawMode === "overlay" && desktopMq.matches;
+      const mode = coercedFromOverlay ? "expanded" : rawMode;
+      const hRaw = typeof d.height === "number" && d.height > 0 ? d.height : 0;
+      // An overlay-mode height is the device viewport, not the panel, so it
+      // must never drive desktop layout — use the known panel height instead.
+      const h = coercedFromOverlay ? panelH : hRaw;
       const wasExpanded = holder.dataset.mode === "expanded";
       const wasOverlay = holder.dataset.mode === "overlay";
 
