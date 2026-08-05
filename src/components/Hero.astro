@@ -248,12 +248,18 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     }
   }
 
-  /* —— The widget —— */
+  /* —— The widget ——
+     Centred, not left-aligned with the copy. Left-aligned it sat under the
+     copy column while the space beneath the scan card stayed empty, so it
+     read as floating loose on the blob rather than belonging to the hero.
+     Centred it balances both columns and reads as the page's one action.
+     Width stays >640px — see the warning at the top of this file. */
   .hero-widget {
     position: relative;
     width: 100%;
     max-width: 740px;
-    margin-top: clamp(1.35rem, 3.2svh, 2.25rem);
+    margin-top: clamp(1.75rem, 4svh, 2.75rem);
+    margin-inline: auto;
   }
   .hero-widget-spacer {
     width: 100%;
