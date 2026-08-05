@@ -27,11 +27,11 @@ const roofPath =
   "M277 356 L277 408 L277 480 L277 508 L308 512 L335 517 L339 533 L339 544 L411 545 L474 545 L534 545 L571 547 L625 548 L677 548 L724 551 L725 534 L774 526 L789 513 L807 490 L808 450 L794 428 L784 423 L784 387 L783 341 L777 318 L778 287 L778 255 L725 245 L669 241 L616 239 L611 201 L600 200 L601 141 L546 138 L494 140 L482 140 L479 197 L469 207 L467 239 L362 239 L357 324 L341 334 L342 354 L314 357 Z";
 
 const AREA_M2 = 118;
-// SW1A 1AA is the UK's de-facto example postcode — the address equivalent of
-// example.com. Deliberately not a real residential one: the animation pairs it
-// with a specific roof and a specific price, and that shouldn't point at
-// anybody's actual house.
-const POSTCODE = "SW1A 1AA";
+// An ordinary residential district, which is what a real lead looks like.
+// Deliberately not a landmark postcode (SW1A 1AA reads as a joke next to a
+// roofing quote) and deliberately not anyone's own address — the animation
+// pairs it with a specific roof and a specific price.
+const POSTCODE = "M20 2RN";
 const PRICE = "£11,500 – £18,750";
 const META = "Hipped · 35° pitch · 2 storeys";
 
@@ -504,29 +504,34 @@ const edges = corners
 <script>
   // Beat boundaries as fractions of one cycle. Everything reads from here —
   // change a number and only that beat moves.
-  const DUR = 9000;
+  // 11.5s. The earlier 9s left the settled notification on screen for under
+  // half a second — the payoff of the whole sequence was the shortest thing in
+  // it. The extra time goes almost entirely to the last beat.
+  const DUR = 11500;
   const BEATS = {
-    typeFrom: 0.04,
-    typeTo: 0.24,
-    press: 0.27,
-    whipFrom: 0.29,
-    whipTo: 0.37,
-    traceFrom: 0.37,
-    traceTo: 0.58,
-    fillFrom: 0.56,
-    fillTo: 0.64,
-    dimsFrom: 0.6,
-    dimsTo: 0.72,
-    areaFrom: 0.62,
-    areaTo: 0.74,
-    // The map leaves before the phone arrives — they never share the frame.
-    mapOutFrom: 0.76,
-    mapOutTo: 0.82,
-    phoneFrom: 0.79,
-    phoneTo: 0.86,
-    notifFrom: 0.85,
-    notifTo: 0.91,
-    holdTo: 0.96,
+    typeFrom: 0.03,
+    typeTo: 0.19,
+    press: 0.21,
+    whipFrom: 0.23,
+    whipTo: 0.3,
+    traceFrom: 0.3,
+    traceTo: 0.47,
+    fillFrom: 0.45,
+    fillTo: 0.52,
+    dimsFrom: 0.49,
+    dimsTo: 0.58,
+    areaFrom: 0.51,
+    areaTo: 0.6,
+    // The measured roof holds for a beat before it hands over.
+    // The map leaves before the lead arrives — they never share the frame.
+    mapOutFrom: 0.68,
+    mapOutTo: 0.73,
+    leadFrom: 0.71,
+    leadTo: 0.77,
+    notifFrom: 0.76,
+    notifTo: 0.81,
+    // Settled notification now holds ~1.8s, against 0.45s before.
+    holdTo: 0.97,
   };
   const POSTCODE = "HP13 5BP";
   const AREA_M2 = 118;
@@ -633,7 +638,7 @@ const edges = corners
         // sequence: the customer got a price, and the roofer got the lead.
         map.style.opacity = String(w * (1 - mapOut));
 
-        const ph = span(p, BEATS.phoneFrom, BEATS.phoneTo);
+        const ph = span(p, BEATS.leadFrom, BEATS.leadTo);
         const out = span(p, BEATS.holdTo, 1);
         lead.style.opacity = String(ph * (1 - out));
 
