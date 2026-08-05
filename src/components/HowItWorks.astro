@@ -1,9 +1,14 @@
 ---
+// Step 01 must stay channel-neutral. Belpa ships two distribution routes: the
+// embed for roofers with a website, and the hosted /l/<slug> page with a QR
+// code for those without one — which is the dashboard's DEFAULT install as of
+// belpa-dashboard-frontend 58bb926. Copy that assumes a website excludes the
+// no-site roofers the link route exists to serve.
 const steps = [
   {
     n: "01",
-    title: "We put Belpa on your site",
-    body: "We put our quote box on your site. It takes a few minutes and requires nothing technical from you.",
+    title: "We set you up",
+    body: "On your website, or as a link and QR code you can hand out. It takes a few minutes and requires nothing technical from you.",
   },
   {
     n: "02",
