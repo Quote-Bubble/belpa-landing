@@ -10,7 +10,9 @@ const dashboardUrl =
   One fixed wordmark for the whole journey. No handoff at the top — that was
   the "click". Spacer is layout-only; fly is always the visible Belpa once ready.
 -->
-<a href="/" class="brand-fly" data-brand-fly aria-label="Belpa home">Belpa</a>
+<a href="/" class="brand-fly" data-brand-fly aria-label="Belpa home">
+  <img src="/belpa-wordmark.png" alt="" width="900" height="279" />
+</a>
 
 <!-- Roofer login. A quiet corner utility, deliberately kept physically apart
      from the "Book a call" CTA so it never reads as a competing button. Faint
@@ -30,7 +32,9 @@ const dashboardUrl =
      linked animation lengthens the pill and reveals the CTA next to the
      wordmark (the .is-expanded toggle is driven by initNavExpand below). -->
 <div class="glass-nav" data-glass-nav inert>
-  <span class="glass-nav-brand-slot" data-nav-brand-slot aria-hidden="true">Belpa</span>
+  <span class="glass-nav-brand-slot" data-nav-brand-slot aria-hidden="true">
+    <img src="/belpa-wordmark.png" alt="" width="900" height="279" />
+  </span>
   <span class="glass-nav-cta-wrap" data-nav-cta-wrap>
     <span class="glass-nav-cta-inner">
       <span class="glass-nav-divider" aria-hidden="true"></span>
@@ -54,7 +58,9 @@ const dashboardUrl =
      momentum + blur recompositing), so on phones the hero wordmark just scrolls
      away and this plain bar fades in. -->
 <div class="mobile-nav" data-mobile-nav>
-  <a href="/" class="mobile-nav-brand">Belpa</a>
+  <a href="/" class="mobile-nav-brand" aria-label="Belpa home">
+    <img src="/belpa-wordmark.png" alt="" width="900" height="279" />
+  </a>
   <div class="mobile-nav-actions">
     <a href={dashboardUrl} class="mobile-nav-login" aria-label="Log in to your dashboard">
       Log in
@@ -69,6 +75,9 @@ const dashboardUrl =
 </div>
 
 <style>
+  /* The flying wordmark is the logo image. brand-dock.ts still drives it purely
+     through font-size + transform, so the img is sized in `em` and every bit of
+     the morph maths (width ratio, dock hand-off) carries over unchanged. */
   .brand-fly {
     position: fixed;
     top: 0;
@@ -77,21 +86,18 @@ const dashboardUrl =
     margin: 0;
     padding: 0;
     border: 0;
-    font-family: var(--font-display);
-    font-weight: 600;
-    letter-spacing: -0.045em;
-    line-height: 0.92;
+    line-height: 0;
     white-space: nowrap;
     text-decoration: none;
     transform-origin: 0 0;
-    color: var(--color-ink);
-    -webkit-text-fill-color: var(--color-ink);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: geometricPrecision;
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
+  }
+  .brand-fly img {
+    display: block;
+    height: 1em;
+    width: auto;
   }
   .brand-fly.is-ready {
     opacity: 1;
@@ -99,18 +105,13 @@ const dashboardUrl =
     pointer-events: auto;
   }
   /*
-    Solid wordmark always. A highlight layer sweeps through the glyphs —
+    Solid wordmark always. A highlight layer sweeps through the logo's shape —
     the logo itself never slides away.
   */
   .brand-fly.is-hero::after {
-    content: "Belpa";
+    content: "";
     position: absolute;
-    left: 0;
-    top: 0;
-    font: inherit;
-    letter-spacing: inherit;
-    line-height: inherit;
-    white-space: nowrap;
+    inset: 0;
     pointer-events: none;
     background-image: linear-gradient(
       105deg,
@@ -123,10 +124,12 @@ const dashboardUrl =
     background-size: 220% 100%;
     background-repeat: no-repeat;
     background-position: 200% 50%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
+    -webkit-mask-image: url("/belpa-wordmark.png");
+    mask-image: url("/belpa-wordmark.png");
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
     animation: brand-sheen 9s linear infinite;
   }
   .brand-fly:not(.is-hero)::after {
@@ -191,16 +194,23 @@ const dashboardUrl =
     }
   }
 
+  /* Layout-only placeholder: reserves the docked logo's box inside the pill so
+     the fixed .brand-fly has something to land on. Kept invisible with
+     visibility (not `color: transparent`, which does nothing to an image) —
+     getBoundingClientRect still reports the real rect, which is what
+     brand-dock.ts measures. font-size is the docked size knob. */
   .glass-nav-brand-slot {
     flex: none;
-    font-family: var(--font-display);
-    font-size: 1.25rem;
-    font-weight: 600;
-    letter-spacing: -0.045em;
-    line-height: 0.92;
-    color: transparent;
+    font-size: 1.4rem;
+    line-height: 0;
+    visibility: hidden;
     user-select: none;
     pointer-events: none;
+  }
+  .glass-nav-brand-slot img {
+    display: block;
+    height: 1em;
+    width: auto;
   }
 
   /* Collapsible CTA. grid-template-columns 0fr → 1fr animates the child from
@@ -403,13 +413,15 @@ const dashboardUrl =
     }
   }
   .mobile-nav-brand {
-    font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 18px;
-    letter-spacing: -0.045em;
-    line-height: 1;
-    color: var(--color-ink);
+    display: block;
+    font-size: 20px;
+    line-height: 0;
     text-decoration: none;
+  }
+  .mobile-nav-brand img {
+    display: block;
+    height: 1em;
+    width: auto;
   }
   .mobile-nav-actions {
     display: flex;

@@ -274,6 +274,17 @@ export function initBrandDock() {
   document.fonts?.ready?.then(() => {
     if (brandBooted) remeasure();
   });
+  // The wordmark is an image now. Its width/height attributes give the box an
+  // aspect-ratio up front, so `height: 1em` measures correctly even before the
+  // bytes land — but if the intrinsic ratio ever disagrees with the attributes
+  // the flyer would rest on a stale width, so re-measure on decode.
+  for (const img of [
+    spacer.querySelector("img"),
+    slot.querySelector("img"),
+  ]) {
+    if (!img || img.complete) continue;
+    img.addEventListener("load", () => remeasure(), { once: true, signal });
+  }
 
   // The docked wordmark is a fixed element resting on the transparent brand
   // slot. When the nav pill lengthens (Book a call revealed) the slot shifts,

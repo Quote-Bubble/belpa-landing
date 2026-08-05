@@ -14,8 +14,17 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     class="hero-stage relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col items-center px-5 text-center sm:px-6"
   >
     <div class="hero-cluster w-full">
-      <h1 class="font-display hero-brand" aria-label="Belpa">
-        <span class="hero-brand-spacer" data-brand-spacer aria-hidden="true">Belpa</span>
+      <h1 class="hero-brand" aria-label="Belpa">
+        <span class="hero-brand-spacer" data-brand-spacer aria-hidden="true">
+          <img
+            src="/belpa-wordmark.png"
+            alt=""
+            width="900"
+            height="279"
+            fetchpriority="high"
+            decoding="sync"
+          />
+        </span>
       </h1>
       <p class="font-display hero-promise sub-load">
         Stop losing leads with slow quotes.
@@ -77,35 +86,40 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
 
   .hero-brand {
     margin: 0;
-    line-height: 0.92;
+    /* Zero strut so the inline-block spacer doesn't sit on a baseline with a
+       descender gap under it — the line box is then exactly the logo's height. */
+    line-height: 0;
   }
 
-  /* Solid wordmark + sheen overlay that sweeps through (letters stay put) */
+  /* Logo wordmark + sheen overlay that sweeps through (the mark stays put).
+     font-size is still the one size knob even though this is an image now:
+     brand-dock.ts measures getComputedStyle(spacer).fontSize and drives the
+     docked wordmark off it, and the img is sized in `em`, so the whole morph
+     keeps working untouched. Change the size here, not on the img. */
   .hero-brand-spacer {
     position: relative;
     display: inline-block;
     font-size: clamp(4.25rem, 14vw, 8.5rem);
-    font-weight: 600;
-    letter-spacing: -0.045em;
-    line-height: 0.92;
+    line-height: 0;
     user-select: none;
     pointer-events: none;
-    color: var(--color-ink);
     opacity: 0;
     transform: translateY(0.4em) scale(1.55);
     filter: blur(14px);
     transform-origin: 50% 100%;
     animation: brand-enter 1.2s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) 0.18s forwards;
   }
+  .hero-brand-spacer img {
+    display: block;
+    height: 1em;
+    width: auto;
+  }
+  /* Same sheen as the old text version, but clipped to the logo's alpha with a
+     mask instead of background-clip:text (which only works on glyphs). */
   .hero-brand-spacer::after {
-    content: "Belpa";
+    content: "";
     position: absolute;
-    left: 0;
-    top: 0;
-    font: inherit;
-    letter-spacing: inherit;
-    line-height: inherit;
-    white-space: nowrap;
+    inset: 0;
     pointer-events: none;
     background-image: linear-gradient(
       105deg,
@@ -118,10 +132,12 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     background-size: 220% 100%;
     background-repeat: no-repeat;
     background-position: 200% 50%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
+    -webkit-mask-image: url("/belpa-wordmark.png");
+    mask-image: url("/belpa-wordmark.png");
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
     animation: brand-sheen 9s linear 1.4s infinite;
   }
   /* Hidden only after the fixed wordmark is placed — no mid-scroll handoff */
@@ -158,7 +174,6 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
       opacity: 1;
       transform: none;
       filter: none;
-      color: var(--color-ink);
     }
     .hero-brand-spacer::after {
       content: none;

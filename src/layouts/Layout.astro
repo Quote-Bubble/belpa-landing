@@ -30,6 +30,8 @@ const {
     <meta name="theme-color" content="#1f57f0" />
     <!-- The blob is the page visual anchor: fetch it before the CSS asks -->
     <link rel="preload" as="image" href="/bg-v3.webp" fetchpriority="high" />
+    <!-- Hero wordmark: above the fold, and the brand-dock morph measures it -->
+    <link rel="preload" as="image" href="/belpa-wordmark.png" fetchpriority="high" />
     <!--
       Kill scroll restoration before first paint. Otherwise refresh-on-hero
       restores a few px (or animates there) while fonts/morph shift layout.
