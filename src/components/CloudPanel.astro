@@ -32,7 +32,7 @@
       radial-gradient(ellipse 34% 24% at 82% 62%, rgba(255, 255, 255, 0.55), transparent 65%),
       radial-gradient(ellipse 30% 20% at 28% 70%, rgba(220, 235, 255, 0.4), transparent 68%),
       linear-gradient(180deg, #1f57f0 0%, #2f6bff 45%, #4f8bff 100%);
-    /* Soft wide band â€” longer TOP fade so it dissolves into the blob */
+    /* Soft wide band — longer TOP fade so it dissolves into the blob */
     -webkit-mask-image:
       linear-gradient(
         to right,
@@ -85,7 +85,7 @@
     mask-composite: intersect;
     pointer-events: none;
   }
-  /* Mobile: same soft, blended sky as desktop â€” long fade ramps on every
+  /* Mobile: same soft, blended sky as desktop — long fade ramps on every
      side and enough top bleed to hand off from the hero blob's fade tail. */
   @media (max-width: 640px) {
     .cp-bg {
@@ -165,7 +165,7 @@
   }
 </style>
 <script>
-  // Cloudscape â€” sharp WebGL at normal resolution; pauses offscreen.
+  // Cloudscape — sharp WebGL at normal resolution; pauses offscreen.
   // Colors match the hero blob (#1f57f0 / #2f6bff / #4f8bff family).
   const CLOUD_VERT = `
 attribute vec2 position;
@@ -225,8 +225,8 @@ void main() {
 `;
 
   const CLOUD_COLORS: [number, number, number][] = [
-    [31 / 255, 87 / 255, 240 / 255],   // #1f57f0 â€” blob core
-    [79 / 255, 139 / 255, 255 / 255],  // #4f8bff â€” blob mid
+    [31 / 255, 87 / 255, 240 / 255],   // #1f57f0 — blob core
+    [79 / 255, 139 / 255, 255 / 255],  // #4f8bff — blob mid
     [1.0, 1.0, 1.0],                  // bright cloud tops
   ];
   const CLOUD_VER = "blob-4";
@@ -378,7 +378,7 @@ void main() {
         return;
       }
 
-      // Run once the canvas is on-screen â€” but let the hero bloom own the
+      // Run once the canvas is on-screen — but let the hero bloom own the
       // GPU for its first beat, then warm the clouds. Pause when scrolled
       // offscreen or when the tab itself is hidden.
       let onScreen = false;

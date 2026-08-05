@@ -27,7 +27,11 @@ const roofPath =
   "M277 356 L277 408 L277 480 L277 508 L308 512 L335 517 L339 533 L339 544 L411 545 L474 545 L534 545 L571 547 L625 548 L677 548 L724 551 L725 534 L774 526 L789 513 L807 490 L808 450 L794 428 L784 423 L784 387 L783 341 L777 318 L778 287 L778 255 L725 245 L669 241 L616 239 L611 201 L600 200 L601 141 L546 138 L494 140 L482 140 L479 197 L469 207 L467 239 L362 239 L357 324 L341 334 L342 354 L314 357 Z";
 
 const AREA_M2 = 118;
-const POSTCODE = "HP13 5BP";
+// SW1A 1AA is the UK's de-facto example postcode — the address equivalent of
+// example.com. Deliberately not a real residential one: the animation pairs it
+// with a specific roof and a specific price, and that shouldn't point at
+// anybody's actual house.
+const POSTCODE = "SW1A 1AA";
 const PRICE = "£11,500 – £18,750";
 const META = "Hipped · 35° pitch · 2 storeys";
 
@@ -191,15 +195,33 @@ const edges = corners
     <figcaption class="st-meta" data-st-meta>{META}</figcaption>
   </div>
 
-  <!-- Scene 3 — the lead arriving with the roofer. -->
-  <div class="st-toast" data-st-toast>
-    <div class="st-toast-top">
-      <img class="st-toast-mark" src="/favicon-32.png" alt="" width="32" height="32" />
-      <span class="st-toast-title">New lead</span>
-      <span class="st-toast-time">now</span>
+  <!-- Scene 3 — the lead arriving with the roofer, on their phone.
+       Its own scene rather than an overlay: sitting on the map it covered the
+       measurement the sequence had just spent six seconds producing, and
+       shrinking it far enough to clear the area label made the notification
+       unreadable. The map leaves, the phone arrives, and it gets the frame.
+
+       The handset is drawn in CSS rather than dropped in as a mockup PNG — a
+       full-resolution device render is a large asset for something this size,
+       and a drawn frame scales cleanly and picks up the brand blue. Cropped at
+       the bottom on purpose: a whole phone inside a 16:10 card would be so
+       narrow the notification couldn't be read. -->
+  <div class="st-scene st-lead" data-st-lead>
+    <div class="st-phone">
+    <div class="st-phone-screen">
+      <span class="st-island"></span>
+      <div class="st-notif">
+        <div class="st-notif-top">
+          <img class="st-notif-icon" src="/favicon-32.png" alt="" width="32" height="32" />
+          <span class="st-notif-app">Belpa</span>
+          <span class="st-notif-time">now</span>
+        </div>
+        <p class="st-notif-title">New lead</p>
+        <p class="st-notif-body">{POSTCODE} · 118 m² hipped roof</p>
+        <p class="st-notif-price">{PRICE}<span class="st-notif-vat"> ex VAT</span></p>
+        </div>
+      </div>
     </div>
-    <p class="st-toast-addr">{POSTCODE} · 118 m² hipped roof</p>
-    <p class="st-toast-price">{PRICE}<span class="st-toast-vat"> ex VAT</span></p>
   </div>
 </figure>
 
@@ -379,65 +401,121 @@ const edges = corners
   /* Bottom-right, not top-right. A notification lands top-right by convention,
      but there it sat straight over the roof's top edge and the 4.5 m label —
      covering the measurement the sequence had just spent six seconds making. */
-  .st-toast {
-    position: absolute;
-    right: clamp(0.75rem, 3%, 1.15rem);
-    bottom: clamp(0.75rem, 3%, 1.15rem);
+  .st-lead {
+    display: grid;
+    justify-items: center;
     z-index: 5;
-    width: min(54%, 286px);
-    padding: 0.7rem 0.85rem 0.8rem;
-    border-radius: 16px;
-    background: rgba(11, 20, 40, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    box-shadow: 0 22px 50px -20px rgba(3, 10, 28, 0.9);
     opacity: 0;
-    transform: translate3d(0, 14px, 0);
+    background:
+      radial-gradient(ellipse 90% 70% at 50% 30%, #16224a 0%, #0a1024 55%, #05080f 100%);
   }
-  .st-toast-top {
+
+  .st-phone {
+    position: relative;
+    margin-top: 6%;
+    width: min(48%, 296px);
+    aspect-ratio: 9 / 19.5;
+    padding: 2.6%;
+    border-radius: 13% / 6%;
+    /* Brushed edge: two highlights down the long sides, like a metal rail. */
+    background:
+      linear-gradient(100deg, #7fb2e6 0%, #2f6bff 18%, #1b3f8f 50%, #2f6bff 82%, #7fb2e6 100%);
+    box-shadow:
+      0 0 0 1px rgba(9, 22, 52, 0.55),
+      0 30px 60px -18px rgba(3, 10, 28, 0.85);
+  }
+  .st-phone-screen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 11% / 5.2%;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse 120% 60% at 50% 0%, #1b2a4d 0%, #0b1122 55%, #05080f 100%);
+  }
+  .st-island {
+    position: absolute;
+    top: 3.2%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 32%;
+    height: 2.6%;
+    border-radius: 999px;
+    background: #000;
+  }
+
+  /* iOS-style notification: light, translucent, heavily rounded. */
+  .st-notif {
+    position: absolute;
+    left: 5%;
+    right: 5%;
+    top: 9%;
+    padding: 0.5rem 0.6rem 0.6rem;
+    border-radius: 14px;
+    background: rgba(244, 247, 255, 0.94);
+    box-shadow: 0 10px 24px -12px rgba(3, 10, 28, 0.8);
+    /* The phone arrives first and settles; the notification then drops onto
+       it, which is the beat that actually matters. */
+    opacity: 0;
+    transform: translate3d(0, -10px, 0);
+  }
+  .st-notif-top {
     display: flex;
     align-items: center;
-    gap: 0.45rem;
+    gap: 0.3rem;
   }
-  .st-toast-mark {
-    width: 16px;
-    height: 16px;
-    border-radius: 4px;
+  .st-notif-icon {
+    width: 13px;
+    height: 13px;
+    border-radius: 3px;
   }
-  .st-toast-title {
+  .st-notif-app {
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(20, 30, 55, 0.55);
+  }
+  .st-notif-time {
+    margin-left: auto;
+    font-size: 0.56rem;
+    color: rgba(20, 30, 55, 0.45);
+  }
+  .st-notif-title {
+    margin: 0.3rem 0 0;
     font-size: 0.74rem;
     font-weight: 700;
-    letter-spacing: 0.01em;
-    color: #fff;
+    letter-spacing: -0.01em;
+    color: #0d1730;
   }
-  .st-toast-time {
-    margin-left: auto;
-    font-size: 0.68rem;
-    color: rgba(255, 255, 255, 0.5);
+  .st-notif-body {
+    margin: 0.1rem 0 0;
+    font-size: 0.64rem;
+    line-height: 1.3;
+    color: rgba(20, 30, 55, 0.66);
   }
-  .st-toast-addr {
-    margin: 0.4rem 0 0;
-    font-size: 0.72rem;
-    line-height: 1.35;
-    color: rgba(255, 255, 255, 0.66);
-  }
-  .st-toast-price {
+  .st-notif-price {
     margin: 0.25rem 0 0;
-    font-size: clamp(0.95rem, 2.1cqw, 1.15rem);
+    font-size: 0.82rem;
     font-weight: 700;
     letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
-    color: #fff;
+    color: var(--color-brand-600, #1746c8);
   }
-  .st-toast-vat {
+  .st-notif-vat {
     font-size: 0.72em;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(20, 30, 55, 0.5);
   }
 
   @media (max-width: 640px) {
     .st-dim { display: none; }
     .st-area-text { font-size: 56px; }
-    .st-toast { width: 74%; }
+    /* Narrower card, so the handset takes proportionally more of it or the
+       notification text stops being legible. */
+    .st-phone { width: 62%; margin-top: 5%; }
+    .st-notif-title { font-size: 0.68rem; }
+    .st-notif-price { font-size: 0.76rem; }
     .st-meta { font-size: 0.7rem; }
   }
 
@@ -451,7 +529,10 @@ const edges = corners
     .st-area,
     .st-meta { opacity: 1; }
     .st-vert { opacity: 1; }
-    .st-toast { opacity: 1; transform: none; }
+    /* Reduced motion holds the measured roof, not the phone — the map is the
+       frame that carries the whole story in one still. */
+    .st-lead { display: none; }
+    .st-notif { opacity: 1; transform: none; }
   }
 </style>
 
@@ -473,9 +554,14 @@ const edges = corners
     dimsTo: 0.72,
     areaFrom: 0.62,
     areaTo: 0.74,
-    toastFrom: 0.76,
-    toastTo: 0.84,
-    holdTo: 0.94,
+    // The map leaves before the phone arrives — they never share the frame.
+    mapOutFrom: 0.76,
+    mapOutTo: 0.82,
+    phoneFrom: 0.79,
+    phoneTo: 0.86,
+    notifFrom: 0.85,
+    notifTo: 0.91,
+    holdTo: 0.96,
   };
   const POSTCODE = "HP13 5BP";
   const AREA_M2 = 118;
@@ -506,7 +592,9 @@ const edges = corners
       const area = q<SVGGElement>("[data-st-area]")!;
       const areaText = q<SVGTextElement>("[data-st-area-text]")!;
       const meta = q<HTMLElement>("[data-st-meta]")!;
-      const toast = q<HTMLElement>("[data-st-toast]")!;
+      const lead = q<HTMLElement>("[data-st-lead]")!;
+      const phone = q<HTMLElement>(".st-phone")!;
+      const notif = q<HTMLElement>(".st-notif")!;
 
       // Dash length must come from the path itself — a hardcoded value breaks
       // the moment the outline is retraced.
@@ -540,9 +628,12 @@ const edges = corners
         ask.style.opacity = String(1 - w);
         ask.style.transform = `scale(${1 + 0.35 * w})`;
         ask.style.filter = `blur(${18 * w}px)`;
-        map.style.opacity = String(w);
+        // (map opacity is set once, further down, after mapOut is known)
         const settle = span(p, BEATS.whipTo, BEATS.traceTo);
-        stage.style.transform = `scale(${1.16 - 0.13 * outCubic(settle)})`;
+        // Single assignment — appending to style.transform each frame grows the
+        // string without bound and the scale compounds.
+        const mapOut = span(p, BEATS.mapOutFrom, BEATS.mapOutTo);
+        stage.style.transform = `scale(${1.16 - 0.13 * outCubic(settle) - 0.04 * mapOut})`;
         stage.style.filter = w < 1 ? `blur(${10 * (1 - w)}px)` : "none";
 
         // Corners land in path order.
@@ -574,16 +665,18 @@ const edges = corners
         areaText.textContent = `${Math.round(outCubic(a) * AREA_M2)} m²`;
         meta.style.opacity = String(span(p, BEATS.dimsFrom, BEATS.dimsTo));
 
-        // The lead lands with the roofer. This is the point of the whole
-        // sequence: the customer got a price, and the roofer got the job.
-        const to = span(p, BEATS.toastFrom, BEATS.toastTo);
-        const out = span(p, BEATS.holdTo, 1);
-        toast.style.opacity = String(to * (1 - out));
-        toast.style.transform = `translate3d(0, ${14 * (1 - outCubic(to))}px, 0)`;
+        // The map hands over to the phone. This is the point of the whole
+        // sequence: the customer got a price, and the roofer got the lead.
+        map.style.opacity = String(w * (1 - mapOut));
 
-        // Everything clears together at the end so the loop restarts clean.
-        const fade = 1 - out;
-        map.style.opacity = String(Math.min(Number(map.style.opacity), fade));
+        const ph = span(p, BEATS.phoneFrom, BEATS.phoneTo);
+        const out = span(p, BEATS.holdTo, 1);
+        lead.style.opacity = String(ph * (1 - out));
+        phone.style.transform = `translate3d(0, ${26 * (1 - outCubic(ph))}px, 0)`;
+
+        const nf = span(p, BEATS.notifFrom, BEATS.notifTo);
+        notif.style.opacity = String(nf);
+        notif.style.transform = `translate3d(0, ${-10 * (1 - outCubic(nf))}px, 0)`;
       }
 
       // Scrub: ?rs=0.42 freezes the timeline there. The only practical way to
