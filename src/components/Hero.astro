@@ -68,6 +68,16 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
       </div>
     </div>
 
+    <!-- The embed is the real widget, unmodified — the same one roofers put on
+         their own sites. Its button says "Get quote" because that is what a
+         homeowner is doing; it must NOT be relabelled to something like "try
+         it free", which would be nonsense on a customer's site. The framing
+         that this is a free demo belongs here, on the page selling it. -->
+    <p class="hero-try" data-reveal="fade">
+      <span class="hero-try-strong">Try it free.</span>
+      Put in any UK postcode and see what your customers would get.
+    </p>
+
     <div class="hero-widget widget-load" data-widget-shell>
       <!-- Holds layout while #belpa-widget is position:fixed during the dock morph -->
       <div class="hero-widget-spacer" data-widget-spacer aria-hidden="true"></div>
@@ -248,17 +258,36 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     }
   }
 
+  /* Names the demo before you reach it. Without this the postcode box was an
+     unexplained search bar floating on the gradient — you couldn't tell it was
+     a live demo rather than page furniture, and nothing said it was free. */
+  .hero-try {
+    width: 100%;
+    max-width: 740px;
+    margin: clamp(1.5rem, 3.5svh, 2.25rem) auto 0;
+    font-size: 0.95rem;
+    font-weight: 500;
+    line-height: 1.5;
+    letter-spacing: -0.015em;
+    color: var(--color-ink-soft);
+    text-align: center;
+  }
+  .hero-try-strong {
+    font-weight: 700;
+    color: var(--color-ink);
+  }
+
   /* —— The widget ——
      Centred, not left-aligned with the copy. Left-aligned it sat under the
      copy column while the space beneath the scan card stayed empty, so it
      read as floating loose on the blob rather than belonging to the hero.
-     Centred it balances both columns and reads as the page's one action.
+     Centred, with the line above naming it, it reads as its own demo band.
      Width stays >640px — see the warning at the top of this file. */
   .hero-widget {
     position: relative;
     width: 100%;
     max-width: 740px;
-    margin-top: clamp(1.75rem, 4svh, 2.75rem);
+    margin-top: 0.85rem;
     margin-inline: auto;
   }
   .hero-widget-spacer {
