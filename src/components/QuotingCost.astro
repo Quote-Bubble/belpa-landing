@@ -27,9 +27,12 @@ import CloudPanel from "./CloudPanel.astro";
 // roof" is a fragment the reader has to reassemble before it means anything.
 // Terseness is not clarity. A roofer landing here should be able to answer
 // "is this for me?" and "what changes for me?" without decoding a single line.
-//   * `label` states the problem as a full sentence, in plain words, and may
-//     restate the figure rather than leaving it implied. Redundancy is cheap;
-//     ambiguity is not.
+//   * `label` REFERS BACK to the figure, it does not continue it. Opening with
+//     "That's what…/That's how long…/That's how many…" is the whole trick.
+//     Earlier versions read "5h 20m" + "a week on quoting and admin", which is
+//     one phrase split across two visual blocks — the sentence breaks over the
+//     gap and lands as a non-sequitur. The label must carry its own unit
+//     ("every week", "one quote") and stand up as a sentence on its own.
 //   * `fix` says what WE do about it, also as a full sentence, naming a real
 //     mechanic — satellite measurement, the price, where the lead lands.
 //
@@ -50,21 +53,21 @@ const stats = [
   {
     figure: "5h 20m",
     label:
-      "a week on quoting and admin for the average UK trade. 77% of it happens after hours.",
+      "That's what the average UK trade spends on quoting and admin every week. 77% of it after hours.",
     src: "1",
     fix: "We price the job the moment a customer asks. Your evening stays free.",
   },
   {
     figure: "20 min",
     label:
-      "to write one quote. At 6–10 quotes a week, most of that writing never becomes paid work.",
+      "That's how long one quote takes to write. At 6–10 a week, most of it never becomes paid work.",
     src: "2",
     fix: "We measure the roof from satellite imagery and price it. You write nothing.",
   },
   {
     figure: "1 in 5",
     label:
-      "customers drop the job completely, because they couldn't find anyone they trusted.",
+      "That's how many customers drop the job completely, because they couldn't find anyone they trusted.",
     src: "3",
     fix: "We price it on your site in seconds and send you their number and postcode.",
   },
