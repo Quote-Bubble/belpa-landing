@@ -32,7 +32,12 @@ import CloudPanel from "./CloudPanel.astro";
 //     ambiguity is not.
 //   * `fix` says what WE do about it, also as a full sentence, naming a real
 //     mechanic — satellite measurement, the price, where the lead lands.
-// Resist the urge to tighten these into fragments. It has been tried.
+//
+// Short is fine; SHORTENED is not. Cut whole clauses that repeat something the
+// reader already has, and keep every sentence a sentence. What broke it before
+// was squeezing sentences into fragments to save words, which left the reader
+// doing the assembly. Never trade a concrete noun (satellite imagery, postcode,
+// their number) for a shorter vague one.
 //
 // `fix` is a CLAIM about the product, not a sourced figure — that's why only
 // `label` carries a footnote marker. Belpa returns an indicative ex-VAT range
@@ -45,23 +50,23 @@ const stats = [
   {
     figure: "5h 20m",
     label:
-      "a week on quoting and admin for the average UK trade. 77% of it happens after the working day has finished.",
+      "a week on quoting and admin for the average UK trade. 77% of it happens after hours.",
     src: "1",
-    fix: "We price the job the moment a customer asks, so it never lands on your evening.",
+    fix: "We price the job the moment a customer asks. Your evening stays free.",
   },
   {
     figure: "20 min",
     label:
-      "to write a single quote, and more than a third of trades take longer. At 6–10 quotes a week, most of that writing never becomes paid work.",
+      "to write one quote. At 6–10 quotes a week, most of that writing never becomes paid work.",
     src: "2",
-    fix: "We measure the roof from satellite imagery and work out the price. You don't write anything.",
+    fix: "We measure the roof from satellite imagery and price it. You write nothing.",
   },
   {
     figure: "1 in 5",
     label:
-      "customers put the work off completely, because they couldn't find anyone they trusted to give them a straight answer.",
+      "customers drop the job completely, because they couldn't find anyone they trusted.",
     src: "3",
-    fix: "We give them a real price on your website in seconds, and send you their phone number and postcode.",
+    fix: "We price it on your site in seconds and send you their number and postcode.",
   },
 ];
 
@@ -213,7 +218,7 @@ const sources = [
      viewport width and broke the moment anything rewrapped. */
   .qc-label {
     margin: 0.65rem 0 0;
-    min-height: calc(4 * 1.45em);
+    min-height: calc(3 * 1.45em);
     font-size: 0.98rem;
     font-weight: 600;
     letter-spacing: -0.02em;
