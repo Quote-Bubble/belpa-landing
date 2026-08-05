@@ -38,6 +38,13 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
 
     <div class="hero-grid">
       <div class="hero-copy">
+        <!-- Says WHO the page is for. The headline is about the pain, not the
+             audience, so without this a visitor has to infer "roofer" from the
+             sub-copy — and the first question anyone asks a landing page is
+             "is this for me?". Uses the existing .section-label token rather
+             than new chrome; the fold already carries the big wordmark. -->
+        <p class="section-label hero-audience sub-load">For UK roofing companies</p>
+
         <p class="font-display hero-promise sub-load">
           Stop losing leads with slow quotes.
         </p>
@@ -201,6 +208,10 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
 
   .hero-copy {
     text-align: left;
+  }
+
+  .hero-audience {
+    margin: 0 0 0.85rem;
   }
 
   .hero-promise {
