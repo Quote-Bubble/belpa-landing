@@ -21,28 +21,43 @@ import CloudPanel from "./CloudPanel.astro";
 // whole argument. Resist re-adding supporting paragraphs: the number is the
 // point, and anything it needs explained belongs in the source, not the card.
 //
+// Copy discipline, both halves earned by rewriting them twice:
+//   * `label` must describe the MOMENT, not the statistic. "a week quoting,
+//     77% after hours" is information; "at the kitchen table, after a full day
+//     on site" is the thing a roofer recognises. The figure already carries
+//     the data, so the sentence is free to carry the sting.
+//   * `fix` must say what we actually DO, in mechanics, starting with "We".
+//     "Your site prices it the moment they ask" was too vague to mean
+//     anything. Name the real steps: satellite measurement, area/pitch/access,
+//     their rates, the range, where the lead lands.
+//
 // `fix` is a CLAIM about the product, not a sourced figure — that's why only
 // `label` carries a footnote marker. Belpa returns an indicative ex-VAT range
 // and the roofer still prices the job on site, so no fix may imply Belpa does
-// the quoting outright.
+// the quoting outright. Every mechanic named above is real: satellite
+// measurement via the Solar envelope or a traced outline, access uplifts from
+// pitch and property type, per-roofer rates from roofer_pricing, and the lead
+// row carrying contact phone and postcode.
 const stats = [
   {
     figure: "5h 20m",
-    label: "a week quoting, 77% of it after hours",
+    label:
+      "a week quoting. Most of it at the kitchen table, after a full day on site.",
     src: "1",
-    fix: "Your site prices it the moment they ask.",
+    fix: "We measure the roof from satellite imagery and price it with your rates, the second they ask.",
   },
   {
     figure: "20 min",
-    label: "to write a single quote",
+    label: "to measure up and write one quote. For a job you might not win.",
     src: "2",
-    fix: "It comes back costed. You write nothing.",
+    fix: "We work out area, pitch and access, apply your rates and hand back a range. You type nothing.",
   },
   {
     figure: "1 in 5",
-    label: "jobs never happen at all",
+    label:
+      "customers never do the job at all, because nobody gave them a straight answer.",
     src: "3",
-    fix: "They get a real number in seconds.",
+    fix: "We give them a price on your site in seconds, and put their number and postcode in your dashboard.",
   },
 ];
 
@@ -180,13 +195,24 @@ const sources = [
     opacity: 0.7;
   }
 
+  /* Runs to two or three lines now that it describes the moment rather than
+     the statistic, so it needs more leading than a one-line label did.
+     Reserves three lines so the ticks below line up across the row whatever
+     the copy does — tuning sentence lengths to match held only at one exact
+     viewport width and broke the moment anything rewrapped. */
   .qc-label {
-    margin: 0.6rem 0 0;
-    font-size: 1rem;
+    margin: 0.65rem 0 0;
+    min-height: calc(3 * 1.45em);
+    font-size: 0.98rem;
     font-weight: 600;
     letter-spacing: -0.02em;
-    line-height: 1.35;
+    line-height: 1.45;
     color: var(--color-ink);
+  }
+  @media (max-width: 767px) {
+    /* Stacked, so there's nothing to align with and the reserved space would
+       just be a gap under every card. */
+    .qc-label { min-height: 0; }
   }
 
   /* Top-aligned, not pinned to the card bottom. Bottom-pinning made the
