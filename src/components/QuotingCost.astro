@@ -1,38 +1,47 @@
 ---
+import CloudPanel from "./CloudPanel.astro";
+
 // The "why this matters" section. Deliberately built on published UK figures
 // rather than invented ones: this page sells to trades who will know instantly
 // if a number is made up, and the product's whole pitch is that its estimates
 // are honest about what they are.
 //
-// Every figure below carries its source in `note`, rendered as a real footnote.
-// Two caveats kept on the record so nobody re-uses these numbers wrongly:
+// Every figure carries its source in a numbered footnote. Two caveats kept on
+// the record so nobody re-uses these numbers wrongly:
 //   * They are ALL-TRADES UK figures. Nothing roofing-specific exists for
 //     quoting time, so the copy says "UK trades", never "roofers".
 //   * The 5h20m and 20-minute figures come from vendor-run surveys (quoting
 //     software companies), so they have an interest in the answer. Real
 //     research, but not independent.
 //
+// Each card carries a small diagram that encodes its own number — seven days
+// with the evenings shaded, a third of an hour swept out, five houses with one
+// struck through — so the figure reads before the sentence does.
+//
 // The closing line promises QUALIFICATION, not quoting. Belpa returns an
-// indicative ex-VAT range with a confidence band — the roofer still prices the
-// job on site. Copy here must never imply otherwise.
+// indicative ex-VAT range with a confidence band and the roofer still prices
+// the job on site, so copy implying otherwise would overclaim.
 const stats = [
   {
     figure: "5h 20m",
     label: "a week on quoting and admin",
     body: "For the average UK trade — and 77% of it happens after the working day has already ended.",
     src: "1",
+    art: "week",
   },
   {
     figure: "20 min",
     label: "to write a single quote",
     body: "More than a third take longer. At 6–10 quotes a week, that's hours of writing that may never become paid work.",
     src: "2",
+    art: "clock",
   },
   {
     figure: "1 in 5",
     label: "jobs never happen at all",
     body: "Homeowners put work off entirely when they can't find someone they trust to give them a straight answer.",
     src: "3",
+    art: "houses",
   },
 ];
 
@@ -55,51 +64,103 @@ const sources = [
 ];
 ---
 
-<section id="numbers" class="cv-auto relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-28">
-  <div class="mx-auto max-w-3xl text-center" data-reveal>
-    <h2 class="font-display qc-heading text-ink">
-      What quoting actually costs you.
-    </h2>
-  </div>
+<section id="numbers" class="qc relative w-full pt-6 pb-16 sm:pt-12 sm:pb-28">
+  <CloudPanel />
 
-  <div class="qc-grid mt-12 sm:mt-16">
-    {stats.map((s, i) => (
-      <div class="qc-card" data-reveal data-delay={String(i + 1)}>
-        <p class="qc-figure font-display">
-          {s.figure}<sup class="qc-sup">{s.src}</sup>
-        </p>
-        <p class="qc-label">{s.label}</p>
-        <p class="qc-body">{s.body}</p>
+  <div class="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
+    <div class="qc-inner px-2 py-12 sm:px-8 sm:py-20 lg:px-10 lg:py-24">
+      <div class="mx-auto max-w-3xl text-center" data-reveal="fade" data-fx="rush">
+        <h2 class="font-display qc-heading">What quoting actually costs you.</h2>
       </div>
-    ))}
-  </div>
 
-  <div class="qc-close" data-reveal data-delay="4">
-    <p class="font-display qc-close-line">Know which jobs are worth the visit.</p>
-  </div>
+      <div class="qc-grid mt-10 sm:mt-14">
+        {stats.map((s, i) => (
+          <div class="qc-card" data-reveal="fade" data-delay={String(i + 1)}>
+            <div class="qc-art" aria-hidden="true">
+              {s.art === "week" && (
+                /* Seven days; the shaded block on each is the evening the
+                   admin actually happens in. */
+                <svg viewBox="0 0 140 48" class="qc-art-svg">
+                  {[0, 1, 2, 3, 4, 5, 6].map((d) => (
+                    <g transform={`translate(${d * 20}, 0)`}>
+                      <rect class="qc-day" x="2" y="6" width="14" height="36" rx="3" />
+                      <rect class="qc-eve" x="2" y={d >= 5 ? 30 : 28} width="14" height={d >= 5 ? 12 : 14} rx="3" />
+                    </g>
+                  ))}
+                </svg>
+              )}
+              {s.art === "clock" && (
+                /* A third of the dial — 20 minutes of an hour — swept out. */
+                <svg viewBox="0 0 48 48" class="qc-art-svg qc-art-svg--clock">
+                  <circle class="qc-dial" cx="24" cy="24" r="18" />
+                  <path class="qc-slice" d="M24 24 L24 6 A18 18 0 0 1 39.59 33 Z" />
+                  <circle class="qc-pin" cx="24" cy="24" r="2.2" />
+                </svg>
+              )}
+              {s.art === "houses" && (
+                /* Five roofs; the last one never gets built. */
+                <svg viewBox="0 0 140 48" class="qc-art-svg">
+                  {[0, 1, 2, 3, 4].map((h) => (
+                    <g transform={`translate(${h * 28}, 8)`} class={h === 4 ? "qc-house is-lost" : "qc-house"}>
+                      <path class="qc-roof" d="M3 14 L12 5 L21 14" />
+                      <rect class="qc-wall" x="5" y="14" width="14" height="14" rx="1.5" />
+                    </g>
+                  ))}
+                </svg>
+              )}
+            </div>
 
-  <ol class="qc-sources" data-reveal data-delay="4">
-    {sources.map((s) => (
-      <li>
-        <sup>{s.n}</sup>
-        <a href={s.href} target="_blank" rel="noopener noreferrer nofollow">{s.text}</a>
-      </li>
-    ))}
-  </ol>
+            <p class="qc-figure font-display">
+              {s.figure}<sup class="qc-sup">{s.src}</sup>
+            </p>
+            <p class="qc-label">{s.label}</p>
+            <p class="qc-body">{s.body}</p>
+          </div>
+        ))}
+      </div>
+
+      <div class="qc-close" data-reveal="fade" data-delay="4">
+        <p class="font-display qc-close-line">Know which jobs are worth the visit.</p>
+      </div>
+
+      <ol class="qc-sources" data-reveal="fade" data-delay="4">
+        {sources.map((s) => (
+          <li>
+            <sup>{s.n}</sup>
+            <a href={s.href} target="_blank" rel="noopener noreferrer nofollow">{s.text}</a>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </div>
 </section>
 
 <style>
+  .qc {
+    /* The cloud panel bleeds past this box on every side; nothing here may clip
+       it or the soft mask edges turn into hard lines. */
+    overflow: visible;
+  }
+  .qc-inner {
+    position: relative;
+  }
+
   .qc-heading {
     margin: 0;
-    font-size: clamp(1.55rem, 4vw, 2.5rem);
+    font-size: clamp(1.85rem, 4.6vw, 3rem);
     font-weight: 400;
-    line-height: 1.15;
-    letter-spacing: -0.03em;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+    color: #fff;
+    /* Clouds drift underneath and can get bright — the shadow is what keeps
+       white type legible over them at every frame. */
+    text-shadow:
+      0 1px 2px rgba(5, 20, 70, 0.55),
+      0 2px 14px rgba(5, 20, 70, 0.7),
+      0 8px 36px rgba(5, 20, 70, 0.85);
   }
   @media (max-width: 640px) {
-    .qc-heading {
-      font-size: clamp(1.4rem, 6.2vw, 1.9rem);
-    }
+    .qc-heading { font-size: clamp(1.5rem, 7vw, 2rem); }
   }
 
   .qc-grid {
@@ -114,28 +175,78 @@ const sources = [
     }
   }
 
+  /* Solid white, not glass. The section already animates `filter` on entrance
+     and global.css documents that a backdrop-filter child snaps the compositor
+     when those keyframes finish — and against a moving cloudscape a flat card
+     is the only way the small type stays readable frame to frame. */
   .qc-card {
     position: relative;
-    padding: 1.75rem 1.5rem 1.85rem;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.72);
-    border: 1px solid rgba(23, 60, 160, 0.09);
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 1.4rem 1.6rem;
+    border-radius: 20px;
+    background: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.65);
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.6) inset,
-      0 18px 40px -30px rgba(23, 60, 160, 0.4);
-    text-align: center;
-  }
-  @media (min-width: 768px) {
-    .qc-card {
-      text-align: left;
-    }
+      0 0 0 1px rgba(21, 55, 140, 0.14),
+      0 24px 48px -22px rgba(10, 32, 90, 0.55);
+    text-align: left;
   }
 
-  /* The figure is the whole point of the card — everything else is support,
-     so it gets the display face and the brand colour and nothing else does. */
+  .qc-art {
+    height: 64px;
+    margin-bottom: 1.15rem;
+  }
+  .qc-art-svg {
+    height: 100%;
+    width: auto;
+    max-width: 100%;
+    overflow: visible;
+  }
+  .qc-art-svg--clock { height: 100%; }
+
+  /* week */
+  .qc-day {
+    fill: rgba(23, 60, 160, 0.1);
+  }
+  .qc-eve {
+    fill: var(--color-brand-500);
+  }
+  /* clock */
+  .qc-dial {
+    fill: rgba(23, 60, 160, 0.1);
+  }
+  .qc-slice {
+    fill: var(--color-brand-500);
+  }
+  .qc-pin {
+    fill: #fff;
+  }
+  /* houses */
+  .qc-house .qc-roof {
+    fill: none;
+    stroke: var(--color-brand-500);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .qc-house .qc-wall {
+    fill: rgba(23, 60, 160, 0.1);
+  }
+  .qc-house.is-lost .qc-roof {
+    stroke: rgba(23, 60, 160, 0.28);
+    stroke-dasharray: 3 3;
+  }
+  .qc-house.is-lost .qc-wall {
+    fill: none;
+    stroke: rgba(23, 60, 160, 0.22);
+    stroke-width: 1.5;
+    stroke-dasharray: 3 3;
+  }
+
   .qc-figure {
     margin: 0;
-    font-size: clamp(2.15rem, 4.4vw, 2.9rem);
+    font-size: clamp(2.1rem, 4.2vw, 2.8rem);
     font-weight: 600;
     line-height: 1;
     letter-spacing: -0.045em;
@@ -143,16 +254,16 @@ const sources = [
   }
   .qc-sup {
     margin-left: 0.15em;
-    font-size: 0.34em;
+    font-size: 0.32em;
     font-weight: 600;
     vertical-align: super;
     letter-spacing: 0;
     color: var(--color-ink-soft);
-    opacity: 0.75;
+    opacity: 0.7;
   }
 
   .qc-label {
-    margin: 0.6rem 0 0;
+    margin: 0.55rem 0 0;
     font-size: 1rem;
     font-weight: 600;
     letter-spacing: -0.02em;
@@ -161,53 +272,59 @@ const sources = [
   }
 
   .qc-body {
-    margin: 0.55rem 0 0;
-    font-size: 0.95rem;
+    margin: 0.5rem 0 0;
+    font-size: 0.93rem;
     line-height: 1.55;
     color: var(--color-ink-soft);
   }
 
   .qc-close {
-    margin-top: clamp(2.5rem, 6vw, 3.75rem);
+    margin-top: clamp(2.25rem, 5vw, 3.25rem);
     text-align: center;
   }
   .qc-close-line {
     margin: 0;
-    font-size: clamp(1.35rem, 3.2vw, 2rem);
+    font-size: clamp(1.4rem, 3.4vw, 2.15rem);
     font-weight: 500;
     letter-spacing: -0.035em;
     line-height: 1.2;
-    color: var(--color-ink);
+    color: #fff;
+    text-shadow:
+      0 1px 2px rgba(5, 20, 70, 0.55),
+      0 2px 14px rgba(5, 20, 70, 0.7),
+      0 8px 36px rgba(5, 20, 70, 0.85);
   }
 
-  /* Sources are real, so they're readable rather than hidden — but they must
-     not compete with the figures, hence the size and the muted tone. */
+  /* Sources are real, so they stay readable rather than hidden — but they must
+     not compete with the figures. */
+  /* Sources are real, so they stay readable rather than hidden. Over drifting
+     clouds a text-shadow alone wasn't enough — the underlines read as
+     strikethrough against bright cloud tops — so they sit on their own scrim. */
   .qc-sources {
-    margin: clamp(2rem, 4vw, 2.75rem) auto 0;
-    padding: 0;
-    max-width: 46rem;
+    margin: clamp(1.75rem, 3.5vw, 2.5rem) auto 0;
+    padding: 0.7rem 1.1rem;
+    max-width: 48rem;
     list-style: none;
+    border-radius: 14px;
+    background: rgba(8, 22, 60, 0.42);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     font-size: 0.72rem;
-    line-height: 1.5;
-    color: var(--color-ink-soft);
-    opacity: 0.72;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
     text-align: center;
   }
-  .qc-sources li {
-    margin-top: 0.25rem;
-  }
-  .qc-sources sup {
-    margin-right: 0.3em;
-    font-weight: 600;
-  }
+  .qc-sources li { margin-top: 0.2rem; }
+  .qc-sources li:first-child { margin-top: 0; }
+  .qc-sources sup { margin-right: 0.3em; font-weight: 700; }
   .qc-sources a {
     color: inherit;
     text-decoration: underline;
-    text-underline-offset: 2px;
+    text-underline-offset: 3px;
     text-decoration-thickness: 1px;
-    text-decoration-color: rgba(23, 60, 160, 0.28);
+    text-decoration-color: rgba(255, 255, 255, 0.35);
   }
   .qc-sources a:hover {
-    color: var(--color-brand-600, var(--color-brand-500));
+    color: #fff;
+    text-decoration-color: rgba(255, 255, 255, 0.8);
   }
 </style>

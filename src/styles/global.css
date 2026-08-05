@@ -549,7 +549,7 @@ input {
   transform: translate3d(0, 0, 0);
 }
 
-/* Satellite sky materializes on PAGE LOAD (not on scroll) — a slow, soft
+/* The cloud sky materializes on PAGE LOAD (not on scroll) — a slow, soft
    rise-and-clear that sequences in after the hero blob. By the time the
    user scrolls down, the clouds are already there and already moving, so
    nothing heavy kicks in mid-scroll. No scale (scaling a masked layer
@@ -564,7 +564,7 @@ input {
     transform: translate3d(0, 0, 0);
   }
 }
-[data-sat] .sat-panel-bg {
+.cp-bg {
   opacity: 0;
   animation: sky-load 2s var(--ease-out-soft) 1.2s forwards;
 }
@@ -594,7 +594,7 @@ input {
   }
   [data-reveal],
   [data-stagger] > *,
-  [data-sat] .sat-panel-bg {
+  .cp-bg {
     opacity: 1 !important;
     transform: none !important;
     transition: none !important;

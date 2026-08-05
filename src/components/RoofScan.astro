@@ -1,0 +1,403 @@
+---
+// The looping roof scan — promoted out of the satellite section to become the
+// hero's visual. Zoom in, trace the outline, then read the roof back as facts.
+//
+// The figures below are ILLUSTRATIVE. They describe the specific house in
+// /satellite-roof.webp and are what a real scan of that roof would plausibly
+// return — they are not computed at runtime and must never be presented as a
+// live measurement. `aria-hidden` on the whole figure keeps them out of the
+// accessibility tree for the same reason. If the photo is ever swapped, these
+// numbers have to be re-checked or dropped.
+//
+// To change the outline: open tools/trace-roof.html, click clockwise around the
+// outer eaves, copy the path, paste it here.
+const roofPath =
+  "M277 356 L277 408 L277 480 L277 508 L308 512 L335 517 L339 533 L339 544 L411 545 L474 545 L534 545 L571 547 L625 548 L677 548 L724 551 L725 534 L774 526 L789 513 L807 490 L808 450 L794 428 L784 423 L784 387 L783 341 L777 318 L778 287 L778 255 L725 245 L669 241 L616 239 L611 201 L600 200 L601 141 L546 138 L494 140 L482 140 L479 197 L469 207 L467 239 L362 239 L357 324 L341 334 L342 354 L314 357 Z";
+
+// Read out in the order a roofer would care about: what it is, how steep,
+// how tall, how big. Area last because it's the number that lands.
+const facts = [
+  { label: "Roof type", value: "Hipped" },
+  { label: "Pitch", value: "35°" },
+  { label: "Storeys", value: "2" },
+  { label: "Area", value: "118 m²" },
+];
+
+interface Props {
+  /** Widescreen in the hero fold; 4/3 reads better in a section. */
+  ratio?: "wide" | "standard";
+}
+const { ratio = "wide" } = Astro.props;
+---
+
+<figure class={`rs-card rs-card--${ratio}`} data-roof-scan aria-hidden="true">
+  <div class="rs-stage" data-rs-stage>
+    <img
+      class="rs-photo"
+      src="/satellite-roof.webp"
+      alt=""
+      width="640"
+      height="480"
+      loading="eager"
+      fetchpriority="high"
+      decoding="async"
+    />
+
+    <svg class="rs-overlay" viewBox="0 0 1024 768" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <filter id="rs-glow-soft" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="6" result="blur" />
+          <feMerge><feMergeNode in="blur" /></feMerge>
+        </filter>
+        <filter id="rs-glow-core" x="-35%" y="-35%" width="170%" height="170%">
+          <feGaussianBlur stdDeviation="2" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      <g class="rs-roof">
+        <path class="rs-roof-fill" d={roofPath} />
+        <path class="rs-roof-glow" d={roofPath} filter="url(#rs-glow-soft)" />
+        <path class="rs-roof-line" d={roofPath} filter="url(#rs-glow-core)" />
+      </g>
+    </svg>
+
+    <!-- The measuring pass: a bright band that crosses the roof once, timed to
+         land exactly as the outline finishes drawing. -->
+    <span class="rs-sweep"></span>
+  </div>
+
+  <div class="rs-vignette"></div>
+
+  <!-- Read-out. Sits over the image bottom, staggered in after the trace. -->
+  <figcaption class="rs-facts">
+    {facts.map((f, i) => (
+      <span class="rs-fact" style={`--i:${i}`}>
+        <span class="rs-fact-label">{f.label}</span>
+        <span class="rs-fact-value">{f.value}</span>
+      </span>
+    ))}
+  </figcaption>
+
+  <span class="rs-chip">
+    <span class="rs-chip-dot"></span>
+    Satellite measurement
+  </span>
+</figure>
+
+<style>
+  /* One 11s cycle drives everything, so the sweep, the trace and the facts can
+     never drift apart. Percentages below are all shares of this duration. */
+  .rs-card {
+    --rs-cycle: 11s;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    margin: 0;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    background: #1a1e16;
+    box-shadow:
+      0 0 0 1px rgba(21, 55, 140, 0.16),
+      0 2px 8px rgba(16, 24, 40, 0.08),
+      0 28px 60px -28px rgba(23, 60, 160, 0.5);
+  }
+  .rs-card--wide {
+    aspect-ratio: 16 / 10;
+  }
+  .rs-card--standard {
+    aspect-ratio: 4 / 3;
+  }
+
+  .rs-stage {
+    position: absolute;
+    inset: 0;
+    transform: scale(1);
+    transform-origin: center center;
+    will-change: transform;
+  }
+  .rs-photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .rs-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .rs-vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse 58% 52% at 50% 45%,
+      transparent 35%,
+      rgba(8, 12, 24, 0.45) 100%
+    );
+  }
+
+  /* Light enough that the roof itself still reads through it — at the old
+     0.28 the fill plus the glow washed the tiles out into a flat blue slab
+     and you couldn't see what had been measured. */
+  .rs-roof-fill {
+    fill: rgba(47, 107, 255, 0.17);
+    opacity: 0;
+  }
+  .rs-roof-glow,
+  .rs-roof-line {
+    fill: none;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    stroke-dasharray: var(--rs-len, 2400);
+    stroke-dashoffset: var(--rs-len, 2400);
+  }
+  .rs-roof-glow {
+    stroke: rgba(120, 175, 255, 1);
+    stroke-width: 16;
+    opacity: 0.9;
+  }
+  .rs-roof-line {
+    stroke: #e8f1ff;
+    stroke-width: 3.25;
+  }
+
+  /* Compositor-only (transform + opacity), same reasoning as the old hero
+     sweep: an animated background-position on an oversized gradient is far
+     harder to reason about than moving a fixed band by its own height. */
+  .rs-sweep {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 40%;
+    z-index: 1;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    opacity: 0;
+    transform: translate3d(0, -110%, 0);
+    background: linear-gradient(
+      180deg,
+      rgba(91, 140, 255, 0) 0%,
+      rgba(120, 176, 255, 0.4) 42%,
+      rgba(255, 255, 255, 0.72) 50%,
+      rgba(120, 176, 255, 0.4) 58%,
+      rgba(91, 140, 255, 0) 100%
+    );
+  }
+
+  .rs-facts {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 2.75rem clamp(0.7rem, 2.5%, 1.1rem) clamp(0.7rem, 2.5%, 1.1rem);
+    background: linear-gradient(180deg, transparent, rgba(6, 14, 34, 0.72) 62%);
+  }
+  .rs-fact {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    padding: 0.34rem 0.65rem;
+    border-radius: 999px;
+    background: rgba(9, 20, 42, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    white-space: nowrap;
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  .rs-fact-label {
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    color: rgba(255, 255, 255, 0.62);
+  }
+  .rs-fact-value {
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #fff;
+  }
+
+  .rs-chip {
+    position: absolute;
+    top: clamp(0.7rem, 2.5%, 1.1rem);
+    left: clamp(0.7rem, 2.5%, 1.1rem);
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.78rem;
+    border-radius: 999px;
+    /* Flat scrim, not backdrop-filter: the hero card animates `filter: blur()`
+       on entrance and global.css documents that a glass child snaps the
+       compositor when those keyframes finish. */
+    background: rgba(9, 20, 42, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.95);
+    white-space: nowrap;
+  }
+  .rs-chip-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: #6ea8ff;
+    box-shadow: 0 0 0 3px rgba(110, 168, 255, 0.25);
+    animation: rs-blink 2.4s ease-in-out infinite;
+  }
+  @keyframes rs-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+
+  /* ——— the loop ———
+     0–14%   zoom in
+     14–30%  sweep crosses
+     18–44%  outline draws
+     44–52%  fill blooms
+     48–78%  facts land one by one, then hold
+     86–100% everything resets */
+  .rs-card.is-playing .rs-stage {
+    animation: rs-zoom var(--rs-cycle) cubic-bezier(0.4, 0.05, 0.2, 1) infinite;
+  }
+  .rs-card.is-playing .rs-sweep {
+    animation: rs-sweep var(--rs-cycle) cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  }
+  .rs-card.is-playing .rs-roof-line {
+    animation: rs-draw var(--rs-cycle) cubic-bezier(0.35, 0.05, 0.2, 1) infinite;
+  }
+  .rs-card.is-playing .rs-roof-glow {
+    animation:
+      rs-draw var(--rs-cycle) cubic-bezier(0.35, 0.05, 0.2, 1) infinite,
+      rs-glow var(--rs-cycle) ease-in-out infinite;
+  }
+  .rs-card.is-playing .rs-roof-fill {
+    animation: rs-fill var(--rs-cycle) ease infinite;
+  }
+  /* Each fact is offset by its index so they read left to right, like the
+     scan is working them out in order. */
+  .rs-card.is-playing .rs-fact {
+    animation: rs-fact var(--rs-cycle) cubic-bezier(0.16, 1, 0.3, 1) infinite;
+    animation-delay: calc(var(--i) * 0.5s);
+  }
+
+  @keyframes rs-zoom {
+    0%, 4% { transform: scale(1); }
+    16%, 80% { transform: scale(1.26); }
+    92%, 100% { transform: scale(1); }
+  }
+  @keyframes rs-sweep {
+    0%, 14% { transform: translate3d(0, -110%, 0); opacity: 0; }
+    18% { opacity: 1; }
+    26% { opacity: 1; }
+    32% { transform: translate3d(0, 260%, 0); opacity: 0; }
+    100% { transform: translate3d(0, 260%, 0); opacity: 0; }
+  }
+  @keyframes rs-draw {
+    0%, 18% { stroke-dashoffset: var(--rs-len, 2400); }
+    44%, 80% { stroke-dashoffset: 0; }
+    90%, 100% { stroke-dashoffset: var(--rs-len, 2400); }
+  }
+  @keyframes rs-fill {
+    0%, 44% { opacity: 0; }
+    54%, 80% { opacity: 1; }
+    88%, 100% { opacity: 0; }
+  }
+  @keyframes rs-glow {
+    0%, 18% { opacity: 0.65; }
+    36%, 62% { opacity: 1; }
+    80% { opacity: 0.9; }
+    90%, 100% { opacity: 0.65; }
+  }
+  @keyframes rs-fact {
+    0%, 46% { opacity: 0; transform: translate3d(0, 8px, 0); }
+    54%, 78% { opacity: 1; transform: translate3d(0, 0, 0); }
+    86%, 100% { opacity: 0; transform: translate3d(0, 4px, 0); }
+  }
+
+  /* Phones: the card is small enough that four chips wrap into a block that
+     swallows the roof. Show the two that matter and let the copy do the rest. */
+  @media (max-width: 640px) {
+    .rs-facts {
+      gap: 0.3rem;
+      padding-bottom: 0.6rem;
+    }
+    .rs-fact:nth-child(n + 3) {
+      display: none;
+    }
+    .rs-fact {
+      padding: 0.3rem 0.55rem;
+    }
+    .rs-fact-label { font-size: 0.64rem; }
+    .rs-fact-value { font-size: 0.76rem; }
+    .rs-chip { font-size: 0.7rem; padding: 0.34rem 0.62rem; }
+  }
+
+  /* Reduced motion: show the finished state — traced, filled, facts read out —
+     with no cycling at all. The still frame is the point of the graphic. */
+  @media (prefers-reduced-motion: reduce) {
+    .rs-card.is-playing .rs-stage,
+    .rs-card.is-playing .rs-sweep,
+    .rs-card.is-playing .rs-roof-line,
+    .rs-card.is-playing .rs-roof-glow,
+    .rs-card.is-playing .rs-roof-fill,
+    .rs-card.is-playing .rs-fact,
+    .rs-chip-dot {
+      animation: none;
+    }
+    .rs-stage { transform: scale(1.26); }
+    .rs-sweep { opacity: 0; }
+    .rs-roof-line,
+    .rs-roof-glow { stroke-dashoffset: 0; }
+    .rs-roof-glow { opacity: 1; }
+    .rs-roof-fill { opacity: 1; }
+    .rs-fact { opacity: 1; transform: none; }
+  }
+</style>
+
+<script>
+  // Measure each path so the dash animation covers exactly its own length —
+  // a hardcoded dasharray breaks the moment the outline is retraced.
+  function initRoofScan() {
+    document.querySelectorAll<HTMLElement>("[data-roof-scan]").forEach((card) => {
+      if (card.dataset.rsBound === "1") return;
+      card.dataset.rsBound = "1";
+
+      card.querySelectorAll<SVGPathElement>(".rs-roof-line, .rs-roof-glow").forEach((path) => {
+        const len = Math.ceil(path.getTotalLength()) + 2;
+        path.style.setProperty("--rs-len", String(len));
+      });
+
+      // Only run while it's actually on screen — this loops forever, and the
+      // zoom layer is composited, so leaving it running offscreen costs frames
+      // for nothing.
+      const io = new IntersectionObserver(
+        ([entry]) => {
+          card.classList.toggle("is-playing", entry.isIntersecting);
+        },
+        { threshold: 0.25 },
+      );
+      io.observe(card);
+    });
+  }
+
+  initRoofScan();
+  document.addEventListener("astro:after-swap", initRoofScan);
+</script>
