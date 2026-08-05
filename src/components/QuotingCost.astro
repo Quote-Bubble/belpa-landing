@@ -21,15 +21,18 @@ import CloudPanel from "./CloudPanel.astro";
 // whole argument. Resist re-adding supporting paragraphs: the number is the
 // point, and anything it needs explained belongs in the source, not the card.
 //
-// Copy discipline, both halves earned by rewriting them twice:
-//   * `label` must describe the MOMENT, not the statistic. "a week quoting,
-//     77% after hours" is information; "at the kitchen table, after a full day
-//     on site" is the thing a roofer recognises. The figure already carries
-//     the data, so the sentence is free to carry the sting.
-//   * `fix` must say what we actually DO, in mechanics, starting with "We".
+// Copy discipline. All three cards follow ONE shape, because mixing fragments
+// and full sentences across them read as janky even when each line was fine:
+//   * `label` is a short phrase that CONTINUES the figure, like a caption —
+//     "5h 20m" + "a week quoting, after you're already off the roof."
+//     It must describe the moment, not restate the statistic, and the imagery
+//     has to be a roofer's: off the roof, measuring up, on site. An earlier
+//     pass said "at the kitchen table", which is office work, not this trade.
+//   * `fix` is ONE short sentence starting with "We", naming a real mechanic.
 //     "Your site prices it the moment they ask" was too vague to mean
-//     anything. Name the real steps: satellite measurement, area/pitch/access,
-//     their rates, the range, where the lead lands.
+//     anything; "we measure the roof from satellite imagery" is a thing we do.
+//     Keep them roughly the same length as each other — the row reads as one
+//     thought, and a card that runs long makes the other two look unfinished.
 //
 // `fix` is a CLAIM about the product, not a sourced figure — that's why only
 // `label` carries a footnote marker. Belpa returns an indicative ex-VAT range
@@ -41,23 +44,21 @@ import CloudPanel from "./CloudPanel.astro";
 const stats = [
   {
     figure: "5h 20m",
-    label:
-      "a week quoting. Most of it at the kitchen table, after a full day on site.",
+    label: "a week quoting, after you're already off the roof.",
     src: "1",
-    fix: "We measure the roof from satellite imagery and price it with your rates, the second they ask.",
+    fix: "We price it the second they ask, using your rates.",
   },
   {
     figure: "20 min",
-    label: "to measure up and write one quote. For a job you might not win.",
+    label: "to measure up and write a single quote.",
     src: "2",
-    fix: "We work out area, pitch and access, apply your rates and hand back a range. You type nothing.",
+    fix: "We measure the roof from satellite imagery. You write nothing.",
   },
   {
     figure: "1 in 5",
-    label:
-      "customers never do the job at all, because nobody gave them a straight answer.",
+    label: "customers never go ahead, because nobody gave them a straight answer.",
     src: "3",
-    fix: "We give them a price on your site in seconds, and put their number and postcode in your dashboard.",
+    fix: "We answer in seconds and put the lead in your dashboard.",
   },
 ];
 
@@ -209,7 +210,7 @@ const sources = [
      viewport width and broke the moment anything rewrapped. */
   .qc-label {
     margin: 0.65rem 0 0;
-    min-height: calc(3 * 1.45em);
+    min-height: calc(2 * 1.45em);
     font-size: 0.98rem;
     font-weight: 600;
     letter-spacing: -0.02em;
