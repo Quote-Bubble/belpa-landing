@@ -1,27 +1,115 @@
 ---
-// The looping roof scan — promoted out of the satellite section to become the
-// hero's visual. Zoom in, trace the outline, then read the roof back as facts.
+// The looping roof scan — the hero's visual.
 //
-// The figures below are ILLUSTRATIVE. They describe the specific house in
-// /satellite-roof.webp and are what a real scan of that roof would plausibly
-// return — they are not computed at runtime and must never be presented as a
-// live measurement. `aria-hidden` on the whole figure keeps them out of the
-// accessibility tree for the same reason. If the photo is ever swapped, these
-// numbers have to be re-checked or dropped.
+// Everything drawn here is DERIVED FROM THE POLYGON below, not placed by hand:
+// the corner vertices, the edge lengths, the centroid the area sits on, and the
+// area itself. That is the whole design idea. An earlier version layered a
+// sweeping "scan" band, a Ken Burns zoom and a floating badge over the photo,
+// which read as effects applied to a picture rather than a measurement being
+// taken — decoration pretending to be process. Nothing here is allowed to be
+// decoration: if a number or a mark appears, the geometry produced it.
+//
+// The one figure that is an INPUT rather than an output is AREA_M2. Everything
+// else is scaled to be consistent with it, so the edge lengths and the area can
+// never disagree. It is illustrative — it describes the specific house in
+// /satellite-roof.webp and is not measured at runtime — which is why the whole
+// figure stays aria-hidden. Swap the photo and this has to be re-checked.
 //
 // To change the outline: open tools/trace-roof.html, click clockwise around the
 // outer eaves, copy the path, paste it here.
 const roofPath =
   "M277 356 L277 408 L277 480 L277 508 L308 512 L335 517 L339 533 L339 544 L411 545 L474 545 L534 545 L571 547 L625 548 L677 548 L724 551 L725 534 L774 526 L789 513 L807 490 L808 450 L794 428 L784 423 L784 387 L783 341 L777 318 L778 287 L778 255 L725 245 L669 241 L616 239 L611 201 L600 200 L601 141 L546 138 L494 140 L482 140 L479 197 L469 207 L467 239 L362 239 L357 324 L341 334 L342 354 L314 357 Z";
 
-// Read out in the order a roofer would care about: what it is, how steep,
-// how tall, how big. Area last because it's the number that lands.
-const facts = [
-  { label: "Roof type", value: "Hipped" },
-  { label: "Pitch", value: "35°" },
-  { label: "Storeys", value: "2" },
-  { label: "Area", value: "118 m²" },
-];
+/** Ground truth for this roof. Everything else is scaled to agree with it. */
+const AREA_M2 = 118;
+
+/** Non-geometric facts about this house — stated, not derived. */
+const META = "Hipped · 35° pitch · 2 storeys";
+
+type Pt = { x: number; y: number };
+
+const pts: Pt[] = [...roofPath.matchAll(/([ML])\s*(-?[\d.]+)\s+(-?[\d.]+)/g)].map(
+  (m) => ({ x: Number(m[2]), y: Number(m[3]) }),
+);
+
+// Shoelace. Gives us both the area (to fix the scale) and the sign of winding.
+function signedArea(p: Pt[]): number {
+  let a = 0;
+  for (let i = 0; i < p.length; i++) {
+    const q = p[(i + 1) % p.length];
+    a += p[i].x * q.y - q.x * p[i].y;
+  }
+  return a / 2;
+}
+const areaUnits = Math.abs(signedArea(pts));
+
+// Metres per SVG unit, chosen so the polygon measures exactly AREA_M2. This is
+// what keeps the edge labels honest against the area label.
+const scale = Math.sqrt(AREA_M2 / areaUnits);
+
+// Area-weighted centroid, so the label sits in the visual middle of the roof
+// rather than the average of the vertices (which drifts toward dense corners).
+function centroid(p: Pt[]): Pt {
+  let cx = 0;
+  let cy = 0;
+  const a = signedArea(p);
+  for (let i = 0; i < p.length; i++) {
+    const q = p[(i + 1) % p.length];
+    const f = p[i].x * q.y - q.x * p[i].y;
+    cx += (p[i].x + q.x) * f;
+    cy += (p[i].y + q.y) * f;
+  }
+  return { x: cx / (6 * a), y: cy / (6 * a) };
+}
+const c = centroid(pts);
+
+// Real corners only. The traced path has many collinear points along each eave;
+// dropping them is what makes the vertices read as corners being found rather
+// than dots being sprayed along a line.
+const CORNER_MIN_TURN = 25; // degrees
+const corners = pts.filter((p, i) => {
+  const prev = pts[(i - 1 + pts.length) % pts.length];
+  const next = pts[(i + 1) % pts.length];
+  const a1 = Math.atan2(p.y - prev.y, p.x - prev.x);
+  const a2 = Math.atan2(next.y - p.y, next.x - p.x);
+  let d = ((a2 - a1) * 180) / Math.PI;
+  while (d > 180) d -= 360;
+  while (d < -180) d += 360;
+  return Math.abs(d) >= CORNER_MIN_TURN;
+});
+
+// Label the principal edges. Four is enough to read as "measured" — more turns
+// the roof into a wall of numbers, which is the badge problem again.
+// Built from CORNER to CORNER, not from the raw path points. The trace lays
+// several collinear points along each eave, so consecutive points are fragments
+// of an edge — measuring those gave a 118 m² roof a longest side of 2.9 m.
+const EDGE_LABELS = 4;
+const edges = corners
+  .map((p, i) => {
+    const q = corners[(i + 1) % corners.length];
+    const dx = q.x - p.x;
+    const dy = q.y - p.y;
+    const len = Math.hypot(dx, dy);
+    const mid = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
+    // Push the label outward, away from the centroid, so it clears the fill.
+    const ox = mid.x - c.x;
+    const oy = mid.y - c.y;
+    const on = Math.hypot(ox, oy) || 1;
+    const OFFSET = 20;
+    let angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+    // Never let a label render upside down.
+    if (angle > 90) angle -= 180;
+    if (angle < -90) angle += 180;
+    return {
+      len,
+      angle,
+      x: mid.x + (ox / on) * OFFSET,
+      y: mid.y + (oy / on) * OFFSET,
+      metres: (len * scale).toFixed(1),
+    };
+  })
+  .sort((a, b) => b.len - a.len)
+  .slice(0, EDGE_LABELS);
 
 interface Props {
   /** Widescreen in the hero fold; 4/3 reads better in a section. */
@@ -31,7 +119,7 @@ const { ratio = "wide" } = Astro.props;
 ---
 
 <figure class={`rs-card rs-card--${ratio}`} data-roof-scan aria-hidden="true">
-  <div class="rs-stage" data-rs-stage>
+  <div class="rs-stage">
     <img
       class="rs-photo"
       src="/satellite-roof.webp"
@@ -58,39 +146,47 @@ const { ratio = "wide" } = Astro.props;
         </filter>
       </defs>
 
-      <g class="rs-roof">
-        <path class="rs-roof-fill" d={roofPath} />
-        <path class="rs-roof-glow" d={roofPath} filter="url(#rs-glow-soft)" />
-        <path class="rs-roof-line" d={roofPath} filter="url(#rs-glow-core)" />
-      </g>
-    </svg>
+      <path class="rs-roof-fill" d={roofPath} />
+      <path class="rs-roof-glow" d={roofPath} filter="url(#rs-glow-soft)" />
+      <path class="rs-roof-line" d={roofPath} filter="url(#rs-glow-core)" />
 
-    <!-- The measuring pass: a bright band that crosses the roof once, timed to
-         land exactly as the outline finishes drawing. -->
-    <span class="rs-sweep"></span>
+      <!-- Corners land first, in order, before the line joins them. -->
+      <g class="rs-verts">
+        {corners.map((p, i) => (
+          <circle class="rs-vert" cx={p.x} cy={p.y} r="4.5" style={`--i:${i}`} />
+        ))}
+      </g>
+
+      <!-- Edge lengths, set along their own edge. -->
+      <g class="rs-dims">
+        {edges.map((e, i) => (
+          <text
+            class="rs-dim"
+            x={e.x}
+            y={e.y}
+            transform={`rotate(${e.angle.toFixed(2)} ${e.x.toFixed(1)} ${e.y.toFixed(1)})`}
+            style={`--i:${i}`}
+          >{e.metres} m</text>
+        ))}
+      </g>
+
+      <!-- Area, on the centroid. Counts up rather than appearing. -->
+      <text class="rs-area" x={c.x.toFixed(1)} y={c.y.toFixed(1)} data-rs-area
+        >0 m²</text
+      >
+    </svg>
   </div>
 
-  <div class="rs-vignette"></div>
-
-  <!-- Read-out. One panel divided into cells rather than four loose pills:
-       the values are a single measurement of one roof, so they should read as
-       one instrument, and separate lozenges made them look like unrelated
-       tags. Slides up as a unit after the trace, cells filling left to right. -->
-  <figcaption class="rs-readout">
-    {facts.map((f, i) => (
-      <span class="rs-fact" style={`--i:${i}`}>
-        <span class="rs-fact-label">{f.label}</span>
-        <span class="rs-fact-value">{f.value}</span>
-      </span>
-    ))}
-  </figcaption>
+  <!-- Not derivable from the outline, so stated quietly at the frame edge
+       rather than dressed up as a read-out. -->
+  <figcaption class="rs-meta">{META}</figcaption>
 </figure>
 
 <style>
-  /* One 11s cycle drives everything, so the sweep, the trace and the facts can
-     never drift apart. Percentages below are all shares of this duration. */
+  /* One cycle drives everything, so nothing can drift out of step. All the
+     percentages below are shares of this duration. */
   .rs-card {
-    --rs-cycle: 11s;
+    --rs-cycle: 12s;
     position: relative;
     isolation: isolate;
     overflow: hidden;
@@ -103,17 +199,16 @@ const { ratio = "wide" } = Astro.props;
       0 2px 8px rgba(16, 24, 40, 0.08),
       0 28px 60px -28px rgba(23, 60, 160, 0.5);
   }
-  .rs-card--wide {
-    aspect-ratio: 16 / 10;
-  }
-  .rs-card--standard {
-    aspect-ratio: 4 / 3;
-  }
+  .rs-card--wide { aspect-ratio: 16 / 10; }
+  .rs-card--standard { aspect-ratio: 4 / 3; }
 
+  /* A settle, not a camera move. The old 1.26 zoom was Ken Burns on a static
+     webp — it revealed nothing and softened the pixels on the way. 1.03 reads
+     as the frame coming to rest. */
   .rs-stage {
     position: absolute;
     inset: 0;
-    transform: scale(1);
+    transform: scale(1.03);
     transform-origin: center center;
     will-change: transform;
   }
@@ -131,22 +226,9 @@ const { ratio = "wide" } = Astro.props;
     width: 100%;
     height: 100%;
     pointer-events: none;
-  }
-  .rs-vignette {
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    pointer-events: none;
-    background: radial-gradient(
-      ellipse 58% 52% at 50% 45%,
-      transparent 35%,
-      rgba(8, 12, 24, 0.45) 100%
-    );
+    overflow: visible;
   }
 
-  /* Light enough that the roof itself still reads through it — at the old
-     0.28 the fill plus the glow washed the tiles out into a flat blue slab
-     and you couldn't see what had been measured. */
   .rs-roof-fill {
     fill: rgba(47, 107, 255, 0.17);
     opacity: 0;
@@ -161,103 +243,77 @@ const { ratio = "wide" } = Astro.props;
   }
   .rs-roof-glow {
     stroke: rgba(120, 175, 255, 1);
-    stroke-width: 16;
+    stroke-width: 14;
     opacity: 0.9;
   }
   .rs-roof-line {
     stroke: #e8f1ff;
-    stroke-width: 3.25;
+    stroke-width: 3;
   }
 
-  /* Compositor-only (transform + opacity), same reasoning as the old hero
-     sweep: an animated background-position on an oversized gradient is far
-     harder to reason about than moving a fixed band by its own height. */
-  .rs-sweep {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    height: 40%;
-    z-index: 1;
-    pointer-events: none;
-    mix-blend-mode: screen;
+  /* Corners. Small and exact — the precision is the point, so no glow. */
+  .rs-vert {
+    fill: #fff;
+    stroke: rgba(47, 107, 255, 0.9);
+    stroke-width: 2;
     opacity: 0;
-    transform: translate3d(0, -110%, 0);
-    background: linear-gradient(
-      180deg,
-      rgba(91, 140, 255, 0) 0%,
-      rgba(120, 176, 255, 0.4) 42%,
-      rgba(255, 255, 255, 0.72) 50%,
-      rgba(120, 176, 255, 0.4) 58%,
-      rgba(91, 140, 255, 0) 100%
-    );
+    transform-box: fill-box;
+    transform-origin: center;
   }
 
-  /* Flat scrim, never backdrop-filter: the hero card animates `filter: blur()`
-     on entrance and global.css documents that a glass child snaps the
-     compositor when those keyframes finish. */
-  .rs-readout {
-    position: absolute;
-    left: clamp(0.7rem, 2.5%, 1.1rem);
-    right: clamp(0.7rem, 2.5%, 1.1rem);
-    bottom: clamp(0.7rem, 2.5%, 1.1rem);
-    z-index: 3;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    border-radius: 14px;
-    overflow: hidden;
-    background: rgba(7, 17, 38, 0.78);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    box-shadow: 0 10px 30px -14px rgba(4, 12, 32, 0.85);
-    opacity: 0;
-    transform: translate3d(0, 10px, 0);
-  }
-
-  .rs-fact {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    padding: 0.6rem 0.75rem 0.65rem;
-    min-width: 0;
-    /* Hairline dividers make it one instrument rather than four tags. */
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
+  /* Tabular figures so the digits don't jitter as the area counts. */
+  .rs-dim,
+  .rs-area {
+    fill: #fff;
+    font-family: var(--font-sans, system-ui, sans-serif);
+    font-variant-numeric: tabular-nums;
+    paint-order: stroke fill;
+    stroke: rgba(6, 16, 38, 0.75);
+    stroke-width: 4;
+    stroke-linejoin: round;
     opacity: 0;
   }
-  .rs-fact:first-child {
-    border-left: 0;
-  }
-  .rs-fact-label {
-    font-size: 0.6rem;
+  .rs-dim {
+    font-size: 21px;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
-    line-height: 1;
-    color: rgba(255, 255, 255, 0.52);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    letter-spacing: 0.01em;
+    text-anchor: middle;
+    dominant-baseline: middle;
   }
-  .rs-fact-value {
-    font-size: 1rem;
+  .rs-area {
+    font-size: 46px;
     font-weight: 700;
     letter-spacing: -0.02em;
-    line-height: 1.15;
-    color: #fff;
-    white-space: nowrap;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    stroke-width: 6;
   }
 
-  /* ——— the loop ———
-     0–14%   zoom in
-     14–30%  sweep crosses
-     18–44%  outline draws
-     44–52%  fill blooms
-     48–78%  facts land one by one, then hold
-     86–100% everything resets */
-  .rs-card.is-playing .rs-stage {
-    animation: rs-zoom var(--rs-cycle) cubic-bezier(0.4, 0.05, 0.2, 1) infinite;
+  .rs-meta {
+    position: absolute;
+    left: clamp(0.85rem, 3%, 1.25rem);
+    bottom: clamp(0.75rem, 3%, 1.1rem);
+    z-index: 3;
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.92);
+    text-shadow: 0 1px 6px rgba(4, 12, 32, 0.9);
+    opacity: 0;
   }
-  .rs-card.is-playing .rs-sweep {
-    animation: rs-sweep var(--rs-cycle) cubic-bezier(0.5, 0, 0.5, 1) infinite;
+
+  /* ——— the sequence, one thing at a time ———
+     0–14%   corners land, in path order
+     14–40%  the outline joins them
+     40–50%  fill blooms
+     48–62%  edge lengths appear, longest first
+     52–66%  area counts up
+     66–86%  hold
+     86–100% clear */
+  .rs-card.is-playing .rs-vert {
+    animation: rs-vert var(--rs-cycle) cubic-bezier(0.16, 1, 0.3, 1) infinite;
+    animation-delay: calc(var(--i) * 55ms);
   }
   .rs-card.is-playing .rs-roof-line {
     animation: rs-draw var(--rs-cycle) cubic-bezier(0.35, 0.05, 0.2, 1) infinite;
@@ -270,114 +326,135 @@ const { ratio = "wide" } = Astro.props;
   .rs-card.is-playing .rs-roof-fill {
     animation: rs-fill var(--rs-cycle) ease infinite;
   }
-  /* The panel arrives as one object; the cells then fill left to right, each
-     offset by its index, like the scan is working them out in order. Cells
-     fade only — translating them individually would tear the panel apart. */
-  .rs-card.is-playing .rs-readout {
-    animation: rs-panel var(--rs-cycle) cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  .rs-card.is-playing .rs-dim {
+    animation: rs-label var(--rs-cycle) ease infinite;
+    animation-delay: calc(var(--i) * 110ms);
   }
-  .rs-card.is-playing .rs-fact {
-    animation: rs-fact var(--rs-cycle) ease infinite;
-    animation-delay: calc(var(--i) * 0.35s);
+  .rs-card.is-playing .rs-area,
+  .rs-card.is-playing .rs-meta {
+    animation: rs-label var(--rs-cycle) ease infinite;
   }
+  .rs-card.is-playing .rs-area { animation-delay: 120ms; }
 
-  @keyframes rs-zoom {
-    0%, 4% { transform: scale(1); }
-    16%, 80% { transform: scale(1.26); }
-    92%, 100% { transform: scale(1); }
-  }
-  @keyframes rs-sweep {
-    0%, 14% { transform: translate3d(0, -110%, 0); opacity: 0; }
-    18% { opacity: 1; }
-    26% { opacity: 1; }
-    32% { transform: translate3d(0, 260%, 0); opacity: 0; }
-    100% { transform: translate3d(0, 260%, 0); opacity: 0; }
+  @keyframes rs-vert {
+    0%, 4% { opacity: 0; transform: scale(0.3); }
+    12%, 84% { opacity: 1; transform: scale(1); }
+    92%, 100% { opacity: 0; transform: scale(0.8); }
   }
   @keyframes rs-draw {
-    0%, 18% { stroke-dashoffset: var(--rs-len, 2400); }
-    44%, 80% { stroke-dashoffset: 0; }
-    90%, 100% { stroke-dashoffset: var(--rs-len, 2400); }
+    0%, 14% { stroke-dashoffset: var(--rs-len, 2400); }
+    40%, 84% { stroke-dashoffset: 0; }
+    92%, 100% { stroke-dashoffset: var(--rs-len, 2400); }
   }
   @keyframes rs-fill {
-    0%, 44% { opacity: 0; }
-    54%, 80% { opacity: 1; }
-    88%, 100% { opacity: 0; }
+    0%, 40% { opacity: 0; }
+    50%, 84% { opacity: 1; }
+    92%, 100% { opacity: 0; }
   }
   @keyframes rs-glow {
-    0%, 18% { opacity: 0.65; }
-    36%, 62% { opacity: 1; }
-    80% { opacity: 0.9; }
-    90%, 100% { opacity: 0.65; }
+    0%, 14% { opacity: 0.6; }
+    40%, 66% { opacity: 1; }
+    84% { opacity: 0.85; }
+    92%, 100% { opacity: 0.6; }
   }
-  @keyframes rs-panel {
-    0%, 42% { opacity: 0; transform: translate3d(0, 10px, 0); }
-    52%, 80% { opacity: 1; transform: translate3d(0, 0, 0); }
-    88%, 100% { opacity: 0; transform: translate3d(0, 6px, 0); }
-  }
-  @keyframes rs-fact {
-    0%, 46% { opacity: 0; }
-    56%, 80% { opacity: 1; }
-    88%, 100% { opacity: 0; }
+  @keyframes rs-label {
+    0%, 48% { opacity: 0; }
+    60%, 84% { opacity: 1; }
+    92%, 100% { opacity: 0; }
   }
 
-  /* Phones: four cells across a ~330px card leaves no room for the labels, so
-     drop to the two that matter most and let them breathe. */
   @media (max-width: 640px) {
-    .rs-readout {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .rs-fact:nth-child(n + 3) {
-      display: none;
-    }
-    .rs-fact {
-      padding: 0.5rem 0.65rem 0.55rem;
-    }
-    .rs-fact-label { font-size: 0.56rem; }
-    .rs-fact-value { font-size: 0.92rem; }
+    /* The card is ~330px wide here; four edge labels plus the area is a wall of
+       digits. Keep the area — it's the one that matters — and drop the rest. */
+    .rs-dim { display: none; }
+    .rs-area { font-size: 58px; }
+    .rs-vert { r: 6; }
+    .rs-meta { font-size: 0.7rem; }
   }
 
-  /* Reduced motion: show the finished state — traced, filled, facts read out —
-     with no cycling at all. The still frame is the point of the graphic. */
+  /* Reduced motion: the finished measurement, held. The still frame is the
+     point of the graphic, so nothing is lost by not animating to it. */
   @media (prefers-reduced-motion: reduce) {
-    .rs-card.is-playing .rs-stage,
-    .rs-card.is-playing .rs-sweep,
+    .rs-card.is-playing .rs-vert,
     .rs-card.is-playing .rs-roof-line,
     .rs-card.is-playing .rs-roof-glow,
     .rs-card.is-playing .rs-roof-fill,
-    .rs-card.is-playing .rs-readout,
-    .rs-card.is-playing .rs-fact {
+    .rs-card.is-playing .rs-dim,
+    .rs-card.is-playing .rs-area,
+    .rs-card.is-playing .rs-meta {
       animation: none;
     }
-    .rs-stage { transform: scale(1.26); }
-    .rs-sweep { opacity: 0; }
     .rs-roof-line,
     .rs-roof-glow { stroke-dashoffset: 0; }
     .rs-roof-glow { opacity: 1; }
-    .rs-roof-fill { opacity: 1; }
-    .rs-readout { opacity: 1; transform: none; }
-    .rs-fact { opacity: 1; }
+    .rs-roof-fill,
+    .rs-vert,
+    .rs-dim,
+    .rs-area,
+    .rs-meta { opacity: 1; }
+    .rs-vert { transform: none; }
   }
 </style>
 
 <script>
-  // Measure each path so the dash animation covers exactly its own length —
-  // a hardcoded dasharray breaks the moment the outline is retraced.
+  const AREA_M2 = 118;
+
   function initRoofScan() {
     document.querySelectorAll<HTMLElement>("[data-roof-scan]").forEach((card) => {
       if (card.dataset.rsBound === "1") return;
       card.dataset.rsBound = "1";
 
+      // Measure each path so the dash animation covers exactly its own length —
+      // a hardcoded dasharray breaks the moment the outline is retraced.
       card.querySelectorAll<SVGPathElement>(".rs-roof-line, .rs-roof-glow").forEach((path) => {
         const len = Math.ceil(path.getTotalLength()) + 2;
         path.style.setProperty("--rs-len", String(len));
       });
 
-      // Only run while it's actually on screen — this loops forever, and the
-      // zoom layer is composited, so leaving it running offscreen costs frames
-      // for nothing.
+      const areaEl = card.querySelector<SVGTextElement>("[data-rs-area]");
+      const fill = card.querySelector<SVGPathElement>(".rs-roof-fill");
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      if (areaEl && reduce) areaEl.textContent = `${AREA_M2} m²`;
+
+      // The area counts up rather than appearing, because a number that
+      // resolves reads as something being worked out. Driven off the fill's
+      // own animation events so it can never drift from the CSS timeline.
+      let raf = 0;
+      const countUp = () => {
+        if (!areaEl || reduce) return;
+        cancelAnimationFrame(raf);
+        const DELAY = 6000; // fill starts ~50% into the 12s cycle
+        const DUR = 1100;
+        const t0 = performance.now() + DELAY;
+        const step = (now: number) => {
+          const t = (now - t0) / DUR;
+          if (t < 0) {
+            raf = requestAnimationFrame(step);
+            return;
+          }
+          if (t >= 1) {
+            areaEl.textContent = `${AREA_M2} m²`;
+            return;
+          }
+          // Ease out so it decelerates into the final figure.
+          const eased = 1 - Math.pow(1 - t, 3);
+          areaEl.textContent = `${Math.round(eased * AREA_M2)} m²`;
+          raf = requestAnimationFrame(step);
+        };
+        raf = requestAnimationFrame(step);
+      };
+
+      fill?.addEventListener("animationstart", countUp);
+      fill?.addEventListener("animationiteration", countUp);
+
+      // Only run while it's actually on screen — this loops forever, so
+      // leaving it running offscreen costs frames for nothing.
       const io = new IntersectionObserver(
         ([entry]) => {
-          card.classList.toggle("is-playing", entry.isIntersecting);
+          const on = entry.isIntersecting;
+          card.classList.toggle("is-playing", on);
+          if (!on) cancelAnimationFrame(raf);
         },
         { threshold: 0.25 },
       );
