@@ -78,20 +78,16 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
       <LiveWidget />
     </div>
 
-    <!-- Reassurance, not instruction. An instruction line above the field
-         ("Try it free. Put in any UK postcode…") had to shout to be worth its
-         space, and quietening it just made it ignorable. The field is already
-         the loudest thing here and needs no help being noticed — what stops
-         someone is not knowing whether it costs them anything. So this answers
-         the objections, sits under the field where the hesitation happens, and
-         stays quiet on purpose. -->
-    <p class="hero-assure" data-hero-assure>
-      <span>Free to try</span>
-      <span class="hero-assure-dot" aria-hidden="true">·</span>
-      <span>No sign-up</span>
-      <span class="hero-assure-dot" aria-hidden="true">·</span>
-      <span>Any UK address</span>
-    </p>
+    <!-- Nothing sits under the widget. Two attempts have been made: an
+         instruction above it ("Try it free. Put in any UK postcode…"), which
+         had to shout to earn its space, and a reassurance row underneath
+         ("Free to try · No sign-up · Any UK address"), which read as template
+         filler — it answered objections this page doesn't create, since the
+         flow asks for nothing until the very end. If the demo needs an
+         invitation, it belongs inside the control (the embed's placeholder,
+         scoped to the belpa-landing-demo roofer) rather than as furniture
+         bolted around it. -->
+
   </div>
 
   <button
@@ -265,33 +261,6 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
       max-width: none;
       margin-inline: 0;
     }
-  }
-
-  .hero-assure {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 0.55rem;
-    margin: 0.85rem auto 0;
-    font-size: 0.82rem;
-    font-weight: 500;
-    letter-spacing: -0.01em;
-    line-height: 1.4;
-    color: var(--color-ink-soft);
-    opacity: 0.85;
-    /* The panel and the suggestions dropdown both overlay DOWNWARD out of the
-       widget and would land straight on top of this. LiveWidget already
-       toggles these classes on <html> for exactly this reason. */
-    transition: opacity 0.2s ease;
-  }
-  .hero-assure-dot {
-    opacity: 0.45;
-  }
-  :global(html.belpa-suggesting) .hero-assure,
-  :global(html.belpa-flow-open) .hero-assure {
-    opacity: 0;
-    pointer-events: none;
   }
 
   /* —— The widget ——
