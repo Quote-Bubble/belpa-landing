@@ -55,52 +55,9 @@
   }
 }
 
-@property --dz-blur {
-  syntax: "<length>";
-  inherits: false;
-  initial-value: 0px;
-}
-@property --dz-opacity {
-  syntax: "<number>";
-  inherits: false;
-  initial-value: 1;
-}
-@property --dz-rise {
-  syntax: "<length>";
-  inherits: false;
-  initial-value: 0px;
-}
-@property --dz-scale {
-  syntax: "<number>";
-  inherits: false;
-  initial-value: 1;
-}
-
-/* "Book a call" softening into the background as the navbar assembles, and
-   re-forming out of it in the top right. Blur + fade + a slight rise, driven
-   per-frame from meeting-wipe.ts. No transition here — the values ARE the
-   scroll position, so a transition would only add lag. */
-/* The fade rides inside `filter`, not the `opacity` property. The entrance
-   animation (`widget-rise ... forwards`) and `.meeting-load.is-settled` both
-   assert opacity at a higher precedence than this rule could reach, so an
-   `opacity:` declaration here is silently ignored — the button blurred but
-   never actually faded, and then got cut. filter:opacity() is uncontested. */
-.is-dissolving {
-  filter: blur(var(--dz-blur, 0px)) opacity(var(--dz-opacity, 1));
-  transition: none;
-}
-/* Rise + expand use the standalone `translate`/`scale` properties so they
-   compose with the `transform` that meeting-wipe.ts writes on the docked copy
-   instead of fighting it. Both are out-of-flow effects: nothing reflows. */
-.hero-meeting-takeoff.is-dissolving,
-.meeting-fly.is-dissolving {
-  translate: 0 var(--dz-rise, 0px);
-  scale: var(--dz-scale, 1);
-}
-
 html {
-  /* ~10% larger type/spacing at 100% browser zoom — without CSS `zoom`,
-     which breaks the brand-dock morph (offset* vs getBoundingClientRect). */
+  /* ~10% larger type/spacing at 100% browser zoom — without CSS `zoom`, which
+     desyncs offset* from getBoundingClientRect for anything measuring layout. */
   font-size: 110%;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -206,6 +163,9 @@ input {
      scales up with the screen) with its core behind the hero search cluster */
   background-position: center 300px;
   background-size: 100% auto;
+  /* Split hero: the demo column sits right of centre, so the glow follows it
+     rather than blooming in the gutter between the two columns. Desktop only —
+     below the lg breakpoint the grid stacks and centred is correct again. */
   filter: blur(14px);
   /* --blob-shift (mobile) slides the glow to the search cluster without
      changing the layer's intrinsic geometry. */
@@ -215,6 +175,11 @@ input {
   mask-image: linear-gradient(to bottom, #000 50%, transparent 84%);
   pointer-events: none;
   contain: paint;
+}
+@media (min-width: 1024px) {
+  .site-bg {
+    background-position: 68% 250px;
+  }
 }
 @media (max-width: 640px) {
   .site-bg {
@@ -637,30 +602,13 @@ input {
   }
 }
 
-/* While the embedded widget's address suggestions are open, hide the
-   "Book a call" button so the dropdown (which floats over the page from the
-   iframe) has a clean area and nothing punches through it. */
-html.belpa-suggesting .hero-meeting-takeoff,
-html.belpa-suggesting .meeting-fly {
-  opacity: 0 !important;
-  pointer-events: none !important;
-  visibility: hidden !important;
-  transition: opacity 0.15s ease;
-}
-
-/* While the widget's flow is open the widget height changes per step, so
-   there's no stable spot to keep "Book a call" aligned beneath it — hide it.
-   Once the morph boots, the visible button is the .meeting-fly clone (the
-   original .hero-meeting-takeoff is already visibility:hidden), so both must
-   be covered. !important is required: the flyer is painted with inline styles
-   and the original's entrance keyframes forwards-fill opacity:1. */
-html.belpa-flow-open .hero-meeting-takeoff,
-html.belpa-flow-open .meeting-fly {
-  opacity: 0 !important;
-  pointer-events: none !important;
-  visibility: hidden !important;
-  transition: opacity 0.2s ease;
-}
+/* NOTE: there used to be `belpa-suggesting` / `belpa-flow-open` rules here
+   hiding "Book a call", because it sat directly under the widget and the
+   iframe's suggestion dropdown and expanded panel overlay downward onto it.
+   In the split hero it is never beneath the widget — it's a quiet link in the
+   left column (and above the demo once the grid stacks on mobile) — so there
+   is nothing left to punch through. Full-screen mobile is still handled by
+   `belpa-overlay-open` below. */
 
 /* Fullscreen mobile quote flow: freeze the landing page and hide chrome that
    would otherwise peek through / sit above the iframe on real iOS Safari.
@@ -674,7 +622,8 @@ html.belpa-overlay-open body {
    is viewport-relative, not trapped inside the hero search slot. */
 html.belpa-overlay-open .hero,
 html.belpa-overlay-open .hero-stage,
-html.belpa-overlay-open .hero-cluster,
+html.belpa-overlay-open .hero-grid,
+html.belpa-overlay-open .hero-demo,
 html.belpa-overlay-open .hero-widget,
 html.belpa-overlay-open .widget-load,
 html.belpa-overlay-open #belpa-widget {
@@ -685,7 +634,7 @@ html.belpa-overlay-open #belpa-widget {
   will-change: auto !important;
   animation: none !important;
 }
-html.belpa-overlay-open .mobile-nav,
+html.belpa-overlay-open .site-header,
 html.belpa-overlay-open .hero-scroll,
 html.belpa-overlay-open .page-lower {
   opacity: 0 !important;

@@ -30,8 +30,9 @@ const {
     <meta name="theme-color" content="#1f57f0" />
     <!-- The blob is the page visual anchor: fetch it before the CSS asks -->
     <link rel="preload" as="image" href="/bg-v3.webp" fetchpriority="high" />
-    <!-- Hero wordmark: above the fold, and the brand-dock morph measures it -->
+    <!-- Header wordmark + the hero's aerial scan: both above the fold -->
     <link rel="preload" as="image" href="/belpa-wordmark.png" fetchpriority="high" />
+    <link rel="preload" as="image" href="/roof-scan.webp" fetchpriority="high" />
     <!--
       Kill scroll restoration before first paint. Otherwise refresh-on-hero
       restores a few px (or animates there) while fonts/morph shift layout.
@@ -196,13 +197,11 @@ const {
     const measureShift = (): number | null => {
       const widget = document.querySelector<HTMLElement>("[data-widget-shell]");
       if (!widget) return null;
-      const meeting = document.querySelector<HTMLElement>("[data-meeting-spacer]");
+      // Centre the glow on the widget. (This used to average the widget with
+      // the hero's "Book a call" slab; that button is a quiet link above the
+      // demo now, so it's no longer part of the cluster to sit behind.)
       const w = widget.getBoundingClientRect();
-      const m = meeting?.getBoundingClientRect();
-      const target = m
-        ? (w.top + m.bottom) / 2
-        : w.top + w.height * 0.55;
-      return Math.round(target - NATURAL_BAND_MID);
+      return Math.round(w.top + w.height * 0.55 - NATURAL_BAND_MID);
     };
 
     const reveal = () => {

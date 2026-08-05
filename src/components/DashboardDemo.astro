@@ -323,7 +323,13 @@ const NAV = [
           <div class="dd-stage">
             <!-- ============ SIDEBAR — ported from Sidebar.tsx + DashboardShell.tsx ============ -->
             <aside class="dd-side flex h-full w-64 shrink-0 flex-col border-r border-white/50 px-4 py-6">
-              <span class="dd-wordmark px-2 text-2xl text-ink">Belpa</span>
+              <img
+                class="dd-wordmark mx-2"
+                src="/belpa-wordmark.png"
+                alt="Belpa"
+                width="900"
+                height="279"
+              />
               <p class="mt-1 px-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-600">Ridgeline Roofing</p>
 
               <nav class="mt-8 flex flex-col gap-1">
@@ -737,17 +743,13 @@ const NAV = [
   .dd-side {
     background: rgba(250, 250, 251, 0.75);
   }
-  /* Matches the site-wide "Belpa" wordmark exactly (Nav.astro's .brand-fly:
-     font-weight 600, letter-spacing -0.045em) rather than relying on
-     .font-display + Tailwind's font-semibold to win the cascade — the
-     landing's own .font-display defaults to font-weight 400, so stacking
-     font-semibold on top of it only wins if the utility layer happens to
-     come after it; explicit values here can't lose that race. */
+  /* Mirrors the real sidebar, which renders the logo at h-7 (Sidebar.tsx in
+     belpa-dashboard-frontend). This used to be type styled to match the old
+     text wordmark; the product now shows the logo, so the mockup does too. */
   .dd-wordmark {
-    font-family: var(--font-display);
-    font-weight: 600;
-    letter-spacing: -0.045em;
-    line-height: 0.92;
+    display: block;
+    height: 28px;
+    width: auto;
   }
   .dd-nav-icon { display: flex; color: var(--color-muted); transition: color 0.2s ease; }
   .dd-nav-item { color: var(--color-ink-soft); transition: color 0.2s ease; }

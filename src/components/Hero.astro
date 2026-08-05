@@ -6,56 +6,74 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
 ---
 
 <!--
-  Widget-first hero. Brand spacer is layout-only; Nav owns the visible flying wordmark.
-  Meeting CTA spacer is layout-only; Nav owns the flying “Book a call” button.
+  Split hero. Copy leads on the left, the product proves itself on the right:
+  the aerial scan says "measured from satellite imagery" in the fold, and the
+  live widget under it lets you actually try the thing.
+
+  The brand lives in the header now, not here — see Nav.astro for why the old
+  centred-wordmark scroll-morph was retired.
 -->
 <section class="hero relative flex min-h-[100svh] flex-col">
-  <div
-    class="hero-stage relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col items-center px-5 text-center sm:px-6"
-  >
-    <div class="hero-cluster w-full">
-      <h1 class="hero-brand" aria-label="Belpa">
-        <span class="hero-brand-spacer" data-brand-spacer aria-hidden="true">
-          <img
-            src="/belpa-wordmark.png"
-            alt=""
-            width="900"
-            height="279"
-            fetchpriority="high"
-            decoding="sync"
-          />
-        </span>
-      </h1>
-      <p class="font-display hero-promise sub-load">
-        Stop losing leads with slow quotes.
-      </p>
-      <p class="hero-support sub-load sub-load-late">
-        We'll give potential clients visiting your site accurate, instant quotes using satellite imagery.
-      </p>
+  <div class="hero-stage relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-5 sm:px-6">
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <h1 class="font-display hero-promise sub-load">
+          Stop losing leads with slow quotes.
+        </h1>
+        <p class="hero-support sub-load sub-load-late">
+          We'll give potential clients visiting your site accurate, instant quotes using satellite imagery.
+        </p>
 
-      <div class="hero-widget mx-auto w-full max-w-[740px] widget-load" data-widget-shell>
-        <!-- Holds layout while #belpa-widget is position:fixed during the dock morph -->
-        <div class="hero-widget-spacer" data-widget-spacer aria-hidden="true"></div>
-        <LiveWidget />
+        <!-- Deliberately a quiet link, not a filled slab: the widget opposite
+             is the primary action, and a saturated button here out-shouted it. -->
+        <a
+          href={meetingUrl}
+          class="hero-book meeting-load"
+          data-meeting-cta
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="2"/>
+            <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Book a call
+          <span class="hero-book-arrow" aria-hidden="true">→</span>
+        </a>
       </div>
 
-      <!--
-        Takeoff button: clickable in-flow until the Nav flyer morphs in,
-        then hidden (same handoff pattern as the Belpa wordmark).
-      -->
-      <a
-        href={meetingUrl}
-        class="hero-meeting-takeoff meeting-load"
-        data-meeting-spacer
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <rect x="3" y="5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="2"/>
-          <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        Book a call
-      </a>
+      <div class="hero-demo">
+        <!-- Proof, not decoration: an aerial roof under a measuring pass.
+             Stylised treatment only — no figures, nothing claimed. -->
+        <figure class="hero-scan sub-load sub-load-late" aria-hidden="true">
+          <img
+            src="/roof-scan.webp"
+            alt=""
+            width="1100"
+            height="686"
+            loading="eager"
+            fetchpriority="high"
+          />
+          <span class="hero-scan-sweep"></span>
+          <!-- vector-effect must be a per-shape attribute: it isn't inherited,
+               so setting it on the <svg> in CSS would do nothing and the short-
+               viewport aspect-ratio overrides below would squash the strokes. -->
+          <svg class="hero-scan-marks" viewBox="0 0 100 62" preserveAspectRatio="none">
+            <path d="M6 16V8h9" vector-effect="non-scaling-stroke" />
+            <path d="M94 16V8h-9" vector-effect="non-scaling-stroke" />
+            <path d="M6 46v8h9" vector-effect="non-scaling-stroke" />
+            <path d="M94 46v8h-9" vector-effect="non-scaling-stroke" />
+          </svg>
+          <figcaption class="hero-scan-chip">
+            <span class="hero-scan-dot"></span>
+            Satellite measurement
+          </figcaption>
+        </figure>
+
+        <div class="hero-widget widget-load" data-widget-shell>
+          <LiveWidget />
+        </div>
+      </div>
     </div>
   </div>
 
@@ -79,224 +97,281 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
 
 <style>
   .hero-stage {
-    justify-content: center;
-    padding-top: max(3.5rem, calc(env(safe-area-inset-top, 0px) + 2.5rem));
-    padding-bottom: clamp(1.25rem, 3.5svh, 2.75rem);
+    /* Clear the fixed header, then centre what's left. */
+    padding-top: max(6rem, calc(env(safe-area-inset-top, 0px) + 5.5rem));
+    padding-bottom: clamp(3rem, 8svh, 5rem);
   }
 
-  .hero-brand {
-    margin: 0;
-    /* Zero strut so the inline-block spacer doesn't sit on a baseline with a
-       descender gap under it — the line box is then exactly the logo's height. */
-    line-height: 0;
+  .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(2rem, 5vw, 2.75rem);
+    align-items: center;
+    width: 100%;
   }
-
-  /* Logo wordmark + sheen overlay that sweeps through (the mark stays put).
-     font-size is still the one size knob even though this is an image now:
-     brand-dock.ts measures getComputedStyle(spacer).fontSize and drives the
-     docked wordmark off it, and the img is sized in `em`, so the whole morph
-     keeps working untouched. Change the size here, not on the img. */
-  .hero-brand-spacer {
-    position: relative;
-    display: inline-block;
-    font-size: clamp(4.25rem, 14vw, 8.5rem);
-    line-height: 0;
-    user-select: none;
-    pointer-events: none;
-    opacity: 0;
-    transform: translateY(0.4em) scale(1.55);
-    filter: blur(14px);
-    transform-origin: 50% 100%;
-    animation: brand-enter 1.2s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) 0.18s forwards;
-  }
-  .hero-brand-spacer img {
-    display: block;
-    height: 1em;
-    width: auto;
-  }
-  /* Same sheen as the old text version, but clipped to the logo's alpha with a
-     mask instead of background-clip:text (which only works on glyphs). */
-  .hero-brand-spacer::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background-image: linear-gradient(
-      105deg,
-      transparent 0%,
-      transparent 42%,
-      rgba(91, 140, 255, 0.9) 50%,
-      transparent 58%,
-      transparent 100%
-    );
-    background-size: 220% 100%;
-    background-repeat: no-repeat;
-    background-position: 200% 50%;
-    -webkit-mask-image: url("/belpa-wordmark.png");
-    mask-image: url("/belpa-wordmark.png");
-    -webkit-mask-size: 100% 100%;
-    mask-size: 100% 100%;
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
-    animation: brand-sheen 9s linear 1.4s infinite;
-  }
-  /* Hidden only after the fixed wordmark is placed — no mid-scroll handoff */
-  :global(html.is-brand-morphing) .hero-brand-spacer {
-    visibility: hidden;
-  }
-
-  @keyframes brand-enter {
-    50% {
-      opacity: 1;
-      filter: blur(2.5px);
-    }
-    100% {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-      filter: blur(0);
-    }
-  }
-  @keyframes brand-sheen {
-    0% {
-      background-position: 200% 50%;
-    }
-    32% {
-      background-position: -200% 50%;
-    }
-    100% {
-      background-position: -200% 50%;
+  @media (min-width: 1024px) {
+    .hero-grid {
+      /* Copy gets a touch less than half — the demo is the thing to look at. */
+      grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+      gap: clamp(2.25rem, 5vw, 4rem);
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .hero-brand-spacer {
-      animation: none;
-      opacity: 1;
-      transform: none;
-      filter: none;
-    }
-    .hero-brand-spacer::after {
-      content: none;
-      animation: none;
+  /* —— Left: the pitch —— */
+  .hero-copy {
+    text-align: center;
+  }
+  @media (min-width: 1024px) {
+    .hero-copy {
+      text-align: left;
     }
   }
 
   .hero-promise {
-    margin: 1.35rem auto 0;
-    max-width: 20em;
-    font-size: clamp(1.55rem, 3.8vw, 2.25rem);
+    margin: 0;
+    max-width: 15em;
+    font-size: clamp(2.1rem, 4.6vw, 3.35rem);
     font-weight: 600;
-    letter-spacing: -0.038em;
-    line-height: 1.15;
+    letter-spacing: -0.04em;
+    line-height: 1.06;
     color: var(--color-ink);
+  }
+  @media (max-width: 1023px) {
+    .hero-promise {
+      margin-inline: auto;
+    }
   }
 
   .hero-support {
-    margin: 1.15rem auto 0;
-    max-width: 38rem;
+    margin: 1.15rem 0 0;
+    max-width: 34rem;
     font-size: clamp(1.02rem, 1.8vw, 1.15rem);
     font-weight: 500;
     letter-spacing: -0.015em;
-    line-height: 1.65;
+    line-height: 1.6;
     color: var(--color-ink-soft);
+  }
+  @media (max-width: 1023px) {
+    .hero-support {
+      margin-inline: auto;
+    }
+  }
+
+  .hero-book {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 1.6rem;
+    padding: 0.6rem 0;
+    font-size: 0.98rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1;
+    color: var(--color-brand-600);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+  .hero-book svg {
+    flex: none;
+  }
+  .hero-book-arrow {
+    transition: transform 0.25s var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1));
+  }
+  .hero-book:hover {
+    color: var(--color-brand-700, var(--color-brand-600));
+  }
+  .hero-book:hover .hero-book-arrow {
+    transform: translateX(3px);
+  }
+  .hero-book:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 4px;
+    border-radius: 6px;
+  }
+
+  /* —— Right: the proof + the demo —— */
+  .hero-demo {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.85rem, 2vw, 1.15rem);
+    width: 100%;
+    max-width: 40rem;
+    margin-inline: auto;
+  }
+  @media (min-width: 1024px) {
+    .hero-demo {
+      max-width: none;
+      margin-inline: 0;
+    }
+  }
+
+  .hero-scan {
+    position: relative;
+    /* Contain the sweep's mix-blend-mode: without a stacking context here it
+       would blend against the page/blob behind the card, not just the photo. */
+    isolation: isolate;
+    overflow: hidden;
+    margin: 0;
+    border-radius: 20px;
+    aspect-ratio: 100 / 62;
+    background: #dfe6ef;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.5) inset,
+      0 2px 8px rgba(16, 24, 40, 0.08),
+      0 28px 60px -28px rgba(23, 60, 160, 0.45);
+  }
+  .hero-scan img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* The measuring pass. A single soft band crossing the roof — reads as
+     "being scanned" without inventing any numbers on top of a stock photo. */
+  /* A fixed-height band translated top-to-bottom. Deliberately transform and
+     opacity rather than an animated background-position: only these two are
+     compositor properties, and the percentage maths on an oversized gradient
+     is far harder to reason about than moving a band by its own height. */
+  .hero-scan-sweep {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 42%;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      rgba(91, 140, 255, 0) 0%,
+      rgba(120, 176, 255, 0.45) 42%,
+      rgba(255, 255, 255, 0.8) 50%,
+      rgba(120, 176, 255, 0.45) 58%,
+      rgba(91, 140, 255, 0) 100%
+    );
+    mix-blend-mode: screen;
+    opacity: 0;
+    /* -110% clears the top edge; 340% of a 42%-tall band clears the bottom. */
+    transform: translate3d(0, -110%, 0);
+    animation: hero-scan-pass 7s cubic-bezier(0.5, 0, 0.5, 1) 1.6s infinite;
+  }
+  @keyframes hero-scan-pass {
+    0% {
+      transform: translate3d(0, -110%, 0);
+      opacity: 0;
+    }
+    8% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 1;
+    }
+    58% {
+      transform: translate3d(0, 340%, 0);
+      opacity: 0;
+    }
+    100% {
+      transform: translate3d(0, 340%, 0);
+      opacity: 0;
+    }
+  }
+
+  .hero-scan-marks {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.9);
+    stroke-width: 0.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 1px 2px rgba(6, 20, 48, 0.45));
+  }
+
+  .hero-scan-chip {
+    position: absolute;
+    left: clamp(0.7rem, 2.5%, 1.1rem);
+    bottom: clamp(0.7rem, 2.5%, 1.1rem);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.42rem 0.8rem;
+    border-radius: 999px;
+    /* Deliberately NOT backdrop-filter. The card carries `sub-load`, which
+       animates `filter: blur()`, and global.css documents that filter on an
+       element with a glass child snaps the compositor when the keyframes
+       finish. A flat scrim over a photo is indistinguishable anyway. */
+    background: rgba(9, 20, 42, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.95);
+    white-space: nowrap;
+  }
+  .hero-scan-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: #6ea8ff;
+    box-shadow: 0 0 0 3px rgba(110, 168, 255, 0.25);
+    animation: hero-scan-blink 2.4s ease-in-out infinite;
+  }
+  @keyframes hero-scan-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
   }
 
   .hero-widget {
     position: relative;
-    margin-top: clamp(1.45rem, 3.6svh, 2.6rem);
-  }
-  .hero-widget-spacer {
     width: 100%;
-    pointer-events: none;
-    visibility: hidden;
   }
 
-  /* Soft-rect sibling of the quote shell — same brand blue as Get my quote */
-  .hero-meeting-takeoff {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    position: relative;
-    z-index: 2;
-    width: min(100% - var(--q-embed-pad-x) * 2, 620px);
-    margin: calc(0.9rem - var(--q-shadow-room)) auto 0;
-    padding: 0.8rem 1.05rem;
-    border-radius: 28px;
-    border: 0;
-    background: linear-gradient(180deg, var(--color-brand-500), var(--color-brand-600));
-    font-size: 0.9rem;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    line-height: 1;
-    color: #fff;
-    text-decoration: none;
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.28) inset,
-      0 8px 20px -8px rgba(31, 87, 240, 0.5);
-    box-sizing: border-box;
-    /* `filter` is owned per-frame by meeting-wipe.ts and must NOT transition:
-       a 0.25s ease here out-specifies `.is-dissolving { transition: none }`,
-       so scrolling back up animated the button from solid → blurred and it
-       flashed in at full strength before catching up. Same reason hover uses
-       box-shadow alone rather than filter: brightness(). */
-    transition: box-shadow 0.35s var(--ease-out-expo, ease);
+  @media (prefers-reduced-motion: reduce) {
+    .hero-scan-sweep,
+    .hero-scan-dot {
+      animation: none;
+    }
+    .hero-scan-sweep {
+      opacity: 0;
+    }
   }
-  .hero-meeting-takeoff:hover {
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.32) inset,
-      0 12px 28px -8px rgba(31, 87, 240, 0.58);
-  }
-  .hero-meeting-takeoff:focus-visible {
-    outline: 2px solid var(--color-brand-500);
-    outline-offset: 3px;
-  }
-  .hero-meeting-takeoff svg {
-    flex: none;
-  }
-  /* Visibility during the wipe handoff is owned by meeting-wipe.ts. */
 
-  /* Once morph boots, the real widget is fixed — spacer is the in-flow box */
-  /* Pinned to body by JS — keep styles global so portal still looks right */
-
+  @media (max-width: 1023px) {
+    .hero-stage {
+      padding-top: max(5.25rem, calc(env(safe-area-inset-top, 0px) + 5rem));
+    }
+  }
 
   @media (max-width: 640px) {
     .hero {
-      /* One screen tall on first paint — content centred inside it. */
       min-height: 100svh;
     }
     .hero-stage {
-      /* True vertical centre in the visible phone viewport (matches shot 2).
-         No downward bias — that was shoving Book a call up and letting
-         satellite section bleed into the first fold. */
-      justify-content: center;
-      padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
-      padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+      padding-top: max(4.75rem, calc(env(safe-area-inset-top, 0px) + 4.5rem));
+      padding-bottom: max(2.25rem, env(safe-area-inset-bottom, 0px));
     }
-    .hero-brand-spacer {
-      /* Readable logo size — not zoomed-out marketing type */
-      font-size: clamp(3.75rem, 12vw, 4.75rem);
+    .hero-grid {
+      gap: 1.6rem;
     }
     .hero-promise {
-      margin-top: 0.95rem;
-      font-size: clamp(1.45rem, 5.2vw, 1.7rem);
-      max-width: 16em;
-      line-height: 1.2;
+      font-size: clamp(1.85rem, 8vw, 2.3rem);
+      line-height: 1.1;
+      max-width: 13em;
     }
     .hero-support {
-      margin-top: 0.8rem;
-      font-size: 1.05rem;
-      line-height: 1.45;
-      max-width: 22rem;
-      color: var(--color-ink-soft);
+      margin-top: 0.85rem;
+      font-size: 1.02rem;
+      line-height: 1.5;
+      max-width: 24rem;
     }
-    .hero-widget {
-      margin-top: 1.5rem;
+    .hero-book {
+      margin-top: 1.1rem;
     }
-    .hero-meeting-takeoff {
-      margin: calc(0.85rem - var(--q-shadow-room, 0px)) auto 0;
-      font-size: 0.95rem;
-      padding: 0.85rem 1.05rem;
+    .hero-scan {
+      border-radius: 16px;
     }
     .hero-scroll {
       /* Keep the cue inside the hero, above Safari chrome */
@@ -304,43 +379,39 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     }
   }
 
-  @media (max-width: 640px) and (max-height: 720px) {
-    .hero-stage {
-      /* Short phones: still centre, lightly compress — keep type readable. */
-      justify-content: center;
-      padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
-      padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
-    }
-    .hero-brand-spacer {
-      font-size: clamp(3.35rem, 11vw, 4rem);
+  /* Short phones: the scan is the first thing to give up room. */
+  @media (max-width: 640px) and (max-height: 760px) {
+    .hero-scan {
+      aspect-ratio: 100 / 46;
     }
     .hero-promise {
-      margin-top: 0.75rem;
-      font-size: clamp(1.35rem, 4.8vw, 1.55rem);
+      font-size: clamp(1.7rem, 7.4vw, 2rem);
     }
-    .hero-support {
-      margin-top: 0.6rem;
-      font-size: 1rem;
-    }
-    .hero-widget {
-      margin-top: 1.2rem;
-    }
-    .hero-meeting-takeoff {
-      margin: calc(0.7rem - var(--q-shadow-room, 0px)) auto 0;
+    .hero-book {
+      margin-top: 0.85rem;
     }
   }
 
-  @media (min-width: 641px) and (max-height: 740px) {
+  /* Very short phones (SE-class): copy + scan + widget can't all fit the fold,
+     and the widget is the one that has to survive — it's the demo. Drop the
+     scan entirely rather than shipping a hero you have to scroll to use. */
+  @media (max-width: 640px) and (max-height: 700px) {
+    .hero-scan {
+      display: none;
+    }
+  }
+
+  /* Short laptops: don't let the stack overflow the fold. */
+  @media (min-width: 1024px) and (max-height: 760px) {
     .hero-stage {
-      justify-content: flex-start;
-      padding-top: 3.25rem;
-      padding-bottom: 1rem;
+      padding-top: 5.5rem;
+      padding-bottom: 2rem;
     }
-    .hero-brand-spacer {
-      font-size: clamp(3.5rem, 9vw, 5.5rem);
+    .hero-promise {
+      font-size: clamp(1.9rem, 3.6vw, 2.6rem);
     }
-    .hero-widget {
-      margin-top: 1.25rem;
+    .hero-scan {
+      aspect-ratio: 100 / 50;
     }
   }
 
@@ -428,7 +499,7 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
       if ((btn as HTMLElement).dataset.tryBound === "1") return;
       (btn as HTMLElement).dataset.tryBound = "1";
       btn.addEventListener("click", () => {
-        // Always return to the top search (hero or docked nav)
+        // Always return to the top search
         const lenis = window.__lenis;
         if (lenis?.scrollTo) lenis.scrollTo(0, { duration: 1.1 });
         else window.scrollTo({ top: 0, behavior: "smooth" });
@@ -446,31 +517,18 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
   }
 
   // Freeze the rise at its end state so the compositor doesn't snap when
-  // keyframes finish (and so morph can measure a clean layout box).
-  function settleWidgetLoad() {
-    const shell = document.querySelector<HTMLElement>("[data-widget-shell]");
-    if (!shell || shell.dataset.settleBound === "1") return;
-    shell.dataset.settleBound = "1";
+  // keyframes finish.
+  function settleLoad(selector: string) {
+    const el = document.querySelector<HTMLElement>(selector);
+    if (!el || el.dataset.settleBound === "1") return;
+    el.dataset.settleBound = "1";
     const done = (e: AnimationEvent) => {
-      if (e.target !== shell) return;
+      if (e.target !== el) return;
       if (e.animationName !== "widget-rise") return;
-      shell.classList.add("is-settled");
-      shell.removeEventListener("animationend", done);
+      el.classList.add("is-settled");
+      el.removeEventListener("animationend", done);
     };
-    shell.addEventListener("animationend", done);
-  }
-
-  function settleMeetingLoad() {
-    const btn = document.querySelector<HTMLElement>("[data-meeting-spacer]");
-    if (!btn || btn.dataset.settleBound === "1") return;
-    btn.dataset.settleBound = "1";
-    const done = (e: AnimationEvent) => {
-      if (e.target !== btn) return;
-      if (e.animationName !== "widget-rise") return;
-      btn.classList.add("is-settled");
-      btn.removeEventListener("animationend", done);
-    };
-    btn.addEventListener("animationend", done);
+    el.addEventListener("animationend", done);
   }
 
   function initHeroScrollCue() {
@@ -519,16 +577,17 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     });
   }
 
-  initTryCta();
-  settleWidgetLoad();
-  settleMeetingLoad();
-  initHeroScrollCue();
-  document.addEventListener("astro:after-swap", () => {
+  function boot() {
     initTryCta();
-    settleWidgetLoad();
-    settleMeetingLoad();
+    settleLoad("[data-widget-shell]");
+    settleLoad("[data-meeting-cta]");
+    initHeroScrollCue();
+  }
+
+  boot();
+  document.addEventListener("astro:after-swap", () => {
     const cue = document.querySelector<HTMLElement>("[data-hero-scroll]");
     if (cue) delete cue.dataset.bound;
-    initHeroScrollCue();
+    boot();
   });
 </script>
