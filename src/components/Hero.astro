@@ -1,6 +1,6 @@
----
+﻿---
 import LiveWidget from "./LiveWidget.astro";
-import RoofScan from "./RoofScan.astro";
+import RoofStory from "./RoofStory.astro";
 
 // Keep in sync with Nav.astro meetingUrl
 const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
@@ -8,7 +8,7 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
 
 <!--
   Left-aligned hero. The wordmark opens large and flies up into the nav on
-  scroll — Nav.astro owns the visible flying mark, everything here marked
+  scroll â€” Nav.astro owns the visible flying mark, everything here marked
   data-brand-spacer / data-widget-spacer / data-meeting-spacer is layout-only
   and gets handed off to it (see brand-dock.ts).
 
@@ -16,9 +16,9 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
   facts, which explains the product faster than the paragraph does. The widget
   sits underneath at its own full width.
 
-  ⚠️ The widget column must stay WIDER THAN 640px. The embed picks its mobile
+  âš ï¸ The widget column must stay WIDER THAN 640px. The embed picks its mobile
   layout from its own width, so a narrower column makes it request the
-  fullscreen overlay on desktop — which is exactly the flap the split hero
+  fullscreen overlay on desktop â€” which is exactly the flap the split hero
   caused. 740px keeps it comfortably clear.
 -->
 <section class="hero relative flex min-h-[100svh] flex-col">
@@ -59,16 +59,16 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
             <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
           Book a call
-          <span class="hero-book-arrow" aria-hidden="true">→</span>
+          <span class="hero-book-arrow" aria-hidden="true">â†’</span>
         </a>
       </div>
 
       <div class="hero-scan sub-load sub-load-late">
-        <RoofScan ratio="wide" />
+        <RoofStory />
       </div>
     </div>
 
-    <!-- The embed is the real widget, unmodified — the same one roofers put on
+    <!-- The embed is the real widget, unmodified â€” the same one roofers put on
          their own sites. Its button says "Get quote" because that is what a
          homeowner is doing; it must NOT be relabelled to something like "try
          it free", which would be nonsense on a customer's site. -->
@@ -79,10 +79,10 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     </div>
 
     <!-- Nothing sits under the widget. Two attempts have been made: an
-         instruction above it ("Try it free. Put in any UK postcode…"), which
+         instruction above it ("Try it free. Put in any UK postcodeâ€¦"), which
          had to shout to earn its space, and a reassurance row underneath
-         ("Free to try · No sign-up · Any UK address"), which read as template
-         filler — it answered objections this page doesn't create, since the
+         ("Free to try Â· No sign-up Â· Any UK address"), which read as template
+         filler â€” it answered objections this page doesn't create, since the
          flow asks for nothing until the very end. If the demo needs an
          invitation, it belongs inside the control (the embed's placeholder,
          scoped to the belpa-landing-demo roofer) rather than as furniture
@@ -114,11 +114,11 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     padding-bottom: clamp(2.5rem, 6svh, 4rem);
   }
 
-  /* —— Brand —— */
+  /* â€”â€” Brand â€”â€” */
   .hero-brand {
     margin: 0;
     /* Zero strut so the inline-block spacer isn't sitting on a baseline with a
-       descender gap under it — the line box is then exactly the logo's height. */
+       descender gap under it â€” the line box is then exactly the logo's height. */
     line-height: 0;
   }
   /* font-size is the single size knob: brand-dock.ts reads
@@ -142,7 +142,7 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     height: 1em;
     width: auto;
   }
-  /* Sheen clipped to the logo's alpha with a mask — background-clip:text only
+  /* Sheen clipped to the logo's alpha with a mask â€” background-clip:text only
      works on glyphs, and this is an image. */
   .hero-brand-spacer::after {
     content: "";
@@ -168,7 +168,7 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     mask-repeat: no-repeat;
     animation: brand-sheen 9s linear 1.4s infinite;
   }
-  /* Hidden only once the fixed wordmark is placed — no mid-scroll handoff */
+  /* Hidden only once the fixed wordmark is placed â€” no mid-scroll handoff */
   :global(html.is-brand-morphing) .hero-brand-spacer {
     visibility: hidden;
   }
@@ -183,7 +183,7 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     100% { background-position: -200% 50%; }
   }
 
-  /* —— Copy beside proof —— */
+  /* â€”â€” Copy beside proof â€”â€” */
   .hero-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -263,12 +263,12 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     }
   }
 
-  /* —— The widget ——
+  /* â€”â€” The widget â€”â€”
      Centred, not left-aligned with the copy. Left-aligned it sat under the
      copy column while the space beneath the scan card stayed empty, so it
      read as floating loose on the blob rather than belonging to the hero.
      Centred, with the line above naming it, it reads as its own demo band.
-     Width stays >640px — see the warning at the top of this file. */
+     Width stays >640px â€” see the warning at the top of this file. */
   .hero-widget {
     position: relative;
     width: 100%;
@@ -282,7 +282,7 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     visibility: hidden;
   }
 
-  /* —— Responsive —— */
+  /* â€”â€” Responsive â€”â€” */
   @media (max-width: 1023px) {
     .hero-stage {
       padding-top: max(5rem, calc(env(safe-area-inset-top, 0px) + 4.75rem));
@@ -333,7 +333,7 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     .hero-scan { display: none; }
   }
 
-  /* —— Scroll cue —— */
+  /* â€”â€” Scroll cue â€”â€” */
   .hero-scroll {
     position: absolute;
     left: 50%;
@@ -413,7 +413,7 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
         const lenis = window.__lenis;
         if (lenis?.scrollTo) lenis.scrollTo(0, { duration: 1.1 });
         else window.scrollTo({ top: 0, behavior: "smooth" });
-        // The search input lives inside the widget iframe now — focus it
+        // The search input lives inside the widget iframe now â€” focus it
         // across the frame boundary via the host bridge.
         const focusEmbed = (window as unknown as { __belpaFocus?: () => void })
           .__belpaFocus;
@@ -458,7 +458,7 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
 
     const show = () => {
       if (gone) return;
-      // Already scrolled (e.g. restored) — never flash the cue
+      // Already scrolled (e.g. restored) â€” never flash the cue
       const y = window.__lenis?.scroll ?? window.scrollY;
       if (y > 24) {
         dismiss();
@@ -501,3 +501,4 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     boot();
   });
 </script>
+

@@ -1,0 +1,624 @@
+---
+// The hero's story animation: a customer asks for a price, the roof gets
+// measured, and the lead lands on the roofer's phone. Six beats on ONE clock.
+//
+// Why a JS timeline and not CSS keyframes: the previous version ran seven
+// elements off hand-tuned keyframe percentages, so every timing change meant
+// re-deriving all seven. Here each beat is a named window in BEATS below and
+// nothing else needs to know about it. It also makes the whole thing
+// scrubbable — append ?rs=0.42 to freeze the timeline at that point, which is
+// the only practical way to review a specific beat.
+//
+// Everything drawn over the photo is DERIVED FROM THE POLYGON: the corners, the
+// edge lengths, the centroid the area sits on, and the area itself. Nothing is
+// placed by hand. If a mark appears, the geometry produced it.
+//
+// THE PRICE IS REAL. £11,500–£18,750 ex VAT is the actual output of
+// calculateReplacementEstimate() in belpa-widget-frontend, run against the live
+// belpa-landing-demo roofer config for this exact roof: 118 m², hipped, two
+// storeys, 35° pitch, concrete tile. Access multiplier 1.32, one week of
+// scaffold, confidence width 0.24. If the roof or the demo roofer's rates
+// change, re-run that calculation rather than editing these numbers by hand.
+//
+// AREA_M2 is the one input rather than an output — it describes the specific
+// house in the photo and is not measured at runtime, which is why the figure
+// stays aria-hidden. Swap the photo and all of this needs re-deriving.
+const roofPath =
+  "M277 356 L277 408 L277 480 L277 508 L308 512 L335 517 L339 533 L339 544 L411 545 L474 545 L534 545 L571 547 L625 548 L677 548 L724 551 L725 534 L774 526 L789 513 L807 490 L808 450 L794 428 L784 423 L784 387 L783 341 L777 318 L778 287 L778 255 L725 245 L669 241 L616 239 L611 201 L600 200 L601 141 L546 138 L494 140 L482 140 L479 197 L469 207 L467 239 L362 239 L357 324 L341 334 L342 354 L314 357 Z";
+
+const AREA_M2 = 118;
+const POSTCODE = "HP13 5BP";
+const PRICE = "£11,500 – £18,750";
+const META = "Hipped · 35° pitch · 2 storeys";
+
+type Pt = { x: number; y: number };
+const pts: Pt[] = [...roofPath.matchAll(/([ML])\s*(-?[\d.]+)\s+(-?[\d.]+)/g)].map(
+  (m) => ({ x: Number(m[2]), y: Number(m[3]) }),
+);
+
+function signedArea(p: Pt[]): number {
+  let a = 0;
+  for (let i = 0; i < p.length; i++) {
+    const q = p[(i + 1) % p.length];
+    a += p[i].x * q.y - q.x * p[i].y;
+  }
+  return a / 2;
+}
+const scale = Math.sqrt(AREA_M2 / Math.abs(signedArea(pts)));
+
+function centroid(p: Pt[]): Pt {
+  let cx = 0;
+  let cy = 0;
+  const a = signedArea(p);
+  for (let i = 0; i < p.length; i++) {
+    const q = p[(i + 1) % p.length];
+    const f = p[i].x * q.y - q.x * p[i].y;
+    cx += (p[i].x + q.x) * f;
+    cy += (p[i].y + q.y) * f;
+  }
+  return { x: cx / (6 * a), y: cy / (6 * a) };
+}
+const c = centroid(pts);
+
+// Real corners only. The trace lays several collinear points along each eave;
+// dropping them is what makes the vertices read as corners being found rather
+// than dots sprayed along a line.
+const corners = pts.filter((p, i) => {
+  const prev = pts[(i - 1 + pts.length) % pts.length];
+  const next = pts[(i + 1) % pts.length];
+  const a1 = Math.atan2(p.y - prev.y, p.x - prev.x);
+  const a2 = Math.atan2(next.y - p.y, next.x - p.x);
+  let d = ((a2 - a1) * 180) / Math.PI;
+  while (d > 180) d -= 360;
+  while (d < -180) d += 360;
+  return Math.abs(d) >= 25;
+});
+
+// Corner to corner, not point to point — measuring raw path segments gave a
+// 118 m² roof a longest side of 2.9 m.
+const edges = corners
+  .map((p, i) => {
+    const q = corners[(i + 1) % corners.length];
+    const dx = q.x - p.x;
+    const dy = q.y - p.y;
+    const mid = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
+    const ox = mid.x - c.x;
+    const oy = mid.y - c.y;
+    const on = Math.hypot(ox, oy) || 1;
+    let angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+    if (angle > 90) angle -= 180;
+    if (angle < -90) angle += 180;
+    return {
+      len: Math.hypot(dx, dy),
+      angle,
+      x: mid.x + (ox / on) * 22,
+      y: mid.y + (oy / on) * 22,
+      metres: (Math.hypot(dx, dy) * scale).toFixed(1),
+    };
+  })
+  .sort((a, b) => b.len - a.len)
+  .slice(0, 4);
+---
+
+<figure class="st" data-roof-story aria-hidden="true">
+  <!-- Scene 1 — the customer asking. Mirrors the real embed's collapsed bar. -->
+  <div class="st-scene st-ask" data-st-ask>
+    <div class="st-ask-inner">
+      <div class="st-bar">
+        <svg class="st-pin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linejoin="round"
+          />
+          <circle cx="12" cy="10" r="2.5" stroke="currentColor" stroke-width="2" />
+        </svg>
+        <span class="st-typed" data-st-typed></span><span class="st-caret" data-st-caret></span>
+        <span class="st-btn" data-st-btn>Get quote</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scene 2 — the measurement. -->
+  <div class="st-scene st-map" data-st-map>
+    <div class="st-stage" data-st-stage>
+      <img
+        class="st-photo"
+        src="/satellite-roof.webp"
+        srcset="/satellite-roof-760.webp 760w, /satellite-roof.webp 1280w"
+        sizes="(min-width: 1024px) 46vw, 92vw"
+        alt=""
+        width="1280"
+        height="960"
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+      />
+
+      <svg class="st-overlay" viewBox="0 0 1024 768" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <filter id="st-glow-soft" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="6" result="b" />
+            <feMerge><feMergeNode in="b" /></feMerge>
+          </filter>
+          <filter id="st-glow-core" x="-35%" y="-35%" width="170%" height="170%">
+            <feGaussianBlur stdDeviation="2" result="b" />
+            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+
+        <path class="st-fill" d={roofPath} data-st-fill />
+        <path class="st-glow" d={roofPath} filter="url(#st-glow-soft)" data-st-line />
+        <path class="st-line" d={roofPath} filter="url(#st-glow-core)" data-st-line />
+
+        <g data-st-verts>
+          {corners.map((p, i) => (
+            <circle class="st-vert" cx={p.x} cy={p.y} r="4.5" style={`--i:${i}`} />
+          ))}
+        </g>
+
+        <g data-st-dims>
+          {edges.map((e, i) => (
+            <g class="st-dim" style={`--i:${i}`}>
+              <rect
+                class="st-dim-plate"
+                x={e.x - 34}
+                y={e.y - 15}
+                width="68"
+                height="30"
+                rx="8"
+                transform={`rotate(${e.angle.toFixed(2)} ${e.x.toFixed(1)} ${e.y.toFixed(1)})`}
+              />
+              <text
+                class="st-dim-text"
+                x={e.x}
+                y={e.y}
+                transform={`rotate(${e.angle.toFixed(2)} ${e.x.toFixed(1)} ${e.y.toFixed(1)})`}
+              >{e.metres} m</text>
+            </g>
+          ))}
+        </g>
+
+        <!-- Plate behind the area, so it holds contrast over any roof colour. -->
+        <g data-st-area class="st-area">
+          <rect class="st-area-plate" x={c.x - 108} y={c.y - 40} width="216" height="80" rx="16" />
+          <text class="st-area-text" x={c.x.toFixed(1)} y={c.y.toFixed(1)} data-st-area-text>0 m²</text>
+        </g>
+      </svg>
+    </div>
+
+    <figcaption class="st-meta" data-st-meta>{META}</figcaption>
+  </div>
+
+  <!-- Scene 3 — the lead arriving with the roofer. -->
+  <div class="st-toast" data-st-toast>
+    <div class="st-toast-top">
+      <img class="st-toast-mark" src="/favicon-32.png" alt="" width="32" height="32" />
+      <span class="st-toast-title">New lead</span>
+      <span class="st-toast-time">now</span>
+    </div>
+    <p class="st-toast-addr">{POSTCODE} · 118 m² hipped roof</p>
+    <p class="st-toast-price">{PRICE}<span class="st-toast-vat"> ex VAT</span></p>
+  </div>
+</figure>
+
+<style>
+  .st {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    margin: 0;
+    aspect-ratio: 16 / 10;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    background: #0d1220;
+    box-shadow:
+      0 0 0 1px rgba(21, 55, 140, 0.16),
+      0 2px 8px rgba(16, 24, 40, 0.08),
+      0 28px 60px -28px rgba(23, 60, 160, 0.5);
+  }
+  .st-scene {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* —— Scene 1: the ask —— */
+  .st-ask {
+    display: grid;
+    place-items: center;
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 40%, #ffffff 0%, #f3f6fc 60%, #e8eefb 100%);
+  }
+  .st-ask-inner {
+    width: min(82%, 460px);
+  }
+  .st-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 0.7rem 0.7rem 0.95rem;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid rgba(23, 60, 160, 0.12);
+    box-shadow: 0 18px 40px -22px rgba(10, 32, 90, 0.55);
+    font-size: clamp(0.8rem, 1.5cqw, 0.95rem);
+  }
+  .st-pin {
+    flex: none;
+    width: 1.1em;
+    height: 1.1em;
+    color: var(--color-ink-soft);
+  }
+  .st-typed {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--color-ink);
+    white-space: pre;
+  }
+  .st-caret {
+    display: inline-block;
+    width: 2px;
+    height: 1.1em;
+    margin-left: 1px;
+    background: var(--color-brand-500);
+    opacity: 0;
+  }
+  .st-btn {
+    margin-left: auto;
+    flex: none;
+    padding: 0.5em 0.95em;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--color-brand-500), var(--color-brand-600));
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+    transition: transform 0.12s ease;
+  }
+
+  /* —— Scene 2: the measurement —— */
+  .st-map {
+    opacity: 0;
+  }
+  .st-stage {
+    position: absolute;
+    inset: 0;
+    transform-origin: center center;
+    will-change: transform, filter;
+  }
+  .st-photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .st-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  .st-fill {
+    fill: rgba(47, 107, 255, 0.17);
+    opacity: 0;
+  }
+  .st-glow,
+  .st-line {
+    fill: none;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+  .st-glow {
+    stroke: rgba(120, 175, 255, 1);
+    stroke-width: 14;
+    opacity: 0.9;
+  }
+  .st-line {
+    stroke: #e8f1ff;
+    stroke-width: 3;
+  }
+  .st-vert {
+    fill: #fff;
+    stroke: rgba(47, 107, 255, 0.9);
+    stroke-width: 2;
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  /* Plates rather than outlined text. An outline keeps the glyph legible but
+     leaves the number sitting in whatever the roof is doing behind it; a plate
+     gives every label the same contrast regardless of what it lands on. */
+  .st-dim,
+  .st-area {
+    opacity: 0;
+  }
+  .st-dim-plate,
+  .st-area-plate {
+    fill: rgba(7, 16, 36, 0.82);
+    stroke: rgba(255, 255, 255, 0.16);
+    stroke-width: 1.5;
+  }
+  .st-dim-text,
+  .st-area-text {
+    fill: #fff;
+    font-family: var(--font-sans, system-ui, sans-serif);
+    font-variant-numeric: tabular-nums;
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+  .st-dim-text {
+    font-size: 19px;
+    font-weight: 600;
+  }
+  .st-area-text {
+    font-size: 44px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .st-meta {
+    position: absolute;
+    left: clamp(0.85rem, 3%, 1.25rem);
+    bottom: clamp(0.75rem, 3%, 1.1rem);
+    z-index: 3;
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.92);
+    text-shadow: 0 1px 6px rgba(4, 12, 32, 0.9);
+    opacity: 0;
+  }
+
+  /* —— Scene 3: the lead —— */
+  /* Bottom-right, not top-right. A notification lands top-right by convention,
+     but there it sat straight over the roof's top edge and the 4.5 m label —
+     covering the measurement the sequence had just spent six seconds making. */
+  .st-toast {
+    position: absolute;
+    right: clamp(0.75rem, 3%, 1.15rem);
+    bottom: clamp(0.75rem, 3%, 1.15rem);
+    z-index: 5;
+    width: min(54%, 286px);
+    padding: 0.7rem 0.85rem 0.8rem;
+    border-radius: 16px;
+    background: rgba(11, 20, 40, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 22px 50px -20px rgba(3, 10, 28, 0.9);
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  .st-toast-top {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  .st-toast-mark {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+  }
+  .st-toast-title {
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: #fff;
+  }
+  .st-toast-time {
+    margin-left: auto;
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.5);
+  }
+  .st-toast-addr {
+    margin: 0.4rem 0 0;
+    font-size: 0.72rem;
+    line-height: 1.35;
+    color: rgba(255, 255, 255, 0.66);
+  }
+  .st-toast-price {
+    margin: 0.25rem 0 0;
+    font-size: clamp(0.95rem, 2.1cqw, 1.15rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+  }
+  .st-toast-vat {
+    font-size: 0.72em;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  @media (max-width: 640px) {
+    .st-dim { display: none; }
+    .st-area-text { font-size: 56px; }
+    .st-toast { width: 74%; }
+    .st-meta { font-size: 0.7rem; }
+  }
+
+  /* Reduced motion: hold the finished state — measured roof, lead delivered.
+     The still frame carries the whole story, so nothing is lost. */
+  @media (prefers-reduced-motion: reduce) {
+    .st-ask { display: none; }
+    .st-map { opacity: 1; }
+    .st-fill,
+    .st-dim,
+    .st-area,
+    .st-meta { opacity: 1; }
+    .st-vert { opacity: 1; }
+    .st-toast { opacity: 1; transform: none; }
+  }
+</style>
+
+<script>
+  // Beat boundaries as fractions of one cycle. Everything reads from here —
+  // change a number and only that beat moves.
+  const DUR = 9000;
+  const BEATS = {
+    typeFrom: 0.04,
+    typeTo: 0.24,
+    press: 0.27,
+    whipFrom: 0.29,
+    whipTo: 0.37,
+    traceFrom: 0.37,
+    traceTo: 0.58,
+    fillFrom: 0.56,
+    fillTo: 0.64,
+    dimsFrom: 0.6,
+    dimsTo: 0.72,
+    areaFrom: 0.62,
+    areaTo: 0.74,
+    toastFrom: 0.76,
+    toastTo: 0.84,
+    holdTo: 0.94,
+  };
+  const POSTCODE = "HP13 5BP";
+  const AREA_M2 = 118;
+
+  const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
+  /** Normalised progress through a window, 0 before and 1 after. */
+  const span = (p: number, a: number, b: number) => clamp01((p - a) / (b - a));
+  const outCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+  const inOutCubic = (t: number) =>
+    t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+  function initRoofStory() {
+    document.querySelectorAll<HTMLElement>("[data-roof-story]").forEach((root) => {
+      if (root.dataset.stBound === "1") return;
+      root.dataset.stBound = "1";
+
+      const q = <T extends Element>(s: string) => root.querySelector<T>(s);
+      const ask = q<HTMLElement>("[data-st-ask]")!;
+      const map = q<HTMLElement>("[data-st-map]")!;
+      const stage = q<HTMLElement>("[data-st-stage]")!;
+      const typed = q<HTMLElement>("[data-st-typed]")!;
+      const caret = q<HTMLElement>("[data-st-caret]")!;
+      const btn = q<HTMLElement>("[data-st-btn]")!;
+      const fill = q<SVGPathElement>("[data-st-fill]")!;
+      const lines = [...root.querySelectorAll<SVGPathElement>("[data-st-line]")];
+      const verts = [...root.querySelectorAll<SVGCircleElement>(".st-vert")];
+      const dims = [...root.querySelectorAll<SVGGElement>(".st-dim")];
+      const area = q<SVGGElement>("[data-st-area]")!;
+      const areaText = q<SVGTextElement>("[data-st-area-text]")!;
+      const meta = q<HTMLElement>("[data-st-meta]")!;
+      const toast = q<HTMLElement>("[data-st-toast]")!;
+
+      // Dash length must come from the path itself — a hardcoded value breaks
+      // the moment the outline is retraced.
+      const lens = lines.map((l) => Math.ceil(l.getTotalLength()) + 2);
+      lines.forEach((l, i) => {
+        l.style.strokeDasharray = String(lens[i]);
+      });
+
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduce) {
+        lines.forEach((l) => (l.style.strokeDashoffset = "0"));
+        areaText.textContent = `${AREA_M2} m²`;
+        return;
+      }
+
+      function render(p: number) {
+        // Scene 1 — typing, then the press.
+        const t = span(p, BEATS.typeFrom, BEATS.typeTo);
+        const chars = Math.round(t * POSTCODE.length);
+        typed.textContent = POSTCODE.slice(0, chars);
+        // Caret blinks while the field is live, then goes with the scene.
+        const live = p > 0.02 && p < BEATS.press;
+        caret.style.opacity = live ? (Math.floor(p * DUR / 500) % 2 ? "0.25" : "1") : "0";
+        const press = span(p, BEATS.press, BEATS.press + 0.02);
+        btn.style.transform = `scale(${1 - 0.06 * Math.sin(press * Math.PI)})`;
+
+        // The whip. Scene 1 pushes back and blurs out; the map comes in from a
+        // wider frame. CSS blur is omnidirectional and reads as smear, so the
+        // horizontal streak is carried by scaleX on the way in instead.
+        const w = inOutCubic(span(p, BEATS.whipFrom, BEATS.whipTo));
+        ask.style.opacity = String(1 - w);
+        ask.style.transform = `scale(${1 + 0.35 * w})`;
+        ask.style.filter = `blur(${18 * w}px)`;
+        map.style.opacity = String(w);
+        const settle = span(p, BEATS.whipTo, BEATS.traceTo);
+        stage.style.transform = `scale(${1.16 - 0.13 * outCubic(settle)})`;
+        stage.style.filter = w < 1 ? `blur(${10 * (1 - w)}px)` : "none";
+
+        // Corners land in path order.
+        const tr = span(p, BEATS.traceFrom, BEATS.traceTo);
+        verts.forEach((v, i) => {
+          const local = clamp01((tr - (i / verts.length) * 0.55) / 0.12);
+          v.style.opacity = String(local);
+          v.style.transform = `scale(${0.3 + 0.7 * outCubic(local)})`;
+        });
+
+        // The outline joins them, trailing the corners slightly.
+        const draw = outCubic(clamp01((tr - 0.18) / 0.82));
+        lines.forEach((l, i) => {
+          l.style.strokeDashoffset = String(lens[i] * (1 - draw));
+        });
+
+        fill.style.opacity = String(span(p, BEATS.fillFrom, BEATS.fillTo));
+
+        // Edge lengths, longest first.
+        const d = span(p, BEATS.dimsFrom, BEATS.dimsTo);
+        dims.forEach((g, i) => {
+          g.style.opacity = String(clamp01((d - i * 0.16) / 0.3));
+        });
+
+        // The area resolves rather than appearing — a number that counts is a
+        // number being worked out.
+        const a = span(p, BEATS.areaFrom, BEATS.areaTo);
+        area.style.opacity = String(clamp01(a * 3));
+        areaText.textContent = `${Math.round(outCubic(a) * AREA_M2)} m²`;
+        meta.style.opacity = String(span(p, BEATS.dimsFrom, BEATS.dimsTo));
+
+        // The lead lands with the roofer. This is the point of the whole
+        // sequence: the customer got a price, and the roofer got the job.
+        const to = span(p, BEATS.toastFrom, BEATS.toastTo);
+        const out = span(p, BEATS.holdTo, 1);
+        toast.style.opacity = String(to * (1 - out));
+        toast.style.transform = `translate3d(0, ${14 * (1 - outCubic(to))}px, 0)`;
+
+        // Everything clears together at the end so the loop restarts clean.
+        const fade = 1 - out;
+        map.style.opacity = String(Math.min(Number(map.style.opacity), fade));
+      }
+
+      // Scrub: ?rs=0.42 freezes the timeline there. The only practical way to
+      // review one beat — and the reason this is a JS clock at all.
+      const forced = new URLSearchParams(location.search).get("rs");
+      if (forced !== null) {
+        render(clamp01(Number(forced)));
+        return;
+      }
+
+      let raf = 0;
+      let t0 = 0;
+      const loop = (now: number) => {
+        if (!t0) t0 = now;
+        render(((now - t0) % DUR) / DUR);
+        raf = requestAnimationFrame(loop);
+      };
+
+      // Loops forever, so don't burn frames while it's off screen.
+      const io = new IntersectionObserver(
+        ([e]) => {
+          if (e.isIntersecting) {
+            if (!raf) raf = requestAnimationFrame(loop);
+          } else {
+            cancelAnimationFrame(raf);
+            raf = 0;
+            t0 = 0;
+          }
+        },
+        { threshold: 0.2 },
+      );
+      io.observe(root);
+    });
+  }
+
+  initRoofStory();
+  document.addEventListener("astro:after-swap", initRoofStory);
+</script>
