@@ -1,0 +1,213 @@
+---
+// The "why this matters" section. Deliberately built on published UK figures
+// rather than invented ones: this page sells to trades who will know instantly
+// if a number is made up, and the product's whole pitch is that its estimates
+// are honest about what they are.
+//
+// Every figure below carries its source in `note`, rendered as a real footnote.
+// Two caveats kept on the record so nobody re-uses these numbers wrongly:
+//   * They are ALL-TRADES UK figures. Nothing roofing-specific exists for
+//     quoting time, so the copy says "UK trades", never "roofers".
+//   * The 5h20m and 20-minute figures come from vendor-run surveys (quoting
+//     software companies), so they have an interest in the answer. Real
+//     research, but not independent.
+//
+// The closing line promises QUALIFICATION, not quoting. Belpa returns an
+// indicative ex-VAT range with a confidence band — the roofer still prices the
+// job on site. Copy here must never imply otherwise.
+const stats = [
+  {
+    figure: "5h 20m",
+    label: "a week on quoting and admin",
+    body: "For the average UK trade — and 77% of it happens after the working day has already ended.",
+    src: "1",
+  },
+  {
+    figure: "20 min",
+    label: "to write a single quote",
+    body: "More than a third take longer. At 6–10 quotes a week, that's hours of writing that may never become paid work.",
+    src: "2",
+  },
+  {
+    figure: "1 in 5",
+    label: "jobs never happen at all",
+    body: "Homeowners put work off entirely when they can't find someone they trust to give them a straight answer.",
+    src: "3",
+  },
+];
+
+const sources = [
+  {
+    n: "1",
+    text: "Nine in ten tradespeople stressed by running their business — PHAM News, national trades report",
+    href: "https://phamnews.co.uk/nine-in-ten-tradespeople-stressed-by-running-their-business-survey-finds/",
+  },
+  {
+    n: "2",
+    text: "Quoting software for UK tradespeople — Use CMA",
+    href: "https://usecma.com/blog/quoting-software-for-uk-tradespeople-what-to-look-for-in-2026",
+  },
+  {
+    n: "3",
+    text: "Anxious consumers avoid £6bn of building work — FMB survey",
+    href: "http://www.buildersmerchantsnews.co.uk/news/fullstory.php/aid/11604/Anxious_consumers_avoid__A36bn_of_building_work,_FMB_survey_suggests.html",
+  },
+];
+---
+
+<section id="numbers" class="cv-auto relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-28">
+  <div class="mx-auto max-w-3xl text-center" data-reveal>
+    <h2 class="font-display qc-heading text-ink">
+      What quoting actually costs you.
+    </h2>
+  </div>
+
+  <div class="qc-grid mt-12 sm:mt-16">
+    {stats.map((s, i) => (
+      <div class="qc-card" data-reveal data-delay={String(i + 1)}>
+        <p class="qc-figure font-display">
+          {s.figure}<sup class="qc-sup">{s.src}</sup>
+        </p>
+        <p class="qc-label">{s.label}</p>
+        <p class="qc-body">{s.body}</p>
+      </div>
+    ))}
+  </div>
+
+  <div class="qc-close" data-reveal data-delay="4">
+    <p class="font-display qc-close-line">Know which jobs are worth the visit.</p>
+  </div>
+
+  <ol class="qc-sources" data-reveal data-delay="4">
+    {sources.map((s) => (
+      <li>
+        <sup>{s.n}</sup>
+        <a href={s.href} target="_blank" rel="noopener noreferrer nofollow">{s.text}</a>
+      </li>
+    ))}
+  </ol>
+</section>
+
+<style>
+  .qc-heading {
+    margin: 0;
+    font-size: clamp(1.55rem, 4vw, 2.5rem);
+    font-weight: 400;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+  }
+  @media (max-width: 640px) {
+    .qc-heading {
+      font-size: clamp(1.4rem, 6.2vw, 1.9rem);
+    }
+  }
+
+  .qc-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+  @media (min-width: 768px) {
+    .qc-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1.25rem;
+    }
+  }
+
+  .qc-card {
+    position: relative;
+    padding: 1.75rem 1.5rem 1.85rem;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(23, 60, 160, 0.09);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.6) inset,
+      0 18px 40px -30px rgba(23, 60, 160, 0.4);
+    text-align: center;
+  }
+  @media (min-width: 768px) {
+    .qc-card {
+      text-align: left;
+    }
+  }
+
+  /* The figure is the whole point of the card — everything else is support,
+     so it gets the display face and the brand colour and nothing else does. */
+  .qc-figure {
+    margin: 0;
+    font-size: clamp(2.15rem, 4.4vw, 2.9rem);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.045em;
+    color: var(--color-brand-600, var(--color-brand-500));
+  }
+  .qc-sup {
+    margin-left: 0.15em;
+    font-size: 0.34em;
+    font-weight: 600;
+    vertical-align: super;
+    letter-spacing: 0;
+    color: var(--color-ink-soft);
+    opacity: 0.75;
+  }
+
+  .qc-label {
+    margin: 0.6rem 0 0;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+    color: var(--color-ink);
+  }
+
+  .qc-body {
+    margin: 0.55rem 0 0;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: var(--color-ink-soft);
+  }
+
+  .qc-close {
+    margin-top: clamp(2.5rem, 6vw, 3.75rem);
+    text-align: center;
+  }
+  .qc-close-line {
+    margin: 0;
+    font-size: clamp(1.35rem, 3.2vw, 2rem);
+    font-weight: 500;
+    letter-spacing: -0.035em;
+    line-height: 1.2;
+    color: var(--color-ink);
+  }
+
+  /* Sources are real, so they're readable rather than hidden — but they must
+     not compete with the figures, hence the size and the muted tone. */
+  .qc-sources {
+    margin: clamp(2rem, 4vw, 2.75rem) auto 0;
+    padding: 0;
+    max-width: 46rem;
+    list-style: none;
+    font-size: 0.72rem;
+    line-height: 1.5;
+    color: var(--color-ink-soft);
+    opacity: 0.72;
+    text-align: center;
+  }
+  .qc-sources li {
+    margin-top: 0.25rem;
+  }
+  .qc-sources sup {
+    margin-right: 0.3em;
+    font-weight: 600;
+  }
+  .qc-sources a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-thickness: 1px;
+    text-decoration-color: rgba(23, 60, 160, 0.28);
+  }
+  .qc-sources a:hover {
+    color: var(--color-brand-600, var(--color-brand-500));
+  }
+</style>
