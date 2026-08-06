@@ -27,11 +27,15 @@ const roofPath =
   "M277 356 L277 408 L277 480 L277 508 L308 512 L335 517 L339 533 L339 544 L411 545 L474 545 L534 545 L571 547 L625 548 L677 548 L724 551 L725 534 L774 526 L789 513 L807 490 L808 450 L794 428 L784 423 L784 387 L783 341 L777 318 L778 287 L778 255 L725 245 L669 241 L616 239 L611 201 L600 200 L601 141 L546 138 L494 140 L482 140 L479 197 L469 207 L467 239 L362 239 L357 324 L341 334 L342 354 L314 357 Z";
 
 const AREA_M2 = 118;
-// An ordinary residential district, which is what a real lead looks like.
-// Deliberately not a landmark postcode (SW1A 1AA reads as a joke next to a
-// roofing quote) and deliberately not anyone's own address — the animation
-// pairs it with a specific roof and a specific price.
-const POSTCODE = "M20 2RN";
+// Buckingham Palace. Deliberately a postcode nobody can mistake for a real
+// customer, because the animation pairs it with a specific roof and a specific
+// price and shouldn't point at anybody's actual house.
+//
+// This value is passed to the client through data-postcode on the figure below.
+// Do NOT re-declare it in the <script> block: it was duplicated there once and
+// the two drifted, so the field typed "HP13 5BP" while the notification said
+// something else entirely.
+const POSTCODE = "SW1A 1AA";
 const PRICE = "£11,500 – £18,750";
 const META = "Hipped · 35° pitch · 2 storeys";
 
@@ -104,7 +108,13 @@ const edges = corners
   .slice(0, 4);
 ---
 
-<figure class="st" data-roof-story aria-hidden="true">
+<figure
+  class="st"
+  data-roof-story
+  data-postcode={POSTCODE}
+  data-area={String(AREA_M2)}
+  aria-hidden="true"
+>
   <!-- Scene 1 — the customer asking. Mirrors the real embed's collapsed bar. -->
   <div class="st-scene st-ask" data-st-ask>
     <div class="st-ask-inner">
@@ -533,9 +543,6 @@ const edges = corners
     // Settled notification now holds ~1.8s, against 0.45s before.
     holdTo: 0.97,
   };
-  const POSTCODE = "HP13 5BP";
-  const AREA_M2 = 118;
-
   const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
   /** Normalised progress through a window, 0 before and 1 after. */
   const span = (p: number, a: number, b: number) => clamp01((p - a) / (b - a));
@@ -547,6 +554,12 @@ const edges = corners
     document.querySelectorAll<HTMLElement>("[data-roof-story]").forEach((root) => {
       if (root.dataset.stBound === "1") return;
       root.dataset.stBound = "1";
+
+      // Single source of truth, handed over on the element. These used to be
+      // re-declared here and drifted from the frontmatter — the typed field
+      // and the notification ended up showing different postcodes.
+      const POSTCODE = root.dataset.postcode ?? "";
+      const AREA_M2 = Number(root.dataset.area ?? 0);
 
       const q = <T extends Element>(s: string) => root.querySelector<T>(s);
       const ask = q<HTMLElement>("[data-st-ask]")!;
