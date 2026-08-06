@@ -750,6 +750,11 @@ const NAV = [
     display: block;
     height: 28px;
     width: auto;
+    /* .dd-side is a flex COLUMN, so the default stretch alignment overrode
+       `width: auto` and pulled the wordmark to the full sidebar width — it was
+       rendering at a 8.14 aspect against the file's true 3.23, i.e. 2.5x too
+       wide. Any wordmark dropped into a flex column needs this. */
+    align-self: flex-start;
   }
   .dd-nav-icon { display: flex; color: var(--color-muted); transition: color 0.2s ease; }
   .dd-nav-item { color: var(--color-ink-soft); transition: color 0.2s ease; }
