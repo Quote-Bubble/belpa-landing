@@ -128,9 +128,14 @@ const dashboardUrl =
      bar's wordmark and the big hero one were both on screen — brand-dock only
      sets that class after two animation frames.
      `has-js` is set by an inline script in Layout.astro's <head>, so with no JS
-     it never lands and the header keeps its own wordmark. */
-  :global(html.has-js) .header-brand img {
-    visibility: hidden;
+     it never lands and the header keeps its own wordmark.
+     Scoped to desktop, because that's the only place the morph runs — on a
+     phone nothing ever flies in to replace this, so hiding it left the header
+     permanently brandless. */
+  @media (min-width: 640px) {
+    :global(html.has-js) .header-brand img {
+      visibility: hidden;
+    }
   }
   .header-brand:focus-visible {
     outline: 2px solid var(--color-brand-500);
@@ -201,6 +206,13 @@ const dashboardUrl =
   }
 
   /* —— The flying wordmark —— */
+  /* Desktop only, matching the JS gate in boot(). Belt and braces: if the
+     script ever runs on a phone again this guarantees nothing leaks through. */
+  @media (max-width: 639px) {
+    .brand-fly {
+      display: none;
+    }
+  }
   .brand-fly {
     position: fixed;
     top: 0;
@@ -327,9 +339,18 @@ const dashboardUrl =
     };
   }
 
+  // The wordmark morph is a DESKTOP-only showpiece. On touch it can't stay
+  // smooth: native momentum scrolling delivers position updates on a separate
+  // thread from the per-frame transform writes, and the glass header
+  // recompositing on top of that makes it visibly stutter. Phones get the
+  // header's own static wordmark instead, and the hero one simply scrolls away.
+  // (This gate existed before, was lost when the morph was reinstated
+  //  alongside the header bar, and the jitter came straight back.)
+  const DESKTOP = "(min-width: 640px)";
+
   function boot() {
     initHeader();
-    initBrandDock();
+    if (window.matchMedia(DESKTOP).matches) initBrandDock();
   }
 
   boot();
