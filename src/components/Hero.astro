@@ -10,37 +10,49 @@ import RoofStory from "./RoofStory.astro";
   data-brand-spacer / data-widget-spacer is layout-only
   and gets handed off to it (see brand-dock.ts).
 
-  The roof scan is the proof: it traces the outline and reads the roof back as
-  facts, which explains the product faster than the paragraph does. The widget
-  sits underneath at its own full width.
+  Structure: one rail on the left — brand, promise, sub-line, then the live
+  widget — with the roof scan beside it as support. Everything in the rail
+  shares a left edge and reads top to bottom. The brand and the widget used to
+  live outside that column (above and below the grid), which is what made the
+  hero read as four loose objects arranged around a card.
 
-  ⚠️ The widget column must stay WIDER THAN 640px. The embed picks its mobile
-  layout from its own width, so a narrower column makes it request the
-  fullscreen overlay on desktop — which is exactly the flap the split hero
-  caused. 740px keeps it comfortably clear.
+  The roof scan is the proof: it traces the outline and reads the roof back as
+  facts, which explains the product faster than the paragraph does. It is
+  deliberately the smaller of the two — it narrates, the widget does.
+
+  ⚠️ The rail must stay WIDER THAN 640px. The embed picks its mobile layout
+  from its own width, so a narrower rail makes it request the fullscreen
+  overlay on desktop — the flap that a fractional column caused before. The
+  rail is a fixed 680px for exactly this reason: a fraction silently drops
+  under the threshold at some viewport, a fixed width cannot.
 -->
 <section class="hero relative flex min-h-[100svh] flex-col">
   <div class="hero-stage relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-5 sm:px-6">
-    <!-- Deliberately not a heading. This is the brand mark, and its only
-         content is an image with an empty alt — so as a top-level heading it
-         was literally empty to a crawler, while the actual promise sat in a
-         paragraph below. The promise is the heading now; the brand is
-         announced by the header link, so this is decorative. -->
-    <div class="hero-brand" aria-hidden="true">
-      <span class="hero-brand-spacer" data-brand-spacer>
-        <img
-          src="/belpa-wordmark.png"
-          alt=""
-          width="900"
-          height="279"
-          fetchpriority="high"
-          decoding="sync"
-        />
-      </span>
-    </div>
-
     <div class="hero-grid">
+      <!-- One rail, read top to bottom: who we are, what we fix, how you say
+           it, then the control that does it. The brand and the widget used to
+           sit OUTSIDE this column — the brand above the grid, the widget below
+           it — which is what made the hero read as four unrelated objects
+           scattered around a card. -->
       <div class="hero-copy">
+        <!-- Deliberately not a heading. This is the brand mark, and its only
+             content is an image with an empty alt — so as a top-level heading
+             it was literally empty to a crawler, while the actual promise sat
+             in a paragraph below. The promise is the heading; the brand is
+             announced by the header link, so this is decorative. -->
+        <div class="hero-brand" aria-hidden="true">
+          <span class="hero-brand-spacer" data-brand-spacer>
+            <img
+              src="/belpa-wordmark.png"
+              alt=""
+              width="900"
+              height="279"
+              fetchpriority="high"
+              decoding="sync"
+            />
+          </span>
+        </div>
+
         <h1 class="font-display hero-promise sub-load">
           Stop losing leads with slow quotes.
         </h1>
@@ -49,24 +61,20 @@ import RoofStory from "./RoofStory.astro";
           imagery, so you know which jobs are worth the visit.
         </p>
 
-        <!-- No "Book a call" here. The header carries it as a filled button
-             from the first frame, so a second one in the copy was the same
-             action twice within one screen. -->
+        <!-- The embed is the real widget, unmodified — the same one roofers put
+             on their own sites. Its button says "Get quote" because that is what
+             a homeowner is doing; it must NOT be relabelled to something like
+             "try it free", which would be nonsense on a customer's site. -->
+        <div class="hero-widget widget-load" data-widget-shell>
+          <!-- Holds layout while #belpa-widget is position:fixed in overlay mode -->
+          <div class="hero-widget-spacer" data-widget-spacer aria-hidden="true"></div>
+          <LiveWidget />
+        </div>
       </div>
 
       <div class="hero-scan sub-load sub-load-late">
         <RoofStory />
       </div>
-    </div>
-
-    <!-- The embed is the real widget, unmodified — the same one roofers put on
-         their own sites. Its button says "Get quote" because that is what a
-         homeowner is doing; it must NOT be relabelled to something like "try
-         it free", which would be nonsense on a customer's site. -->
-    <div class="hero-widget widget-load" data-widget-shell>
-      <!-- Holds layout while #belpa-widget is position:fixed during the dock morph -->
-      <div class="hero-widget-spacer" data-widget-spacer aria-hidden="true"></div>
-      <LiveWidget />
     </div>
 
     <!-- Nothing sits under the widget. Two attempts have been made: an
@@ -107,7 +115,10 @@ import RoofStory from "./RoofStory.astro";
 
   /* —— Brand —— */
   .hero-brand {
-    margin: 0;
+    /* Opens the rail, so it needs air beneath it rather than sitting on the
+       headline. It is no longer the biggest thing on screen — the promise is,
+       which is the right way round for a brand nobody recognises yet. */
+    margin: 0 0 clamp(1.4rem, 3.2svh, 2.25rem);
     /* Zero strut so the inline-block spacer isn't sitting on a baseline with a
        descender gap under it — the line box is then exactly the logo's height. */
     line-height: 0;
@@ -118,7 +129,7 @@ import RoofStory from "./RoofStory.astro";
   .hero-brand-spacer {
     position: relative;
     display: inline-block;
-    font-size: clamp(3rem, 6.5vw, 4.75rem);
+    font-size: clamp(2.4rem, 4.4vw, 3.5rem);
     line-height: 0;
     user-select: none;
     pointer-events: none;
@@ -181,24 +192,23 @@ import RoofStory from "./RoofStory.astro";
     gap: clamp(1.5rem, 4vw, 2.25rem);
     align-items: center;
     width: 100%;
-    margin-top: clamp(1.1rem, 3svh, 1.9rem);
   }
-  @media (min-width: 1024px) {
-    .hero-grid {
-      grid-template-columns: minmax(0, 0.92fr) minmax(0, 1fr);
-      gap: clamp(2rem, 4.5vw, 3.25rem);
-    }
-  }
+  /* The rail is a FIXED 680px, not a fraction.
 
-  /* Wide desktop only: open the gutter so the roof card sits further right,
-     clearing the 620px-wide bar that rises beside it (see .hero-widget below).
-     Deliberately NOT applied from 1024px. There, the right column is only
-     ~480px and the copy is shorter, so there is neither the horizontal room
-     for the bar to clear the card nor the vertical slack for it to rise into —
-     it would land on top of both. Below 1280px the original stacking is kept. */
-  @media (min-width: 1280px) {
+     Two reasons. It has to clear 640px or the embed inside it switches to its
+     mobile fullscreen layout (the overlay flap warned about at the top of this
+     file) — a fractional column silently drops under that at some viewport and
+     the bug comes back. And fixing it makes the widget's geometry deterministic,
+     so the bar's alignment below is a constant rather than something that has
+     to be re-derived per breakpoint.
+
+     Splitting at 1200px rather than 1024px: 680 + gap + a usable panel does not
+     fit below that, so the layout stacks instead of cramming. */
+  @media (min-width: 1200px) {
     .hero-grid {
-      column-gap: clamp(5rem, 8vw, 8rem);
+      grid-template-columns: 680px minmax(0, 1fr);
+      column-gap: clamp(2.75rem, 4vw, 4.5rem);
+      align-items: center;
     }
   }
 
@@ -227,12 +237,16 @@ import RoofStory from "./RoofStory.astro";
   }
 
 
+  /* The panel is support, not a second hero. Beside the rail it takes whatever
+     the grid leaves (~480px), which keeps it clearly secondary to the control
+     on the left — the two used to sit at matching weight, which is why the page
+     read as having two competing search bars. */
   .hero-scan {
     width: 100%;
-    max-width: 40rem;
+    max-width: 34rem;
     margin-inline: auto;
   }
-  @media (min-width: 1024px) {
+  @media (min-width: 1200px) {
     .hero-scan {
       max-width: none;
       margin-inline: 0;
@@ -240,57 +254,38 @@ import RoofStory from "./RoofStory.astro";
   }
 
   /* —— The widget ——
-     Centred, not left-aligned with the copy. Left-aligned it sat under the
-     copy column while the space beneath the scan card stayed empty, so it
-     read as floating loose on the blob rather than belonging to the hero.
-     Centred, with the line above naming it, it reads as its own demo band.
-     Width stays >640px — see the warning at the top of this file. */
+     Last item in the rail: the control you actually use, directly under the
+     sentence that promises it. Everything above sets it up. */
   .hero-widget {
     position: relative;
     width: 100%;
     max-width: 740px;
-    margin-top: clamp(1.6rem, 3.8svh, 2.5rem);
+    margin-top: clamp(1.85rem, 4svh, 2.9rem);
     margin-inline: auto;
   }
-  /* Desktop: line the widget's visible bar up with the headline.
 
-     Left-aligning this container is not enough on its own. The embed centres
-     its OWN card inside the iframe (max-width 620px collapsed, mx-auto), so in
-     a 740px frame the bar floats (740 - 620) / 2 = 60px in from the container's
-     edge — which is the gap that made it read as still-centred. Pulling the
-     frame left by exactly that inset puts the BAR on the headline's edge. The
-     frame's leading 60px is transparent and simply clips.
+  /* Line the visible BAR up with the headline, not the iframe.
 
-     ⚠️ The frame must stay 740px. Below 640px the embed picks its mobile
-     fullscreen layout, which is the overlay flap noted at the top of this file
-     — so the frame cannot just be narrowed to the card's width instead.
+     The embed centres its own card inside the frame, so left-aligning the
+     frame still leaves the bar floating inside it. The offset is half the
+     leftover — and `min()` makes it self-correcting across both stages rather
+     than two hand-written numbers: collapsed the card is 620 in a 680 frame
+     (-30px), in flow it wants 700 but the frame caps it at 680, so the
+     leftover is zero and the bar simply stays put as the panel opens.
+
      ⚠️ 620/700 mirror --quote-collapsed-width / --quote-shell-width in
      belpa-widget-frontend/app/globals.css. If those move, move these. */
-  @media (min-width: 1024px) {
+  @media (min-width: 1200px) {
     .hero-widget {
-      --q-embed-card-w: 620px;
-      margin-inline: calc((var(--q-embed-card-w) - 740px) / 2) auto;
+      --q-frame-w: 680px;
+      --q-card-w: 620px;
+      margin-inline: calc(
+          (min(var(--q-card-w), var(--q-frame-w)) - var(--q-frame-w)) / 2
+        )
+        auto;
     }
-    /* In the flow stage the card grows to 700px. Since it grows about its own
-       centre, without this the bar's left edge would jump 40px further left as
-       the panel opens instead of staying put. */
     .hero-widget:has(#belpa-widget[data-stage="flow"]) {
-      --q-embed-card-w: 700px;
-    }
-  }
-
-  /* Lift the bar up beside the roof card instead of leaving it stranded below.
-     The widget has to live outside the grid (it needs >640px; the copy column
-     is ~530px), so it starts below the taller of the two columns — the card —
-     which left a void under "Book a call" and the bar floating on its own.
-     The card is the taller column, so that void is exactly the slack this
-     borrows back. -4rem lands the bar ~45px under "Book a call" while still
-     clearing the card's bottom edge.
-     Paired with the wider gutter above: without that the bar's right edge
-     would run into the card. Same 1280px gate, for the same reason. */
-  @media (min-width: 1280px) {
-    .hero-widget {
-      margin-top: -4rem;
+      --q-card-w: 700px;
     }
   }
   .hero-widget-spacer {
@@ -304,7 +299,6 @@ import RoofStory from "./RoofStory.astro";
     .hero-stage {
       padding-top: max(5rem, calc(env(safe-area-inset-top, 0px) + 4.75rem));
     }
-    .hero-widget { margin-inline: auto; }
   }
 
   @media (max-width: 640px) {
@@ -314,7 +308,7 @@ import RoofStory from "./RoofStory.astro";
       padding-bottom: max(2rem, env(safe-area-inset-bottom, 0px));
     }
     .hero-brand-spacer { font-size: clamp(2.75rem, 11vw, 3.5rem); }
-    .hero-grid { gap: 1.3rem; margin-top: 1rem; }
+    .hero-grid { gap: 1.3rem; }
     .hero-promise {
       font-size: clamp(1.75rem, 7.4vw, 2.15rem);
       line-height: 1.1;
