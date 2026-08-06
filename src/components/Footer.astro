@@ -19,12 +19,26 @@ const year = new Date().getFullYear();
 <footer class="footer-giant relative">
   <!-- Desktop: giant brand echo + scroll FX. Hidden on phones. -->
   <div class="giant-wrap" data-reveal="brand-echo">
-    <div class="giant-word" aria-hidden="true" data-fx="punch">belpa</div>
+    <img
+      class="giant-word"
+      src="/belpa-wordmark-light.png"
+      alt=""
+      width="1329"
+      height="412"
+      aria-hidden="true"
+      data-fx="punch"
+    />
   </div>
 
   <!-- Mobile-only closer: always visible, no reveal/FX dependency. -->
   <div class="footer-m" aria-hidden="true">
-    <p class="footer-m-brand font-display">belpa</p>
+    <img
+      class="footer-m-brand"
+      src="/belpa-wordmark-light.png"
+      alt=""
+      width="1329"
+      height="412"
+    />
   </div>
 
   <div class="footer-legal">
@@ -112,17 +126,25 @@ const year = new Date().getFullYear();
     padding-inline: 0.5rem;
   }
 
+  /* The logo as a white silhouette rather than type set to imitate it — same
+     device (and same asset) as the dashboard's auth echo. Height is tuned to
+     land at roughly the width the type version occupied. */
   .giant-word {
+    /* Held in a custom property so the negative margin can be a fraction of
+       the rendered height. `em` would resolve against the inherited font-size
+       here (an image has none of its own), which is ~1px, not ~11px. */
+    --giant-h: clamp(2.6rem, 14.3vw, 15.5rem);
+    display: block;
+    /* .giant-wrap is a flex container: without flex:none the default shrink
+       would narrow the img while the height stays fixed, squashing the logo. */
+    flex: none;
+    height: var(--giant-h);
+    width: auto;
+    max-width: none;
     margin-top: clamp(1.25rem, 4vw, 3rem);
-    margin-bottom: -0.06em;
-    font-family: var(--font-display);
-    font-weight: 600;
-    font-size: clamp(3.6rem, 19vw, 22rem);
-    line-height: 0.9;
-    letter-spacing: -0.045em;
-    text-align: center;
-    white-space: nowrap;
-    color: #ffffff;
+    /* Tucks the base behind the legal bar, as the type version's cropped
+       descender did. */
+    margin-bottom: calc(var(--giant-h) * -0.055);
     opacity: 0.92;
     user-select: none;
     pointer-events: none;
@@ -197,12 +219,10 @@ const year = new Date().getFullYear();
       text-align: center;
     }
     .footer-m-brand {
-      margin: 0;
-      font-size: 2.75rem;
-      font-weight: 600;
-      letter-spacing: -0.045em;
-      line-height: 0.92;
-      color: #ffffff;
+      display: block;
+      height: 2.6rem;
+      width: auto;
+      margin: 0 auto;
       user-select: none;
     }
 
