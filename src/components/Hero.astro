@@ -204,6 +204,18 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     }
   }
 
+  /* Wide desktop only: open the gutter so the roof card sits further right,
+     clearing the 620px-wide bar that rises beside it (see .hero-widget below).
+     Deliberately NOT applied from 1024px. There, the right column is only
+     ~480px and the copy is shorter, so there is neither the horizontal room
+     for the bar to clear the card nor the vertical slack for it to rise into —
+     it would land on top of both. Below 1280px the original stacking is kept. */
+  @media (min-width: 1280px) {
+    .hero-grid {
+      column-gap: clamp(5rem, 8vw, 8rem);
+    }
+  }
+
   .hero-copy {
     text-align: left;
   }
@@ -305,6 +317,21 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
        the panel opens instead of staying put. */
     .hero-widget:has(#belpa-widget[data-stage="flow"]) {
       --q-embed-card-w: 700px;
+    }
+  }
+
+  /* Lift the bar up beside the roof card instead of leaving it stranded below.
+     The widget has to live outside the grid (it needs >640px; the copy column
+     is ~530px), so it starts below the taller of the two columns — the card —
+     which left a void under "Book a call" and the bar floating on its own.
+     The card is the taller column, so that void is exactly the slack this
+     borrows back. -4rem lands the bar ~45px under "Book a call" while still
+     clearing the card's bottom edge.
+     Paired with the wider gutter above: without that the bar's right edge
+     would run into the card. Same 1280px gate, for the same reason. */
+  @media (min-width: 1280px) {
+    .hero-widget {
+      margin-top: -4rem;
     }
   }
   .hero-widget-spacer {
