@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# The quote widget is served from widget.belpa.co.uk and embedded here in an
+# iframe. Its content isn't part of this document, so there's nothing to gain
+# from crawling the embed URL directly.
+
+Sitemap: https://belpa.co.uk/sitemap-index.xml

@@ -23,8 +23,13 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
 -->
 <section class="hero relative flex min-h-[100svh] flex-col">
   <div class="hero-stage relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-5 sm:px-6">
-    <h1 class="hero-brand" aria-label="Belpa">
-      <span class="hero-brand-spacer" data-brand-spacer aria-hidden="true">
+    <!-- Deliberately not a heading. This is the brand mark, and its only
+         content is an image with an empty alt — so as a top-level heading it
+         was literally empty to a crawler, while the actual promise sat in a
+         paragraph below. The promise is the heading now; the brand is
+         announced by the header link, so this is decorative. -->
+    <div class="hero-brand" aria-hidden="true">
+      <span class="hero-brand-spacer" data-brand-spacer>
         <img
           src="/belpa-wordmark.png"
           alt=""
@@ -34,13 +39,13 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
           decoding="sync"
         />
       </span>
-    </h1>
+    </div>
 
     <div class="hero-grid">
       <div class="hero-copy">
-        <p class="font-display hero-promise sub-load">
+        <h1 class="font-display hero-promise sub-load">
           Stop losing leads with slow quotes.
-        </p>
+        </h1>
         <p class="hero-support sub-load sub-load-late">
           We'll give your customers instant, indicative quotes from satellite
           imagery, so you know which jobs are worth the visit.

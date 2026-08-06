@@ -5,6 +5,8 @@ import SpeedInsights from "@vercel/speed-insights/astro";
 interface Props {
   title?: string;
   description?: string;
+  /** Set on pages that shouldn't be indexed. Nothing uses it yet. */
+  noindex?: boolean;
 }
 
 // Channel-neutral on purpose. Belpa ships two distribution routes — the embed,
@@ -15,20 +17,90 @@ const {
   title = "Belpa: instant roof quotes for UK roofers",
   description =
     "Your customers get a price for their roof in seconds, worked out from satellite imagery. You get their details and the price they were shown. Use it on your website or hand out a link and QR code.",
+  noindex = false,
 } = Astro.props;
+
+// Built off Astro.site (astro.config.mjs). Sub-pages are canonicalised WITHOUT
+// a trailing slash and the root keeps its "/", which is exactly what the
+// sitemap emits (see astro.config.mjs) and what vercel.json's trailingSlash
+// redirect enforces. All three have to agree: /privacy and /privacy/ both
+// return 200, so if they disagree the signal is split across two URLs Google
+// treats as separate pages.
+const path = Astro.url.pathname.replace(/\/+$/, "");
+const canonical = `${new URL(Astro.site!).origin}${path || "/"}`;
+const ogImage = new URL("/og-image.jpg", Astro.site).href;
 ---
 
 <!doctype html>
-<html lang="en">
+<!-- en-GB, not en: every price is in £, areas are m², and the product is sold
+     to UK roofers only. The regional subtag is a relevance signal worth giving. -->
+<html lang="en-GB">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:site_name" content="Belpa" />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Belpa" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <!-- Structured data. Deliberately limited to things actually on the page
+         and verifiable: no price (there's no pricing section to back it up),
+         no aggregateRating, no sameAs, and no FAQPage — marking up Q&A that
+         isn't visible on the page is a guidelines violation, and Google
+         retired FAQ rich results for most sites anyway. Add FAQPage only if a
+         real FAQ section ships. -->
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify({
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": `${Astro.site}#organization`,
+            name: "Belpa",
+            url: Astro.site?.href,
+            logo: new URL("/icon-512.png", Astro.site).href,
+            areaServed: { "@type": "Country", name: "United Kingdom" },
+          },
+          {
+            "@type": "WebSite",
+            "@id": `${Astro.site}#website`,
+            url: Astro.site?.href,
+            name: "Belpa",
+            inLanguage: "en-GB",
+            publisher: { "@id": `${Astro.site}#organization` },
+          },
+          {
+            "@type": "SoftwareApplication",
+            name: "Belpa",
+            applicationCategory: "BusinessApplication",
+            operatingSystem: "Web",
+            url: Astro.site?.href,
+            description:
+              "Instant roof quotes for UK roofers. Customers get an indicative price for their roof in seconds, measured from satellite imagery, delivered through a widget on the roofer's website or a shareable link and QR code.",
+            publisher: { "@id": `${Astro.site}#organization` },
+          },
+        ],
+      })}
+    />
+
     <!-- SVG first: browsers that support it get a mark that stays sharp at any
          size, with the PNGs as the fallback for those that don't. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
