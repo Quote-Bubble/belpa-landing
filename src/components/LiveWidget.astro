@@ -161,9 +161,14 @@ const COLLAPSED_H_MOBILE = 82;
   :global(html.belpa-modal-in) .q-modal-chrome {
     opacity: 1;
   }
+  /* Mirrors the frame's MEASURED rect (set in JS), not the height the embed
+     reports — that number includes shadow room below the card, so hanging the
+     close control off it put the button well above the panel's real corner.
+     The card is top-aligned in the frame and fills its width, so the frame's
+     top-right corner is the card's. */
   .q-modal-box {
     position: relative;
-    width: clamp(640px, calc(100vw - 2rem), 700px);
+    width: var(--q-modal-w, 700px);
     height: var(--q-modal-h, 574px);
   }
   .q-close {
@@ -456,6 +461,10 @@ const COLLAPSED_H_MOBILE = 82;
 
       if (mode === "expanded" && desktopMq.matches) {
         enterModal();
+        // The panel changes height between steps and the frame eases to it
+        // over 320ms, so measure once now and again once it has landed.
+        syncModalChrome();
+        window.setTimeout(syncModalChrome, 360);
         // The panel is centred over the page now instead of growing downward
         // into it, so there is nothing below to make room for. Both the
         // push-down and the scroll-into-view existed only for the inline
@@ -475,22 +484,36 @@ const COLLAPSED_H_MOBILE = 82;
     let closeFallback = 0;
     let modalOpen = false;
 
+    /**
+     * Size the invisible box the close control hangs off to the frame's REAL
+     * rect. panelH is what the embed reports and includes shadow room below
+     * the card, so using it put the button above the panel's actual corner.
+     */
+    function syncModalChrome() {
+      if (!modalOpen || !frame) return;
+      const r = frame.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      const s = document.documentElement.style;
+      s.setProperty("--q-modal-w", `${Math.round(r.width)}px`);
+      s.setProperty("--q-modal-h", `${Math.round(r.height)}px`);
+    }
+
     function enterModal() {
       if (modalOpen) return;
       modalOpen = true;
-      // Sizes the invisible box the close button hangs off, so the control
-      // tracks the panel's real height rather than a hard-coded one.
-      document.documentElement.style.setProperty("--q-modal-h", `${panelH}px`);
       backdrop?.removeAttribute("hidden");
       chrome?.removeAttribute("hidden");
       document.documentElement.classList.add("belpa-modal");
       // Lenis owns the scroll; CSS overflow alone wouldn't stop it.
       window.__lenis?.stop?.();
-      // Next frame, so the transition has a start state to run from.
+      // Next frame, so the transition has a start state to run from — and the
+      // frame is only in its fixed, centred box by then, which is what the
+      // chrome has to measure.
       requestAnimationFrame(() =>
-        requestAnimationFrame(() =>
-          document.documentElement.classList.add("belpa-modal-in"),
-        ),
+        requestAnimationFrame(() => {
+          document.documentElement.classList.add("belpa-modal-in");
+          syncModalChrome();
+        }),
       );
     }
 
@@ -533,6 +556,7 @@ const COLLAPSED_H_MOBILE = 82;
 
     closeBtn?.addEventListener("click", requestClose);
     backdrop?.addEventListener("click", requestClose);
+    window.addEventListener("resize", syncModalChrome, { passive: true });
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && modalOpen) requestClose();
     });

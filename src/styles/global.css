@@ -644,3 +644,24 @@ html.belpa-overlay-open .site-dots {
 html.belpa-expanded #belpa-widget {
   z-index: 30;
 }
+
+/* —— Desktop modal layering ——
+   Two stacking contexts have to be broken out of, and both bit:
+
+   1. The rule above gives #belpa-widget a z-index, which makes it a stacking
+      context — so the iframe's own z-index is scoped INSIDE it and can never
+      climb over the backdrop. The frame sat at 30, behind the backdrop, and
+      got blurred along with the page. Raising the widget itself is the fix;
+      the iframe's z-index inside it is then irrelevant.
+   2. .hero-stage is `relative z-10`, so the backdrop — which lives inside it —
+      was capped at 10 and couldn't cover the header (60) or the flying
+      wordmark (70). Those two stayed sharp over a blurred page.
+
+   Both are scoped to belpa-modal, so nothing changes when the modal is shut.
+   Specificity note: (1) must match the id selector above and come after it. */
+html.belpa-modal .hero-stage {
+  z-index: 2000;
+}
+html.belpa-modal #belpa-widget {
+  z-index: 2001;
+}
