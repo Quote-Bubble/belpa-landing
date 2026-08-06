@@ -454,19 +454,6 @@ input {
   }
 }
 
-/* Same rise language as the widget — delayed so it lands as a follow-through */
-.meeting-load {
-  opacity: 0;
-  transform: translate3d(0, 36px, 0) scale(0.96);
-  transform-origin: center top;
-  animation: widget-rise 0.95s var(--ease-out-expo) 1.7s forwards;
-}
-.meeting-load.is-settled {
-  animation: none;
-  opacity: 1;
-  transform: none;
-}
-
 /* Atmosphere blooms in first — everything else reveals through its light */
 .site-bg {
   opacity: 0;
@@ -577,7 +564,6 @@ input {
   .sub-load,
   .cta-load > *,
   .widget-load,
-  .meeting-load,
   .sub-load,
   .site-bg,
   .site-dots {

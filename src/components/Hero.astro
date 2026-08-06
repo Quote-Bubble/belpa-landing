@@ -2,14 +2,12 @@
 import LiveWidget from "./LiveWidget.astro";
 import RoofStory from "./RoofStory.astro";
 
-// Keep in sync with Nav.astro meetingUrl
-const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
 ---
 
 <!--
   Left-aligned hero. The wordmark opens large and flies up into the nav on
   scroll — Nav.astro owns the visible flying mark, everything here marked
-  data-brand-spacer / data-widget-spacer / data-meeting-spacer is layout-only
+  data-brand-spacer / data-widget-spacer is layout-only
   and gets handed off to it (see brand-dock.ts).
 
   The roof scan is the proof: it traces the outline and reads the roof back as
@@ -51,21 +49,9 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
           imagery, so you know which jobs are worth the visit.
         </p>
 
-        <a
-          href={meetingUrl}
-          class="hero-book meeting-load"
-          data-meeting-spacer
-          data-meeting-cta
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <rect x="3" y="5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="2"/>
-            <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          Book a call
-          <span class="hero-book-arrow" aria-hidden="true">→</span>
-        </a>
+        <!-- No "Book a call" here. The header carries it as a filled button
+             from the first frame, so a second one in the copy was the same
+             action twice within one screen. -->
       </div>
 
       <div class="hero-scan sub-load sub-load-late">
@@ -240,33 +226,6 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     color: var(--color-ink-soft);
   }
 
-  /* Deliberately a quiet link, not a filled slab: the widget below is the
-     primary action and a saturated button here out-shouted it. */
-  .hero-book {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    margin-top: 1.35rem;
-    padding: 0.6rem 0;
-    font-size: 0.98rem;
-    font-weight: 600;
-    letter-spacing: -0.015em;
-    line-height: 1;
-    color: var(--color-brand-600);
-    text-decoration: none;
-    transition: color 0.15s ease;
-  }
-  .hero-book svg { flex: none; }
-  .hero-book-arrow {
-    transition: transform 0.25s var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1));
-  }
-  .hero-book:hover { color: var(--color-brand-700, var(--color-brand-600)); }
-  .hero-book:hover .hero-book-arrow { transform: translateX(3px); }
-  .hero-book:focus-visible {
-    outline: 2px solid var(--color-brand-500);
-    outline-offset: 4px;
-    border-radius: 6px;
-  }
 
   .hero-scan {
     width: 100%;
@@ -367,7 +326,6 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
       line-height: 1.5;
       max-width: 24rem;
     }
-    .hero-book { margin-top: 1rem; }
     .hero-scroll {
       bottom: max(0.65rem, calc(env(safe-area-inset-bottom, 0px) + 0.35rem));
     }
@@ -548,7 +506,6 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
   function boot() {
     initTryCta();
     settleLoad("[data-widget-shell]");
-    settleLoad("[data-meeting-cta]");
     initHeroScrollCue();
   }
 
