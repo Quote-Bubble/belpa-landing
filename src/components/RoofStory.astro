@@ -219,8 +219,18 @@ const edges = corners
   <div class="st-scene st-lead" data-st-lead>
     <div class="st-notif">
       <div class="st-notif-top">
-        <img class="st-notif-icon" src="/favicon-32.png" alt="" width="32" height="32" />
-        <span class="st-notif-app">Belpa</span>
+        <!-- The real wordmark, the same asset and treatment the widget uses for
+             "Powered by" (public/belpa-wordmark.png at a fixed height, auto
+             width). It replaces the favicon plus a typed "BELPA" — the mark
+             already says the name, so setting it again was doubling up. Costs
+             nothing extra: Layout.astro already preloads this for the hero. -->
+        <img
+          class="st-notif-mark"
+          src="/belpa-wordmark.png"
+          alt=""
+          width="900"
+          height="279"
+        />
         <span class="st-notif-time">now</span>
       </div>
       <p class="st-notif-title">New lead</p>
@@ -437,17 +447,11 @@ const edges = corners
     align-items: center;
     gap: 0.3rem;
   }
-  .st-notif-icon {
-    width: 18px;
-    height: 18px;
-    border-radius: 5px;
-  }
-  .st-notif-app {
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: rgba(20, 30, 55, 0.55);
+  /* Height is the size knob, width follows — same as the widget's h-5 w-auto. */
+  .st-notif-mark {
+    height: 15px;
+    width: auto;
+    display: block;
   }
   .st-notif-time {
     margin-left: auto;
