@@ -1,37 +1,43 @@
 ---
-// The hero's story animation.
+// The hero's story animation: a customer asks for a price, the roof gets
+// measured, and the lead lands on the roofer's phone. Six beats on ONE clock.
 //
-//   ask → dive from space → measure the roof → pull back, the street lights up
-//   → the leads rain in, with a stopwatch running the whole way
+// Why a JS timeline and not CSS keyframes: the previous version ran seven
+// elements off hand-tuned keyframe percentages, so every timing change meant
+// re-deriving all seven. Here each beat is a named window in BEATS below and
+// nothing else needs to know about it. It also makes the whole thing
+// scrubbable — append ?rs=0.42 to freeze the timeline at that point, which is
+// the only practical way to review a specific beat.
 //
-// Five scenes on ONE clock. Each beat is a named window in BEATS (client script
-// below) and nothing else needs to know about it, so timing can be retuned a
-// beat at a time. Append ?rs=0.42 to freeze the timeline there — the only
-// practical way to review a single frame of this.
+// Everything drawn over the photo is DERIVED FROM THE POLYGON: the corners, the
+// edge lengths, the centroid the area sits on, and the area itself. Nothing is
+// placed by hand. If a mark appears, the geometry produced it.
 //
-// The roof geometry is DERIVED FROM THE POLYGON: corners, edge lengths, the
-// centroid the area sits on, and the area itself. Nothing is hand-placed.
-//
-// THE PRICE IS REAL. £11,500–£18,750 ex VAT is the output of
+// THE PRICE IS REAL. £11,500–£18,750 ex VAT is the actual output of
 // calculateReplacementEstimate() in belpa-widget-frontend, run against the live
-// belpa-landing-demo config for this roof: 118 m², hipped, two storeys, 35°
-// pitch, concrete tile. Access multiplier 1.32, one week of scaffold,
-// confidence width 0.24. Re-run that calculation rather than editing by hand.
+// belpa-landing-demo roofer config for this exact roof: 118 m², hipped, two
+// storeys, 35° pitch, concrete tile. Access multiplier 1.32, one week of
+// scaffold, confidence width 0.24. If the roof or the demo roofer's rates
+// change, re-run that calculation rather than editing these numbers by hand.
 //
-// AREA_M2 is an input, not an output — it describes the house in the photo and
-// is not measured at runtime, which is why the whole figure is aria-hidden.
+// AREA_M2 is the one input rather than an output — it describes the specific
+// house in the photo and is not measured at runtime, which is why the figure
+// stays aria-hidden. Swap the photo and all of this needs re-deriving.
 const roofPath =
   "M277 356 L277 408 L277 480 L277 508 L308 512 L335 517 L339 533 L339 544 L411 545 L474 545 L534 545 L571 547 L625 548 L677 548 L724 551 L725 534 L774 526 L789 513 L807 490 L808 450 L794 428 L784 423 L784 387 L783 341 L777 318 L778 287 L778 255 L725 245 L669 241 L616 239 L611 201 L600 200 L601 141 L546 138 L494 140 L482 140 L479 197 L469 207 L467 239 L362 239 L357 324 L341 334 L342 354 L314 357 Z";
 
 const AREA_M2 = 118;
-const PRICE_MIN = 11500;
-const PRICE_MAX = 18750;
-const PRICE = "£11,500 – £18,750";
-// Buckingham Palace: a postcode nobody can mistake for a real customer, since
-// the animation pairs it with a specific roof and a specific price.
-// Passed to the client on data-postcode below — do NOT re-declare it in the
-// script, it was duplicated once and the two drifted.
+// Buckingham Palace. Deliberately a postcode nobody can mistake for a real
+// customer, because the animation pairs it with a specific roof and a specific
+// price and shouldn't point at anybody's actual house.
+//
+// This value is passed to the client through data-postcode on the figure below.
+// Do NOT re-declare it in the <script> block: it was duplicated there once and
+// the two drifted, so the field typed "HP13 5BP" while the notification said
+// something else entirely.
 const POSTCODE = "SW1A 1AA";
+const PRICE = "£11,500 – £18,750";
+const META = "Hipped · 35° pitch · 2 storeys";
 
 type Pt = { x: number; y: number };
 const pts: Pt[] = [...roofPath.matchAll(/([ML])\s*(-?[\d.]+)\s+(-?[\d.]+)/g)].map(
@@ -62,7 +68,9 @@ function centroid(p: Pt[]): Pt {
 }
 const c = centroid(pts);
 
-// Real corners only — the trace lays several collinear points along each eave.
+// Real corners only. The trace lays several collinear points along each eave;
+// dropping them is what makes the vertices read as corners being found rather
+// than dots sprayed along a line.
 const corners = pts.filter((p, i) => {
   const prev = pts[(i - 1 + pts.length) % pts.length];
   const next = pts[(i + 1) % pts.length];
@@ -74,8 +82,8 @@ const corners = pts.filter((p, i) => {
   return Math.abs(d) >= 25;
 });
 
-// Corner to corner, not point to point — raw path segments gave a 118 m² roof a
-// longest side of 2.9 m.
+// Corner to corner, not point to point — measuring raw path segments gave a
+// 118 m² roof a longest side of 2.9 m.
 const edges = corners
   .map((p, i) => {
     const q = corners[(i + 1) % corners.length];
@@ -97,60 +105,7 @@ const edges = corners
     };
   })
   .sort((a, b) => b.len - a.len)
-  .slice(0, 3);
-
-// —— The street ——
-// On the pull-back the photo shrinks into a stylised plan and the surrounding
-// roofs light up. They are drawn, not traced: at that zoom nobody reads a
-// footprint, and inventing outlines over a real photograph's neighbours would
-// be claiming to have measured houses we haven't.
-//
-// Their prices come from the REAL quote's implied rate (midpoint ÷ area, about
-// £128/m²) applied to each drawn footprint, so they sit in a believable band
-// around the one figure that is genuinely computed.
-const RATE_PER_M2 = Math.round((PRICE_MIN + PRICE_MAX) / 2 / AREA_M2);
-let seed = 20260806;
-const rnd = () => ((seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296);
-
-// Laid out across the WHOLE frame on a jittered grid, with the middle left
-// clear — that's where the measured photo shrinks to, and a lot underneath it
-// would just be a rectangle poking out from behind a photograph.
-const COLS = 6;
-const ROWS = 5;
-const street = Array.from({ length: COLS * ROWS }, (_, i) => {
-  const col = i % COLS;
-  const row = Math.floor(i / COLS);
-  const cw = 1024 / COLS;
-  const ch = 768 / ROWS;
-  const w = 96 + rnd() * 52;
-  const h = 62 + rnd() * 34;
-  const x = col * cw + (cw - w) / 2 + (rnd() - 0.5) * 26;
-  const y = row * ch + (ch - h) / 2 + (rnd() - 0.5) * 22;
-  const areaM2 = Math.round(60 + rnd() * 120);
-  const price = `£${(Math.round((areaM2 * RATE_PER_M2) / 100) * 100).toLocaleString("en-GB")}`;
-  // The photo tile lands centred at ~28% of the frame; skip anything under it.
-  const inCentre = x + w > 350 && x < 674 && y + h > 258 && y < 510;
-  // Ridge and hips, so a lot reads as a roof rather than an empty UI card.
-  // Same plan symbol a surveyor would draw: a ridge down the middle with four
-  // hips running out to the corners.
-  const rx1 = x + w * 0.26;
-  const rx2 = x + w * 0.74;
-  const my = y + h / 2;
-  const hips =
-    `M${rx1.toFixed(0)} ${my.toFixed(0)} L${rx2.toFixed(0)} ${my.toFixed(0)}` +
-    `M${x.toFixed(0)} ${y.toFixed(0)} L${rx1.toFixed(0)} ${my.toFixed(0)}` +
-    `M${x.toFixed(0)} ${(y + h).toFixed(0)} L${rx1.toFixed(0)} ${my.toFixed(0)}` +
-    `M${(x + w).toFixed(0)} ${y.toFixed(0)} L${rx2.toFixed(0)} ${my.toFixed(0)}` +
-    `M${(x + w).toFixed(0)} ${(y + h).toFixed(0)} L${rx2.toFixed(0)} ${my.toFixed(0)}`;
-  return {
-    x, y, w, h, hips,
-    rot: (rnd() - 0.5) * 26,
-    // Only a few carry a price — thirty price tags is noise, not spectacle.
-    price: i % 5 === 2 ? price : null,
-    delay: rnd(),
-    skip: inCentre,
-  };
-}).filter((s) => !s.skip);
+  .slice(0, 4);
 ---
 
 <figure
@@ -160,145 +115,129 @@ const street = Array.from({ length: COLS * ROWS }, (_, i) => {
   data-area={String(AREA_M2)}
   aria-hidden="true"
 >
-  <!-- 1 · Ask -->
+  <!-- Scene 1 — the customer asking. Mirrors the real embed's collapsed bar. -->
   <div class="st-scene st-ask" data-st-ask>
-    <div class="st-bar">
-      <svg class="st-pin" viewBox="0 0 24 24" fill="none">
-        <path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
-        <circle cx="12" cy="10" r="2.5" stroke="currentColor" stroke-width="2" />
-      </svg>
-      <span class="st-typed" data-st-typed></span><span class="st-caret" data-st-caret></span>
-      <span class="st-btn" data-st-btn>Get quote</span>
-    </div>
-  </div>
-
-  <!-- 2 · The dive. Earth, then cloud layers rushing past the lens.
-       The clouds are scaled radial gradients rather than the WebGL cloudscape
-       from CloudPanel — that shader is a slow drifting sky, and running a
-       second GL context above the fold to fake speed would cost more than it
-       could possibly return. -->
-  <div class="st-scene st-space" data-st-space>
-    <div class="st-earth" data-st-earth></div>
-    <!-- Radial streaks. Scaling one big gradient up reads as a colour wash,
-         because a dive is sold by PARALLAX and edges, not by size — things have
-         to move past you at different speeds. Each streak flies out from the
-         centre on its own angle at its own rate. -->
-    {Array.from({ length: 44 }, (_, i) => (
-      <span
-        class="st-star"
-        data-st-star
-        style={`--a:${((i * 137.5) % 360).toFixed(1)}deg; --r0:${(6 + ((i * 37) % 46)).toFixed(0)}; --sp:${(0.7 + ((i * 53) % 60) / 100).toFixed(2)}`}
-      ></span>
-    ))}
-    {[0, 1, 2, 3, 4].map((i) => (
-      <div class={`st-cloud st-cloud-${i}`} data-st-cloud style={`--i:${i}`}></div>
-    ))}
-  </div>
-
-  <!-- 3/4 · The roof, then the street -->
-  <div class="st-scene st-map" data-st-map>
-    <!-- The street is a SIBLING of the world, not a child. Inside it, it
-         scaled down with the photo and stayed a cluster of stamps around the
-         tile instead of filling the frame. -->
-    <svg class="st-street" data-st-street viewBox="0 0 1024 768" preserveAspectRatio="xMidYMid slice">
-        {street.map((s, i) => (
-          <g class="st-lot" style={`--i:${i}; --d:${s.delay}`}>
-            <rect
-              class="st-lot-roof"
-              x={s.x.toFixed(0)}
-              y={s.y.toFixed(0)}
-              width={s.w.toFixed(0)}
-              height={s.h.toFixed(0)}
-              rx="4"
-              transform={`rotate(${s.rot.toFixed(1)} ${(s.x + s.w / 2).toFixed(0)} ${(s.y + s.h / 2).toFixed(0)})`}
-            />
-            <path
-              class="st-lot-hips"
-              d={s.hips}
-              transform={`rotate(${s.rot.toFixed(1)} ${(s.x + s.w / 2).toFixed(0)} ${(s.y + s.h / 2).toFixed(0)})`}
-            />
-            {s.price && (
-              <text class="st-lot-price" x={(s.x + s.w / 2).toFixed(0)} y={(s.y + s.h + 15).toFixed(0)}>{s.price}</text>
-            )}
-          </g>
-      ))}
-    </svg>
-
-    <div class="st-world" data-st-world>
-      <div class="st-stage" data-st-stage>
-        <img
-          class="st-photo"
-          src="/satellite-roof.webp"
-          srcset="/satellite-roof-760.webp 760w, /satellite-roof.webp 1280w"
-          sizes="(min-width: 1024px) 46vw, 92vw"
-          alt=""
-          width="1280"
-          height="960"
-          loading="eager"
-          fetchpriority="high"
-          decoding="async"
-        />
-
-        <svg class="st-overlay" viewBox="0 0 1024 768" preserveAspectRatio="xMidYMid slice">
-          <defs>
-            <filter id="st-glow-soft" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="6" result="b" />
-              <feMerge><feMergeNode in="b" /></feMerge>
-            </filter>
-            <filter id="st-glow-core" x="-35%" y="-35%" width="170%" height="170%">
-              <feGaussianBlur stdDeviation="2" result="b" />
-              <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-          </defs>
-
-          <path class="st-fill" d={roofPath} data-st-fill />
-          <path class="st-glow" d={roofPath} filter="url(#st-glow-soft)" data-st-line />
-          <path class="st-line" d={roofPath} filter="url(#st-glow-core)" data-st-line />
-
-          <g data-st-verts>
-            {corners.map((p, i) => (
-              <circle class="st-vert" cx={p.x} cy={p.y} r="4.5" style={`--i:${i}`} />
-            ))}
-          </g>
-
-          <g data-st-dims>
-            {edges.map((e, i) => (
-              <g class="st-dim" style={`--i:${i}`}>
-                <rect class="st-dim-plate" x={e.x - 34} y={e.y - 15} width="68" height="30" rx="8"
-                  transform={`rotate(${e.angle.toFixed(2)} ${e.x.toFixed(1)} ${e.y.toFixed(1)})`} />
-                <text class="st-dim-text" x={e.x} y={e.y}
-                  transform={`rotate(${e.angle.toFixed(2)} ${e.x.toFixed(1)} ${e.y.toFixed(1)})`}>{e.metres} m</text>
-              </g>
-            ))}
-          </g>
-
-          <g data-st-area class="st-area">
-            <rect class="st-area-plate" x={c.x - 108} y={c.y - 40} width="216" height="80" rx="16" />
-            <text class="st-area-text" x={c.x.toFixed(1)} y={c.y.toFixed(1)} data-st-area-text>0 m²</text>
-          </g>
+    <div class="st-ask-inner">
+      <div class="st-bar">
+        <svg class="st-pin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linejoin="round"
+          />
+          <circle cx="12" cy="10" r="2.5" stroke="currentColor" stroke-width="2" />
         </svg>
+        <span class="st-typed" data-st-typed></span><span class="st-caret" data-st-caret></span>
+        <span class="st-btn" data-st-btn>Get quote</span>
       </div>
     </div>
   </div>
 
-  <!-- 5 · The leads. Not one — they stack. -->
-  <div class="st-scene st-leads" data-st-leads>
-    {[0, 1, 2].map((i) => (
-      <div class="st-notif" data-st-notif style={`--i:${i}`}>
-        <div class="st-notif-top">
-          <img class="st-notif-mark" src="/belpa-wordmark.png" alt="" width="900" height="279" />
-          <span class="st-notif-time">now</span>
-        </div>
-        <p class="st-notif-title">New lead</p>
-        <p class="st-notif-body">{POSTCODE} · 118 m² hipped roof</p>
-        <p class="st-notif-price">{PRICE}<span class="st-notif-vat"> ex VAT</span></p>
-      </div>
-    ))}
+  <!-- Scene 2 — the measurement. -->
+  <div class="st-scene st-map" data-st-map>
+    <div class="st-stage" data-st-stage>
+      <img
+        class="st-photo"
+        src="/satellite-roof.webp"
+        srcset="/satellite-roof-760.webp 760w, /satellite-roof.webp 1280w"
+        sizes="(min-width: 1024px) 46vw, 92vw"
+        alt=""
+        width="1280"
+        height="960"
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+      />
+
+      <svg class="st-overlay" viewBox="0 0 1024 768" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <filter id="st-glow-soft" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="6" result="b" />
+            <feMerge><feMergeNode in="b" /></feMerge>
+          </filter>
+          <filter id="st-glow-core" x="-35%" y="-35%" width="170%" height="170%">
+            <feGaussianBlur stdDeviation="2" result="b" />
+            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+
+        <path class="st-fill" d={roofPath} data-st-fill />
+        <path class="st-glow" d={roofPath} filter="url(#st-glow-soft)" data-st-line />
+        <path class="st-line" d={roofPath} filter="url(#st-glow-core)" data-st-line />
+
+        <g data-st-verts>
+          {corners.map((p, i) => (
+            <circle class="st-vert" cx={p.x} cy={p.y} r="4.5" style={`--i:${i}`} />
+          ))}
+        </g>
+
+        <g data-st-dims>
+          {edges.map((e, i) => (
+            <g class="st-dim" style={`--i:${i}`}>
+              <rect
+                class="st-dim-plate"
+                x={e.x - 34}
+                y={e.y - 15}
+                width="68"
+                height="30"
+                rx="8"
+                transform={`rotate(${e.angle.toFixed(2)} ${e.x.toFixed(1)} ${e.y.toFixed(1)})`}
+              />
+              <text
+                class="st-dim-text"
+                x={e.x}
+                y={e.y}
+                transform={`rotate(${e.angle.toFixed(2)} ${e.x.toFixed(1)} ${e.y.toFixed(1)})`}
+              >{e.metres} m</text>
+            </g>
+          ))}
+        </g>
+
+        <!-- Plate behind the area, so it holds contrast over any roof colour. -->
+        <g data-st-area class="st-area">
+          <rect class="st-area-plate" x={c.x - 108} y={c.y - 40} width="216" height="80" rx="16" />
+          <text class="st-area-text" x={c.x.toFixed(1)} y={c.y.toFixed(1)} data-st-area-text>0 m²</text>
+        </g>
+      </svg>
+    </div>
+
+    <figcaption class="st-meta" data-st-meta>{META}</figcaption>
   </div>
 
-  <!-- Runs across every scene. Deliberately unlabelled: it shows the animation
-       taking seconds, without claiming a real-world end-to-end time. -->
-  <div class="st-clock" data-st-clock>0.00s</div>
+  <!-- Scene 3 — the lead arriving with the roofer.
+       Its own scene rather than an overlay: sitting on the map it covered the
+       measurement the sequence had just spent six seconds producing.
+
+       NO PHONE FRAME, deliberately. A drawn handset was tried and looked
+       uncanny — a bezel is either photoreal or it reads as a cartoon, and at
+       this size it can't be photoreal. It also forced the notification down to
+       a width where the price stopped being readable. The notification's own
+       form is unmistakably a phone notification, so the hardware was carrying
+       no meaning the card wasn't already carrying. -->
+
+  <div class="st-scene st-lead" data-st-lead>
+    <div class="st-notif">
+      <div class="st-notif-top">
+        <!-- The real wordmark, the same asset and treatment the widget uses for
+             "Powered by" (public/belpa-wordmark.png at a fixed height, auto
+             width). It replaces the favicon plus a typed "BELPA" — the mark
+             already says the name, so setting it again was doubling up. Costs
+             nothing extra: Layout.astro already preloads this for the hero. -->
+        <img
+          class="st-notif-mark"
+          src="/belpa-wordmark.png"
+          alt=""
+          width="900"
+          height="279"
+        />
+        <span class="st-notif-time">now</span>
+      </div>
+      <p class="st-notif-title">New lead</p>
+      <p class="st-notif-body">{POSTCODE} · 118 m² hipped roof</p>
+      <p class="st-notif-price">{PRICE}<span class="st-notif-vat"> ex VAT</span></p>
+    </div>
+  </div>
 </figure>
 
 <style>
@@ -310,25 +249,31 @@ const street = Array.from({ length: COLS * ROWS }, (_, i) => {
     aspect-ratio: 16 / 10;
     border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.55);
-    background: #05070f;
+    background: #0d1220;
     box-shadow:
       0 0 0 1px rgba(21, 55, 140, 0.16),
       0 2px 8px rgba(16, 24, 40, 0.08),
       0 28px 60px -28px rgba(23, 60, 160, 0.5);
   }
-  .st-scene { position: absolute; inset: 0; }
+  .st-scene {
+    position: absolute;
+    inset: 0;
+  }
 
-  /* —— 1 · Ask —— */
+  /* —— Scene 1: the ask —— */
   .st-ask {
     display: grid;
     place-items: center;
-    background: radial-gradient(ellipse 70% 60% at 50% 40%, #fff 0%, #f3f6fc 60%, #e8eefb 100%);
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 40%, #ffffff 0%, #f3f6fc 60%, #e8eefb 100%);
+  }
+  .st-ask-inner {
+    width: min(82%, 460px);
   }
   .st-bar {
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    width: min(82%, 460px);
     padding: 0.7rem 0.7rem 0.7rem 0.95rem;
     border-radius: 999px;
     background: #fff;
@@ -336,8 +281,18 @@ const street = Array.from({ length: COLS * ROWS }, (_, i) => {
     box-shadow: 0 18px 40px -22px rgba(10, 32, 90, 0.55);
     font-size: clamp(0.8rem, 1.5cqw, 0.95rem);
   }
-  .st-pin { flex: none; width: 1.1em; height: 1.1em; color: var(--color-ink-soft); }
-  .st-typed { font-weight: 600; color: var(--color-ink); white-space: pre; }
+  .st-pin {
+    flex: none;
+    width: 1.1em;
+    height: 1.1em;
+    color: var(--color-ink-soft);
+  }
+  .st-typed {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--color-ink);
+    white-space: pre;
+  }
   .st-caret {
     display: inline-block;
     width: 2px;
@@ -355,81 +310,18 @@ const street = Array.from({ length: COLS * ROWS }, (_, i) => {
     font-weight: 700;
     color: #fff;
     white-space: nowrap;
+    transition: transform 0.12s ease;
   }
 
-  /* —— 2 · The dive —— */
-  .st-space {
-    display: grid;
-    place-items: center;
-    opacity: 0;
-    background: radial-gradient(ellipse 90% 90% at 50% 120%, #0b1c46 0%, #050914 55%, #01030a 100%);
-  }
-  /* Earth: a limb with an atmospheric rim, seen from above. */
-  /* Kept small and given a hard limb, so you read a planet approaching rather
-     than a blue gradient filling the screen. */
-  .st-earth {
-    position: absolute;
-    width: 42%;
-    aspect-ratio: 1;
-    border-radius: 50%;
-    background:
-      radial-gradient(circle at 36% 30%, rgba(255, 255, 255, 0.5) 0%, transparent 22%),
-      radial-gradient(circle at 42% 38%, #6fa8ff 0%, #2f6bff 34%, #1b3f8f 62%, #081634 88%);
-    box-shadow:
-      0 0 0 1px rgba(140, 190, 255, 0.5),
-      0 0 70px 12px rgba(88, 150, 255, 0.5),
-      inset -18px -14px 60px rgba(2, 6, 18, 0.85);
-    transform: scale(0.3);
-    will-change: transform, opacity;
-  }
-  .st-star {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 2px;
-    height: 2px;
-    border-radius: 999px;
-    background: #dceaff;
-    opacity: 0;
-    will-change: transform, opacity;
-  }
-  .st-cloud {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 46%;
-    aspect-ratio: 1.6;
-    border-radius: 50%;
-    background: radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.95) 0%, rgba(226, 238, 255, 0.6) 42%, transparent 72%);
-    filter: blur(6px);
-    opacity: 0;
-    will-change: transform, opacity;
-  }
-  .st-cloud-0 { margin: -34% 0 0 -46%; }
-  .st-cloud-1 { margin: -6% 0 0 6%; }
-  .st-cloud-2 { margin: 16% 0 0 -30%; }
-  .st-cloud-3 { margin: -22% 0 0 22%; }
-  .st-cloud-4 { margin: 8% 0 0 18%; }
-
-  /* —— 3/4 · Roof and street —— */
+  /* —— Scene 2: the measurement —— */
   .st-map {
     opacity: 0;
-    background: radial-gradient(ellipse 80% 70% at 50% 45%, #0e1c3f 0%, #070d1e 60%, #04060e 100%);
-  }
-  .st-world {
-    position: absolute;
-    inset: 0;
-    transform-origin: center center;
-    will-change: transform;
   }
   .st-stage {
     position: absolute;
     inset: 0;
     transform-origin: center center;
     will-change: transform, filter;
-    /* Rounds off as it shrinks so it reads as a tile on a map, not a crop. */
-    overflow: hidden;
-    border-radius: 0;
   }
   .st-photo {
     position: absolute;
@@ -439,8 +331,7 @@ const street = Array.from({ length: COLS * ROWS }, (_, i) => {
     object-fit: cover;
     display: block;
   }
-  .st-overlay,
-  .st-street {
+  .st-overlay {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -449,10 +340,25 @@ const street = Array.from({ length: COLS * ROWS }, (_, i) => {
     overflow: visible;
   }
 
-  .st-fill { fill: rgba(47, 107, 255, 0.17); opacity: 0; }
-  .st-glow, .st-line { fill: none; stroke-linejoin: round; stroke-linecap: round; }
-  .st-glow { stroke: rgba(120, 175, 255, 1); stroke-width: 14; opacity: 0.9; }
-  .st-line { stroke: #e8f1ff; stroke-width: 3; }
+  .st-fill {
+    fill: rgba(47, 107, 255, 0.17);
+    opacity: 0;
+  }
+  .st-glow,
+  .st-line {
+    fill: none;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+  .st-glow {
+    stroke: rgba(120, 175, 255, 1);
+    stroke-width: 14;
+    opacity: 0.9;
+  }
+  .st-line {
+    stroke: #e8f1ff;
+    stroke-width: 3;
+  }
   .st-vert {
     fill: #fff;
     stroke: rgba(47, 107, 255, 0.9);
@@ -462,153 +368,189 @@ const street = Array.from({ length: COLS * ROWS }, (_, i) => {
     transform-origin: center;
   }
 
-  .st-dim, .st-area { opacity: 0; }
-  .st-dim-plate, .st-area-plate {
+  /* Plates rather than outlined text. An outline keeps the glyph legible but
+     leaves the number sitting in whatever the roof is doing behind it; a plate
+     gives every label the same contrast regardless of what it lands on. */
+  .st-dim,
+  .st-area {
+    opacity: 0;
+  }
+  .st-dim-plate,
+  .st-area-plate {
     fill: rgba(7, 16, 36, 0.82);
     stroke: rgba(255, 255, 255, 0.16);
     stroke-width: 1.5;
   }
-  .st-dim-text, .st-area-text {
+  .st-dim-text,
+  .st-area-text {
     fill: #fff;
     font-family: var(--font-sans, system-ui, sans-serif);
     font-variant-numeric: tabular-nums;
     text-anchor: middle;
     dominant-baseline: central;
   }
-  .st-dim-text { font-size: 19px; font-weight: 600; }
-  .st-area-text { font-size: 44px; font-weight: 700; letter-spacing: -0.02em; }
-
-  /* The street. Same visual language as the measured roof so it reads as more
-     of the same work, just further out. */
-  .st-street { opacity: 0; }
-  .st-lot { opacity: 0; }
-  .st-lot-roof {
-    fill: rgba(47, 107, 255, 0.16);
-    stroke: #7fb2ff;
-    stroke-width: 2.5;
+  .st-dim-text {
+    font-size: 19px;
+    font-weight: 600;
   }
-  .st-lot-hips {
-    fill: none;
-    stroke: rgba(160, 200, 255, 0.55);
-    stroke-width: 1.6;
-    stroke-linecap: round;
-  }
-  .st-lot-price {
-    fill: #fff;
-    font-family: var(--font-sans, system-ui, sans-serif);
-    font-size: 15px;
+  .st-area-text {
+    font-size: 44px;
     font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    text-anchor: middle;
-    dominant-baseline: central;
-    paint-order: stroke fill;
-    stroke: rgba(5, 12, 30, 0.9);
-    stroke-width: 4;
-    stroke-linejoin: round;
+    letter-spacing: -0.02em;
   }
 
-  /* —— 5 · The leads —— */
-  /* An iOS notification STACK, not a list. Three identical cards side by side
-     read as a rendering bug; stacked, only the newest is legible and the ones
-     behind are what "more are coming" looks like. */
-  .st-leads {
+  .st-meta {
+    position: absolute;
+    left: clamp(0.85rem, 3%, 1.25rem);
+    bottom: clamp(0.75rem, 3%, 1.1rem);
+    z-index: 3;
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.92);
+    text-shadow: 0 1px 6px rgba(4, 12, 32, 0.9);
+    opacity: 0;
+  }
+
+  /* —— Scene 3: the lead —— */
+  /* Bottom-right, not top-right. A notification lands top-right by convention,
+     but there it sat straight over the roof's top edge and the 4.5 m label —
+     covering the measurement the sequence had just spent six seconds making. */
+  /* The lock-screen dark the notification would be sitting on anyway, which is
+     what makes it read as a phone without drawing one. */
+  .st-lead {
     display: grid;
-    place-items: start center;
-    padding: 16% 8% 0;
+    place-items: center;
+    padding: 0 8%;
+    z-index: 5;
     opacity: 0;
-    background: radial-gradient(ellipse 90% 70% at 50% 35%, #16224a 0%, #0a1024 55%, #05080f 100%);
+    background:
+      radial-gradient(ellipse 90% 70% at 50% 35%, #16224a 0%, #0a1024 55%, #05080f 100%);
   }
+
+  /* iOS-style notification: light, heavily rounded. Now free to take a
+     comfortable width, since it isn't squeezed inside a handset. */
   .st-notif {
-    grid-area: 1 / 1;
     width: 100%;
-    max-width: 400px;
-    padding: 0.7rem 0.9rem 0.8rem;
-    border-radius: 18px;
-    /* Fully opaque. At 94% the cards behind ghosted their text straight
-       through the front one and the stack looked like a printing error. */
-    background: #f2f5fd;
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.8) inset,
-      0 14px 30px -14px rgba(3, 10, 28, 0.85);
+    max-width: 420px;
+    padding: 0.85rem 1rem 0.95rem;
+    border-radius: 20px;
+    background: rgba(244, 247, 255, 0.94);
+    box-shadow: 0 10px 24px -12px rgba(3, 10, 28, 0.8);
+    /* The phone arrives first and settles; the notification then drops onto
+       it, which is the beat that actually matters. */
     opacity: 0;
-    /* Newest in front; each older one sits a little lower and narrower. */
-    z-index: calc(10 - var(--i));
+    transform: translate3d(0, -10px, 0);
   }
-  .st-notif-top { display: flex; align-items: center; gap: 0.3rem; }
-  .st-notif-mark { height: 14px; width: auto; display: block; }
-  .st-notif-time { margin-left: auto; font-size: 0.66rem; color: rgba(20, 30, 55, 0.45); }
-  .st-notif-title { margin: 0.35rem 0 0; font-size: 0.94rem; font-weight: 700; color: #0d1730; }
-  .st-notif-body { margin: 0.1rem 0 0; font-size: 0.78rem; color: rgba(20, 30, 55, 0.66); }
+  .st-notif-top {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  /* Height is the size knob, width follows — same as the widget's h-5 w-auto. */
+  .st-notif-mark {
+    height: 15px;
+    width: auto;
+    display: block;
+  }
+  .st-notif-time {
+    margin-left: auto;
+    font-size: 0.68rem;
+    color: rgba(20, 30, 55, 0.45);
+  }
+  .st-notif-title {
+    margin: 0.45rem 0 0;
+    font-size: 1.02rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: #0d1730;
+  }
+  .st-notif-body {
+    margin: 0.15rem 0 0;
+    font-size: 0.86rem;
+    line-height: 1.35;
+    color: rgba(20, 30, 55, 0.66);
+  }
   .st-notif-price {
-    margin: 0.3rem 0 0;
-    font-size: 1.15rem;
+    margin: 0.4rem 0 0;
+    font-size: 1.3rem;
     font-weight: 700;
     letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
     color: var(--color-brand-600, #1746c8);
   }
-  .st-notif-vat { font-size: 0.72em; font-weight: 600; color: rgba(20, 30, 55, 0.5); }
-
-  /* —— Stopwatch —— */
-  .st-clock {
-    position: absolute;
-    left: clamp(0.7rem, 2.8%, 1.1rem);
-    bottom: clamp(0.7rem, 2.8%, 1.1rem);
-    z-index: 8;
-    padding: 0.3rem 0.6rem;
-    border-radius: 8px;
-    background: rgba(6, 14, 34, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    font-family: ui-monospace, "SF Mono", Menlo, monospace;
-    font-size: 0.72rem;
+  .st-notif-vat {
+    font-size: 0.72em;
     font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: rgba(255, 255, 255, 0.9);
-    opacity: 0;
+    color: rgba(20, 30, 55, 0.5);
   }
 
   @media (max-width: 640px) {
     .st-dim { display: none; }
     .st-area-text { font-size: 56px; }
-    .st-lot-price { font-size: 34px; }
-    .st-notif { max-width: none; }
-    .st-notif-title { font-size: 0.84rem; }
-    .st-notif-price { font-size: 1rem; }
-    .st-clock { font-size: 0.66rem; }
+    /* Narrower card, so the handset takes proportionally more of it or the
+       notification text stops being legible. */
+    .st-lead { padding: 0 5%; }
+    .st-notif-title { font-size: 0.9rem; }
+    .st-notif-price { font-size: 1.05rem; }
+    .st-notif-title { font-size: 0.68rem; }
+    .st-notif-price { font-size: 0.76rem; }
+    .st-meta { font-size: 0.7rem; }
   }
 
-  /* Reduced motion: the measured roof, held. One still that carries the story. */
+  /* Reduced motion: hold the finished state — measured roof, lead delivered.
+     The still frame carries the whole story, so nothing is lost. */
   @media (prefers-reduced-motion: reduce) {
-    .st-ask, .st-space, .st-leads, .st-clock, .st-street { display: none; }
+    .st-ask { display: none; }
     .st-map { opacity: 1; }
-    .st-fill, .st-dim, .st-area, .st-vert { opacity: 1; }
+    .st-fill,
+    .st-dim,
+    .st-area,
+    .st-meta { opacity: 1; }
+    .st-vert { opacity: 1; }
+    /* Reduced motion holds the measured roof, not the phone — the map is the
+       frame that carries the whole story in one still. */
+    .st-lead { display: none; }
+    .st-notif { opacity: 1; transform: none; }
   }
 </style>
 
 <script>
-  const DUR = 9500;
+  // Beat boundaries as fractions of one cycle. Everything reads from here —
+  // change a number and only that beat moves.
+  // 11.5s. The earlier 9s left the settled notification on screen for under
+  // half a second — the payoff of the whole sequence was the shortest thing in
+  // it. The extra time goes almost entirely to the last beat.
+  const DUR = 11500;
   const BEATS = {
-    typeFrom: 0.02, typeTo: 0.1,
-    press: 0.115,
-    // The dive. Short on purpose — it's a transition, not a destination.
-    diveFrom: 0.12, diveTo: 0.27,
-    // Measure. Corners, outline, dims and area all OVERLAP here; the previous
-    // version queued them and spent 4.4s doing what this does in 1.6.
-    measureFrom: 0.26, measureTo: 0.43,
-    holdRoof: 0.48,
-    // Pull back and light up the street.
-    pullFrom: 0.48, pullTo: 0.62,
-    streetFrom: 0.53, streetTo: 0.7,
-    // The leads rain in.
-    leadsFrom: 0.72, leadsTo: 0.86,
-    clockStop: 0.86,
-    holdTo: 0.96,
+    typeFrom: 0.03,
+    typeTo: 0.19,
+    press: 0.21,
+    whipFrom: 0.23,
+    whipTo: 0.3,
+    traceFrom: 0.3,
+    traceTo: 0.47,
+    fillFrom: 0.45,
+    fillTo: 0.52,
+    dimsFrom: 0.49,
+    dimsTo: 0.58,
+    areaFrom: 0.51,
+    areaTo: 0.6,
+    // The measured roof holds for a beat before it hands over.
+    // The map leaves before the lead arrives — they never share the frame.
+    mapOutFrom: 0.68,
+    mapOutTo: 0.73,
+    leadFrom: 0.71,
+    leadTo: 0.77,
+    notifFrom: 0.76,
+    notifTo: 0.81,
+    // Settled notification now holds ~1.8s, against 0.45s before.
+    holdTo: 0.97,
   };
-
   const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
+  /** Normalised progress through a window, 0 before and 1 after. */
   const span = (p: number, a: number, b: number) => clamp01((p - a) / (b - a));
   const outCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-  const outQuint = (t: number) => 1 - Math.pow(1 - t, 5);
   const inOutCubic = (t: number) =>
     t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
@@ -617,21 +559,16 @@ const street = Array.from({ length: COLS * ROWS }, (_, i) => {
       if (root.dataset.stBound === "1") return;
       root.dataset.stBound = "1";
 
-      // Single source of truth, handed over on the element.
+      // Single source of truth, handed over on the element. These used to be
+      // re-declared here and drifted from the frontmatter — the typed field
+      // and the notification ended up showing different postcodes.
       const POSTCODE = root.dataset.postcode ?? "";
       const AREA_M2 = Number(root.dataset.area ?? 0);
 
       const q = <T extends Element>(s: string) => root.querySelector<T>(s);
       const ask = q<HTMLElement>("[data-st-ask]")!;
-      const space = q<HTMLElement>("[data-st-space]")!;
-      const earth = q<HTMLElement>("[data-st-earth]")!;
-      const clouds = [...root.querySelectorAll<HTMLElement>("[data-st-cloud]")];
-      const stars = [...root.querySelectorAll<HTMLElement>("[data-st-star]")];
       const map = q<HTMLElement>("[data-st-map]")!;
-      const world = q<HTMLElement>("[data-st-world]")!;
       const stage = q<HTMLElement>("[data-st-stage]")!;
-      const streetSvg = q<SVGElement>("[data-st-street]")!;
-      const lots = [...root.querySelectorAll<SVGGElement>(".st-lot")];
       const typed = q<HTMLElement>("[data-st-typed]")!;
       const caret = q<HTMLElement>("[data-st-caret]")!;
       const btn = q<HTMLElement>("[data-st-btn]")!;
@@ -641,12 +578,16 @@ const street = Array.from({ length: COLS * ROWS }, (_, i) => {
       const dims = [...root.querySelectorAll<SVGGElement>(".st-dim")];
       const area = q<SVGGElement>("[data-st-area]")!;
       const areaText = q<SVGTextElement>("[data-st-area-text]")!;
-      const leads = q<HTMLElement>("[data-st-leads]")!;
-      const notifs = [...root.querySelectorAll<HTMLElement>("[data-st-notif]")];
-      const clock = q<HTMLElement>("[data-st-clock]")!;
+      const meta = q<HTMLElement>("[data-st-meta]")!;
+      const lead = q<HTMLElement>("[data-st-lead]")!;
+      const notif = q<HTMLElement>(".st-notif")!;
 
+      // Dash length must come from the path itself — a hardcoded value breaks
+      // the moment the outline is retraced.
       const lens = lines.map((l) => Math.ceil(l.getTotalLength()) + 2);
-      lines.forEach((l, i) => (l.style.strokeDasharray = String(lens[i])));
+      lines.forEach((l, i) => {
+        l.style.strokeDasharray = String(lens[i]);
+      });
 
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (reduce) {
@@ -656,105 +597,78 @@ const street = Array.from({ length: COLS * ROWS }, (_, i) => {
       }
 
       function render(p: number) {
-        // 1 · Ask
+        // Scene 1 — typing, then the press.
         const t = span(p, BEATS.typeFrom, BEATS.typeTo);
-        typed.textContent = POSTCODE.slice(0, Math.round(t * POSTCODE.length));
-        const live = p > 0.01 && p < BEATS.press;
-        caret.style.opacity = live ? (Math.floor((p * DUR) / 420) % 2 ? "0.25" : "1") : "0";
-        const press = span(p, BEATS.press, BEATS.press + 0.015);
-        btn.style.transform = `scale(${1 - 0.07 * Math.sin(press * Math.PI)})`;
+        const chars = Math.round(t * POSTCODE.length);
+        typed.textContent = POSTCODE.slice(0, chars);
+        // Caret blinks while the field is live, then goes with the scene.
+        const live = p > 0.02 && p < BEATS.press;
+        caret.style.opacity = live ? (Math.floor(p * DUR / 500) % 2 ? "0.25" : "1") : "0";
+        const press = span(p, BEATS.press, BEATS.press + 0.02);
+        btn.style.transform = `scale(${1 - 0.06 * Math.sin(press * Math.PI)})`;
 
-        const dive = span(p, BEATS.diveFrom, BEATS.diveTo);
-        ask.style.opacity = String(1 - clamp01(dive * 4));
-        ask.style.transform = `scale(${1 + 0.3 * dive})`;
-        ask.style.filter = `blur(${16 * dive}px)`;
+        // The whip. Scene 1 pushes back and blurs out; the map comes in from a
+        // wider frame. CSS blur is omnidirectional and reads as smear, so the
+        // horizontal streak is carried by scaleX on the way in instead.
+        const w = inOutCubic(span(p, BEATS.whipFrom, BEATS.whipTo));
+        ask.style.opacity = String(1 - w);
+        ask.style.transform = `scale(${1 + 0.35 * w})`;
+        ask.style.filter = `blur(${18 * w}px)`;
+        // (map opacity is set once, further down, after mapOut is known)
+        const settle = span(p, BEATS.whipTo, BEATS.traceTo);
+        // Single assignment — appending to style.transform each frame grows the
+        // string without bound and the scale compounds.
+        const mapOut = span(p, BEATS.mapOutFrom, BEATS.mapOutTo);
+        stage.style.transform = `scale(${1.16 - 0.13 * outCubic(settle) - 0.04 * mapOut})`;
+        stage.style.filter = w < 1 ? `blur(${10 * (1 - w)}px)` : "none";
 
-        // 2 · The dive. Earth rushes up, clouds tear past, then the ground.
-        space.style.opacity = String(clamp01(dive * 5) * (1 - clamp01((dive - 0.72) / 0.28)));
-        // The planet grows, but only to the point it fills the frame — past
-        // that it's a gradient, and the streaks carry the speed instead.
-        const de = inOutCubic(dive);
-        earth.style.transform = `scale(${0.3 + 3.4 * de})`;
-        earth.style.opacity = String(1 - clamp01((dive - 0.55) / 0.35));
-        stars.forEach((s) => {
-          const sp = Number(s.style.getPropertyValue("--sp")) || 1;
-          const r0 = Number(s.style.getPropertyValue("--r0")) || 10;
-          // Accelerating outward, elongating as it goes — the streak IS the
-          // speed cue, so it stretches rather than just moving.
-          const r = r0 + Math.pow(dive, 1.7) * 760 * sp;
-          const len = 1 + Math.pow(dive, 2) * 34 * sp;
-          s.style.opacity = String(Math.sin(clamp01(dive * 1.15) * Math.PI) * 0.95);
-          s.style.transform =
-            `rotate(var(--a)) translateX(${r.toFixed(1)}px) scaleX(${len.toFixed(1)})`;
-        });
-        clouds.forEach((cl, i) => {
-          // Late and fast: cloud comes at the very bottom of the dive.
-          const local = clamp01((dive - 0.5 - i * 0.07) / 0.42);
-          cl.style.opacity = String(Math.sin(local * Math.PI) * 0.9);
-          cl.style.transform = `translate(-50%, -50%) scale(${0.35 + 7 * local})`;
-        });
-
-        // 3 · Measure. Everything overlaps.
-        const m = span(p, BEATS.measureFrom, BEATS.measureTo);
-        map.style.opacity = String(clamp01((dive - 0.6) / 0.3));
-        stage.style.transform = `scale(${1.22 - 0.22 * outQuint(m)})`;
-        stage.style.filter = dive < 1 ? `blur(${14 * (1 - dive)}px)` : "none";
-
+        // Corners land in path order.
+        const tr = span(p, BEATS.traceFrom, BEATS.traceTo);
         verts.forEach((v, i) => {
-          const local = clamp01((m - (i / verts.length) * 0.4) / 0.14);
+          const local = clamp01((tr - (i / verts.length) * 0.55) / 0.12);
           v.style.opacity = String(local);
           v.style.transform = `scale(${0.3 + 0.7 * outCubic(local)})`;
         });
-        const draw = outCubic(clamp01(m / 0.72));
-        lines.forEach((l, i) => (l.style.strokeDashoffset = String(lens[i] * (1 - draw))));
-        fill.style.opacity = String(clamp01((m - 0.5) / 0.3));
-        dims.forEach((g, i) => {
-          g.style.opacity = String(clamp01((m - 0.45 - i * 0.1) / 0.22));
+
+        // The outline joins them, trailing the corners slightly.
+        const draw = outCubic(clamp01((tr - 0.18) / 0.82));
+        lines.forEach((l, i) => {
+          l.style.strokeDashoffset = String(lens[i] * (1 - draw));
         });
-        const a = clamp01((m - 0.42) / 0.4);
+
+        fill.style.opacity = String(span(p, BEATS.fillFrom, BEATS.fillTo));
+
+        // Edge lengths, longest first.
+        const d = span(p, BEATS.dimsFrom, BEATS.dimsTo);
+        dims.forEach((g, i) => {
+          g.style.opacity = String(clamp01((d - i * 0.16) / 0.3));
+        });
+
+        // The area resolves rather than appearing — a number that counts is a
+        // number being worked out.
+        const a = span(p, BEATS.areaFrom, BEATS.areaTo);
         area.style.opacity = String(clamp01(a * 3));
         areaText.textContent = `${Math.round(outCubic(a) * AREA_M2)} m²`;
+        meta.style.opacity = String(span(p, BEATS.dimsFrom, BEATS.dimsTo));
 
-        // 4 · Pull back. The photo becomes one tile among many.
-        const pull = span(p, BEATS.pullFrom, BEATS.pullTo);
-        const pe = inOutCubic(pull);
-        world.style.transform = `scale(${1 - 0.72 * pe})`;
-        stage.style.borderRadius = `${18 * pe}px`;
-        streetSvg.style.opacity = String(pe);
+        // The map hands over to the phone. This is the point of the whole
+        // sequence: the customer got a price, and the roofer got the lead.
+        map.style.opacity = String(w * (1 - mapOut));
 
-        const st = span(p, BEATS.streetFrom, BEATS.streetTo);
-        lots.forEach((g) => {
-          const d = Number(getComputedStyle(g).getPropertyValue("--d")) || 0;
-          const local = clamp01((st - d * 0.55) / 0.3);
-          g.style.opacity = String(local);
-        });
-
-        // 5 · The leads rain in.
-        const ld = span(p, BEATS.leadsFrom, BEATS.leadsTo);
+        const ph = span(p, BEATS.leadFrom, BEATS.leadTo);
         const out = span(p, BEATS.holdTo, 1);
-        leads.style.opacity = String(clamp01(ld * 4) * (1 - out));
-        map.style.opacity = String(Number(map.style.opacity) * (1 - clamp01(ld * 4)));
-        // The newest arrives first and the earlier ones sink behind it, so the
-        // stack grows downward as leads keep landing.
-        notifs.forEach((n, i) => {
-          const local = clamp01((ld - i * 0.2) / 0.3);
-          const depth = i; // 0 = front
-          // Only a sliver of each older card shows below the newest — enough to
-          // say "there are more", not enough to be read.
-          n.style.opacity = String(local * (1 - depth * 0.18));
-          n.style.transform =
-            `translate3d(0, ${(-16 * (1 - outCubic(local)) + depth * 13).toFixed(1)}px, 0)` +
-            ` scale(${(1 - depth * 0.045).toFixed(3)})`;
-        });
+        lead.style.opacity = String(ph * (1 - out));
 
-        // Stopwatch: starts on the press, freezes when the last lead lands.
-        const started = p >= BEATS.press;
-        clock.style.opacity = String(started ? 1 - out : 0);
-        const elapsed = (Math.min(p, BEATS.clockStop) - BEATS.press) * (DUR / 1000);
-        clock.textContent = `${Math.max(0, elapsed).toFixed(2)}s`;
+        // The notification drops in the way a real one does — down from the
+        // top edge, slightly overshooting nothing, then still.
+        const nf = span(p, BEATS.notifFrom, BEATS.notifTo);
+        notif.style.opacity = String(nf);
+        notif.style.transform =
+          `translate3d(0, ${-22 * (1 - outCubic(nf))}px, 0) scale(${0.96 + 0.04 * outCubic(nf)})`;
       }
 
-      // ?rs=0.42 freezes the timeline — the only practical way to review a beat.
+      // Scrub: ?rs=0.42 freezes the timeline there. The only practical way to
+      // review one beat — and the reason this is a JS clock at all.
       const forced = new URLSearchParams(location.search).get("rs");
       if (forced !== null) {
         render(clamp01(Number(forced)));
@@ -768,6 +682,8 @@ const street = Array.from({ length: COLS * ROWS }, (_, i) => {
         render(((now - t0) % DUR) / DUR);
         raf = requestAnimationFrame(loop);
       };
+
+      // Loops forever, so don't burn frames while it's off screen.
       const io = new IntersectionObserver(
         ([e]) => {
           if (e.isIntersecting) {
