@@ -7,8 +7,12 @@ export function initBrandDock() {
   const fly = document.querySelector<HTMLElement>("[data-brand-fly]");
   const spacer = document.querySelector<HTMLElement>("[data-brand-spacer]");
   const slot = document.querySelector<HTMLElement>("[data-nav-brand-slot]");
+  // Optional. It exists for the floating glass pill, which had to materialise
+  // as the wordmark arrived or it read as two unrelated things moving. A full
+  // header bar is visible from the top of the page instead, so it has nothing
+  // to fade in — the dock still runs, it just has no pill to reveal.
   const glass = document.querySelector<HTMLElement>("[data-glass-nav]");
-  if (!fly || !spacer || !slot || !glass) return;
+  if (!fly || !spacer || !slot) return;
 
   const prev = (fly as unknown as { __morphAbort?: AbortController }).__morphAbort;
   prev?.abort();
@@ -154,15 +158,17 @@ export function initBrandDock() {
 
     // The pill has no business appearing until the wordmark is most of the way
     // home, or it reads as two unrelated things moving at once.
-    const alpha = clamp01((t - 0.45) / 0.28);
-    glass.style.setProperty("--nav-alpha", String(alpha));
-    glass.style.opacity = String(alpha);
-    const interactive = alpha > 0.6;
-    if (interactive !== lastInteractive) {
-      lastInteractive = interactive;
-      glass.style.pointerEvents = interactive ? "auto" : "none";
-      if (interactive) glass.removeAttribute("inert");
-      else glass.setAttribute("inert", "");
+    if (glass) {
+      const alpha = clamp01((t - 0.45) / 0.28);
+      glass.style.setProperty("--nav-alpha", String(alpha));
+      glass.style.opacity = String(alpha);
+      const interactive = alpha > 0.6;
+      if (interactive !== lastInteractive) {
+        lastInteractive = interactive;
+        glass.style.pointerEvents = interactive ? "auto" : "none";
+        if (interactive) glass.removeAttribute("inert");
+        else glass.setAttribute("inert", "");
+      }
     }
   }
 
@@ -196,7 +202,7 @@ export function initBrandDock() {
 
   document.documentElement.classList.remove("is-brand-morphing");
   fly.classList.remove("is-ready", "is-active", "is-docked", "is-hero");
-  glass.style.transition = "none";
+  if (glass) glass.style.transition = "none";
 
   const unsub = flight.on(() => {
     if (ready) paint();
@@ -303,7 +309,7 @@ export function initBrandDock() {
     unsub();
     unbindLenis();
     document.documentElement.classList.remove("is-brand-morphing");
-    glass.style.transition = "";
+    if (glass) glass.style.transition = "";
     (window as Window & { __brandDock?: { sync: () => void } | null }).__brandDock = null;
   });
 }

@@ -1,4 +1,4 @@
-﻿---
+---
 const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
 // Roofer login. Points at the dashboard root, which auto-routes: logged-out to
 // /login, logged-in straight to /quotes. Env-overridable like the embed origin.
@@ -7,40 +7,46 @@ const dashboardUrl =
 ---
 
 <!--
-  One fixed wordmark for the whole journey. No handoff at the top — that was
-  the "click". Spacer is layout-only; fly is always the visible Belpa once ready.
+  A full-width header bar that is present from the top of the page, WITH the
+  hero wordmark morphing into it on scroll.
+
+  Two earlier versions each had half of this. The floating glass pill had the
+  morph but nothing at the top of the fold, so the page opened with no nav and
+  no way to log in. The plain sticky bar was always there but the morph had been
+  retired to get it, so the big hero wordmark just scrolled away.
+
+  Here the bar owns Log in and Book a call from the first frame, and its brand
+  slot stays empty until the wordmark flies in and lands on it. That is why the
+  bar does NOT carry data-glass-nav: that hook fades an element in as the
+  wordmark arrives, which is right for a pill that shouldn't exist yet and wrong
+  for a bar that has to be usable immediately.
 -->
+
+<!-- The flying wordmark. Fixed, driven entirely by brand-dock.ts through
+     font-size + transform, so the img is sized in `em`. -->
 <a href="/" class="brand-fly" data-brand-fly aria-label="Belpa home">
   <img src="/belpa-wordmark.png" alt="" width="900" height="279" />
 </a>
 
-<!-- Roofer login. A quiet corner utility, deliberately kept physically apart
-     from the "Book a call" CTA so it never reads as a competing button. Faint
-     glass chip (no fill) so it stays legible over the dark sections lower down.
-     Desktop only — the mobile bar carries its own muted "Log in" instead. -->
-<a href={dashboardUrl} class="corner-login" aria-label="Log in to your dashboard">
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M10 17l5-5-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-  <span>Log in</span>
-</a>
+<header class="site-header" data-site-header>
+  <div class="site-header-inner">
+    <!-- The dock target. Layout-only: it reserves the space and gives
+         brand-dock a rect to measure, and its own image stays hidden while the
+         morph owns the visible wordmark. Same handoff the hero spacer uses. -->
+    <a
+      href="/"
+      class="header-brand"
+      data-nav-brand-slot
+      aria-label="Belpa home"
+    >
+      <img src="/belpa-wordmark.png" alt="" width="900" height="279" />
+    </a>
 
-<!-- Docked nav pill. Sits at its normal (wordmark-only) size until the hero's
-     own "Book a call" has scrolled out of view; then a discrete, NON-scroll-
-     linked animation lengthens the pill and reveals the CTA next to the
-     wordmark (the .is-expanded toggle is driven by initNavExpand below). -->
-<div class="glass-nav" data-glass-nav inert>
-  <span class="glass-nav-brand-slot" data-nav-brand-slot aria-hidden="true">
-    <img src="/belpa-wordmark.png" alt="" width="900" height="279" />
-  </span>
-  <span class="glass-nav-cta-wrap" data-nav-cta-wrap>
-    <span class="glass-nav-cta-inner">
-      <span class="glass-nav-divider" aria-hidden="true"></span>
+    <nav class="header-actions" aria-label="Main">
+      <a href={dashboardUrl} class="header-login">Log in</a>
       <a
         href={meetingUrl}
-        class="glass-nav-cta"
+        class="header-cta"
         target="_blank"
         rel="noopener noreferrer"
       >
@@ -48,36 +54,140 @@ const dashboardUrl =
           <rect x="3" y="5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="2"/>
           <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
-        <span class="glass-nav-cta-label">Book a call</span>
+        <span>Book a call</span>
       </a>
-    </span>
-  </span>
-</div>
-
-<!-- Mobile nav: the desktop scroll-morph can't stay smooth on touch (native
-     momentum + blur recompositing), so on phones the hero wordmark just scrolls
-     away and this plain bar fades in. -->
-<div class="mobile-nav" data-mobile-nav>
-  <a href="/" class="mobile-nav-brand" aria-label="Belpa home">
-    <img src="/belpa-wordmark.png" alt="" width="900" height="279" />
-  </a>
-  <div class="mobile-nav-actions">
-    <a href={dashboardUrl} class="mobile-nav-login" aria-label="Log in to your dashboard">
-      Log in
-    </a>
-    <a
-      href={meetingUrl}
-      class="mobile-nav-cta"
-      target="_blank"
-      rel="noopener noreferrer"
-    >Book a call</a>
+    </nav>
   </div>
-</div>
+</header>
 
 <style>
-  /* The flying wordmark is the logo image. brand-dock.ts still drives it purely
-     through font-size + transform, so the img is sized in `em` and every bit of
-     the morph maths (width ratio, dock hand-off) carries over unchanged. */
+  .site-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 60;
+    padding: max(0.7rem, env(safe-area-inset-top, 0px)) 0 0.7rem;
+    /* Glass only once scrolled — over the hero it's invisible chrome so the
+       blob and the headline own the fold. */
+    background: transparent;
+    border-bottom: 1px solid transparent;
+    transition:
+      background 0.28s ease,
+      border-color 0.28s ease,
+      box-shadow 0.28s ease,
+      backdrop-filter 0.28s ease;
+  }
+  .site-header.is-stuck {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(22px) saturate(1.7);
+    -webkit-backdrop-filter: blur(22px) saturate(1.7);
+    border-bottom-color: rgba(16, 24, 40, 0.07);
+    box-shadow: 0 10px 30px -22px rgba(23, 60, 160, 0.5);
+  }
+
+  .site-header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+    max-width: 72rem;
+    margin: 0 auto;
+    padding-inline: clamp(1rem, 3vw, 1.75rem);
+  }
+
+  /* font-size is the logo's size knob — the img is sized in em, and
+     brand-dock.ts reads getComputedStyle(slot).fontSize to work out where the
+     flight ends. Change the size here, never on the img. */
+  .header-brand {
+    display: block;
+    flex: none;
+    font-size: 26px;
+    line-height: 0;
+    text-decoration: none;
+  }
+  .header-brand img {
+    display: block;
+    height: 1em;
+    width: auto;
+  }
+  /* Hidden the moment the morph takes over, so the slot is pure layout and the
+     flying wordmark is the only one you ever see. Without the morph running
+     (no JS, or the script failing) this stays visible and the bar is complete
+     on its own. */
+  :global(html.is-brand-morphing) .header-brand img {
+    visibility: hidden;
+  }
+  .header-brand:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 6px;
+    border-radius: 4px;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.85rem, 2vw, 1.5rem);
+  }
+
+  /* Quiet utility for returning roofers — deliberately subordinate to the
+     filled CTA so it never reads as a competing button. */
+  .header-login {
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1;
+    color: var(--color-ink);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.15s ease;
+  }
+  .header-login:hover {
+    color: var(--color-brand-600);
+  }
+  .header-login:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 4px;
+    border-radius: 6px;
+  }
+
+  .header-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.68rem 1.15rem;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--color-brand-500), var(--color-brand-600));
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: #fff;
+    text-decoration: none;
+    white-space: nowrap;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.28) inset,
+      0 8px 20px -8px rgba(31, 87, 240, 0.55);
+    transition:
+      filter 0.15s ease,
+      box-shadow 0.2s ease;
+  }
+  .header-cta:hover {
+    filter: brightness(1.05);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.32) inset,
+      0 12px 26px -8px rgba(31, 87, 240, 0.6);
+  }
+  .header-cta:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 3px;
+  }
+  .header-cta svg {
+    flex: none;
+  }
+
+  /* —— The flying wordmark —— */
   .brand-fly {
     position: fixed;
     top: 0;
@@ -104,10 +214,8 @@ const dashboardUrl =
     visibility: visible;
     pointer-events: auto;
   }
-  /*
-    Solid wordmark always. A highlight layer sweeps through the logo's shape —
-    the logo itself never slides away.
-  */
+  /* Solid wordmark always. A highlight sweeps through the logo's shape while
+     it's resting in the hero — the mark itself never slides away. */
   .brand-fly.is-hero::after {
     content: "";
     position: absolute;
@@ -136,435 +244,85 @@ const dashboardUrl =
     content: none;
     animation: none;
   }
-
   @keyframes brand-sheen {
-    /* Pass through, then a long rest before the next sweep */
-    0% {
-      background-position: 200% 50%;
+    0% { background-position: 200% 50%; }
+    32% { background-position: -200% 50%; }
+    100% { background-position: -200% 50%; }
+  }
+
+  @media (max-width: 480px) {
+    .header-brand {
+      font-size: 22px;
     }
-    32% {
-      background-position: -200% 50%;
+    .header-cta {
+      padding: 0.6rem 0.95rem;
+      font-size: 0.85rem;
     }
-    100% {
-      background-position: -200% 50%;
-    }
-  }
-
-  .glass-nav {
-    position: fixed;
-    top: max(10px, env(safe-area-inset-top, 0px));
-    left: 50%;
-    z-index: 60;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    /* Starts wordmark-only. The CTA collapses to zero width via the grid trick
-       on .glass-nav-cta-wrap, so the pill hugs the wordmark until .is-expanded
-       fires — then the wrap animates open and the whole bar lengthens. */
-    gap: 0;
-    max-width: min(55rem, calc(100vw - 1.5rem));
-    padding: 0.5rem 2.75rem;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.55);
-    backdrop-filter: blur(24px) saturate(1.7);
-    -webkit-backdrop-filter: blur(24px) saturate(1.7);
-    border: 1px solid rgba(255, 255, 255, 0.65);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.7) inset,
-      0 2px 6px rgba(16, 24, 40, 0.05),
-      0 18px 44px -18px rgba(23, 60, 160, 0.35);
-    transform: translate(-50%, 0);
-    opacity: 0;
-    pointer-events: none;
-    box-sizing: border-box;
-  }
-  .glass-nav.is-expanded {
-    padding-left: 2.75rem;
-    padding-right: 0.5rem;
-  }
-
-  /* The docked pill + flying wordmark are the DESKTOP nav. Mobile uses the
-     plain fade bar (.mobile-nav) instead, so hard-hide these below the
-     breakpoint — the scroll-morph JS is already gated off there, this just
-     guarantees nothing leaks through on any viewport edge case. */
-  @media (max-width: 639px) {
-    .glass-nav,
-    .brand-fly {
-      display: none;
-    }
-  }
-
-  /* Layout-only placeholder: reserves the docked logo's box inside the pill so
-     the fixed .brand-fly has something to land on. Kept invisible with
-     visibility (not `color: transparent`, which does nothing to an image) —
-     getBoundingClientRect still reports the real rect, which is what
-     brand-dock.ts measures. font-size is the docked size knob. */
-  .glass-nav-brand-slot {
-    flex: none;
-    font-size: 1.4rem;
-    line-height: 0;
-    visibility: hidden;
-    user-select: none;
-    pointer-events: none;
-  }
-  .glass-nav-brand-slot img {
-    display: block;
-    height: 1em;
-    width: auto;
-  }
-
-  /* Collapsible CTA. grid-template-columns 0fr → 1fr animates the child from
-     zero to its natural width (the standard animate-to-auto trick), so the
-     pill lengthens smoothly when .is-expanded toggles. */
-  .glass-nav-cta-wrap {
-    display: grid;
-    grid-template-columns: 0fr;
-    margin-left: 0;
-    transition:
-      grid-template-columns 0.55s var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1)),
-      margin-left 0.55s var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1));
-  }
-  .glass-nav.is-expanded .glass-nav-cta-wrap {
-    grid-template-columns: 1fr;
-    margin-left: 26px;
-  }
-  /* The collapsing block: divider + button. overflow:hidden lives here so the
-     0fr track clips the whole group to nothing when collapsed. */
-  .glass-nav-cta-inner {
-    overflow: hidden;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  }
-  .glass-nav-divider {
-    flex: none;
-    width: 1px;
-    height: 30px;
-    border-radius: 1px;
-    background: rgba(16, 24, 40, 0.16);
-    opacity: 0;
-    transition: opacity 0.3s ease 0.12s;
-  }
-  .glass-nav.is-expanded .glass-nav-divider {
-    opacity: 1;
-  }
-  .glass-nav-cta {
-    flex: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.78rem 1.35rem;
-    border-radius: 999px;
-    background: linear-gradient(180deg, var(--color-brand-500), var(--color-brand-600));
-    font-size: 0.92rem;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    line-height: 1;
-    color: #fff;
-    text-decoration: none;
-    white-space: nowrap;
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.28) inset,
-      0 8px 20px -8px rgba(31, 87, 240, 0.55);
-    opacity: 0;
-    transform: translateX(-6px);
-    pointer-events: none;
-    transition:
-      opacity 0.35s ease 0.1s,
-      transform 0.45s var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1)) 0.1s;
-  }
-  .glass-nav.is-expanded .glass-nav-cta {
-    opacity: 1;
-    transform: translateX(0);
-    pointer-events: auto;
-  }
-  .glass-nav-cta svg {
-    flex: none;
-  }
-  .glass-nav-cta:hover {
-    filter: brightness(1.05);
-  }
-  .glass-nav-cta:focus-visible {
-    outline: 2px solid var(--color-brand-500);
-    outline-offset: 3px;
-  }
-
-  /* Corner login: a quiet, separate utility for returning roofers. A faint
-     glass chip (no fill) that stays subordinate to the filled "Book a call" and
-     legible over both the light hero and the dark sections below. Pinned top-
-     right so it clears the top-left brand and the centred pill. */
-  .corner-login {
-    position: fixed;
-    top: max(18px, calc(env(safe-area-inset-top, 0px) + 12px));
-    right: max(20px, env(safe-area-inset-right, 0px));
-    z-index: 62;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.72rem 1.4rem;
-    border-radius: 999px;
-    font-size: 1rem;
-    font-weight: 600;
-    letter-spacing: -0.015em;
-    line-height: 1;
-    color: var(--color-ink);
-    text-decoration: none;
-    white-space: nowrap;
-    background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(22px) saturate(1.7);
-    -webkit-backdrop-filter: blur(22px) saturate(1.7);
-    border: 1px solid rgba(16, 24, 40, 0.08);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.9) inset,
-      0 2px 8px rgba(16, 24, 40, 0.1),
-      0 16px 34px -14px rgba(23, 60, 160, 0.5);
-    /* Hidden until the wordmark docks into the nav — brand-fly gains .is-docked
-       at t>0.97 in brand-dock.ts. Synced to the DOCK, not the "Book a call"
-       reveal: login is nav chrome, so it enters as the nav forms, and the two
-       needn't arrive together. Pure CSS via the sibling selector below. */
-    opacity: 0;
-    transform: translateY(-10px);
-    pointer-events: none;
-    transition:
-      opacity 0.5s ease,
-      transform 0.55s var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1)),
-      color 0.2s ease,
-      background 0.2s ease,
-      box-shadow 0.2s ease;
-  }
-  .brand-fly.is-docked ~ .corner-login {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
-  }
-  .corner-login svg {
-    flex: none;
-    color: var(--color-brand-600);
-  }
-  .corner-login:hover {
-    color: var(--color-brand-600);
-    background: rgba(255, 255, 255, 1);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.9) inset,
-      0 2px 8px rgba(16, 24, 40, 0.12),
-      0 18px 36px -14px rgba(23, 60, 160, 0.55);
-  }
-  .corner-login:focus-visible {
-    outline: 2px solid var(--color-brand-500);
-    outline-offset: 3px;
-  }
-  /* Mobile uses the fade-in bar's own "Log in"; hide the corner chip there. */
-  @media (max-width: 639px) {
-    .corner-login {
+    .header-cta svg {
       display: none;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .site-header {
+      transition: none;
+    }
     .brand-fly.is-hero::after {
       content: none;
       animation: none;
     }
-    /* Still dock-synced (hidden in the hero, revealed once docked), but no
-       vertical slide — a plain fade. */
-    .corner-login,
-    .brand-fly.is-docked ~ .corner-login {
-      transform: none;
-    }
-  }
-  /* Mobile nav: hidden on desktop (the morph owns the nav there). On phones a
-     plain fixed bar that fades in once you scroll past the hero — opacity only,
-     no per-frame scroll morph, so it stays smooth. */
-  .mobile-nav {
-    display: none;
-  }
-  @media (max-width: 639px) {
-    .mobile-nav {
-      position: fixed;
-      top: max(8px, env(safe-area-inset-top, 0px));
-      left: 12px;
-      right: 12px;
-      z-index: 65;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 7px 8px 7px 16px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.72);
-      backdrop-filter: blur(20px) saturate(1.7);
-      -webkit-backdrop-filter: blur(20px) saturate(1.7);
-      border: 1px solid rgba(255, 255, 255, 0.65);
-      box-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.7) inset,
-        0 10px 30px -14px rgba(23, 60, 160, 0.4);
-      opacity: 0;
-      transform: translateY(-8px);
-      pointer-events: none;
-      transition:
-        opacity 0.3s ease,
-        transform 0.34s var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1));
-    }
-    .mobile-nav.is-shown {
-      opacity: 1;
-      transform: translateY(0);
-      pointer-events: auto;
-    }
-  }
-  .mobile-nav-brand {
-    display: block;
-    font-size: 20px;
-    line-height: 0;
-    text-decoration: none;
-  }
-  .mobile-nav-brand img {
-    display: block;
-    height: 1em;
-    width: auto;
-  }
-  .mobile-nav-actions {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  /* Clear but still secondary to the filled "Book a call" — full ink, slightly
-     lighter weight, no fill. */
-  .mobile-nav-login {
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: -0.015em;
-    line-height: 1;
-    color: var(--color-ink);
-    text-decoration: none;
-    white-space: nowrap;
-  }
-  .mobile-nav-cta {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.6rem 1rem;
-    border-radius: 999px;
-    background: linear-gradient(
-      180deg,
-      var(--color-brand-500),
-      var(--color-brand-600)
-    );
-    color: #fff;
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    line-height: 1;
-    text-decoration: none;
-    white-space: nowrap;
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.28) inset,
-      0 8px 18px -8px rgba(31, 87, 240, 0.55);
   }
 </style>
 
 <script>
-  import { ensureScrollFlight } from "../scripts/scroll-flight";
   import { initBrandDock } from "../scripts/brand-dock";
 
-  let mobileNavCleanup: (() => void) | null = null;
-  let navExpandCleanup: (() => void) | null = null;
+  let cleanup: (() => void) | null = null;
 
-  // Mobile: no scroll-linked morph. Just fade a plain fixed bar in once the
-  // hero has mostly scrolled away. A class toggle + CSS transition — cheap and
-  // smooth, unlike the per-frame position morph.
-  function initMobileNav() {
-    const nav = document.querySelector<HTMLElement>("[data-mobile-nav]");
-    if (!nav) return;
-    let shown = false;
-    const update = () => {
-      const should = window.scrollY > window.innerHeight * 0.6;
-      if (should !== shown) {
-        shown = should;
-        nav.classList.toggle("is-shown", should);
-      }
-    };
-    update();
-    window.addEventListener("scroll", update, { passive: true });
-    mobileNavCleanup = () => window.removeEventListener("scroll", update);
-  }
-
-  // Desktop: the pill lengthens and reveals "Book a call" once the hero's own
-  // CTA has scrolled out of sight. This is a THRESHOLD trigger, not a scroll-
-  // linked morph — crossing the line flips a class and CSS runs the (fixed-
-  // duration) animation, so it plays smoothly regardless of scroll speed.
-  // Hysteresis on the two edges stops it flickering right at the boundary.
-  function initNavExpand() {
-    const nav = document.querySelector<HTMLElement>("[data-glass-nav]");
-    const heroCta = document.querySelector<HTMLElement>("[data-meeting-spacer]");
-    if (!nav || !heroCta) return;
-    let expanded = false;
+  // Threshold toggle, not a scroll-linked morph: crossing the line flips a
+  // class and CSS runs a fixed-duration transition, so it stays smooth however
+  // fast you scroll. Hysteresis on the two edges stops it flickering.
+  function initHeader() {
+    const header = document.querySelector<HTMLElement>("[data-site-header]");
+    if (!header) return;
+    let stuck = false;
     let raf = 0;
-
-    // The pill widens/narrows over ~0.55s of CSS transition, sliding the brand
-    // slot sideways. The docked wordmark is a fixed element pinned to that
-    // slot, so re-measure it every frame for the length of the animation or it
-    // ends up sitting under the button.
-    let syncRaf = 0;
-    let syncUntil = 0;
-    const syncBrand = () =>
-      (window as Window & { __brandDock?: { sync?: () => void } | null })
-        .__brandDock?.sync?.();
-    const runSync = () => {
-      syncRaf = 0;
-      syncBrand();
-      if (performance.now() < syncUntil) syncRaf = requestAnimationFrame(runSync);
-    };
-    const trackExpand = () => {
-      syncUntil = performance.now() + 700;
-      if (!syncRaf) syncRaf = requestAnimationFrame(runSync);
-    };
 
     const evaluate = () => {
       raf = 0;
-      const bottom = heroCta.getBoundingClientRect().bottom;
-      // Expand once the hero CTA is fully gone above the top; collapse only
-      // after it comes well back into view.
-      if (!expanded && bottom < 6) {
-        expanded = true;
-        nav.classList.add("is-expanded");
-        trackExpand();
-      } else if (expanded && bottom > 56) {
-        expanded = false;
-        nav.classList.remove("is-expanded");
-        trackExpand();
+      const y = window.__lenis?.scroll ?? window.scrollY;
+      if (!stuck && y > 24) {
+        stuck = true;
+        header.classList.add("is-stuck");
+      } else if (stuck && y < 8) {
+        stuck = false;
+        header.classList.remove("is-stuck");
       }
     };
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(evaluate);
     };
+
     evaluate();
     window.addEventListener("scroll", onScroll, { passive: true });
-    navExpandCleanup = () => {
+    const lenis = window.__lenis;
+    lenis?.on?.("scroll", onScroll);
+
+    cleanup = () => {
       if (raf) cancelAnimationFrame(raf);
-      if (syncRaf) cancelAnimationFrame(syncRaf);
       window.removeEventListener("scroll", onScroll);
     };
   }
 
-  function bootNavMotion() {
-    // The scroll-morph is a desktop showpiece; on touch it can't stay smooth
-    // (native momentum + blur recompositing), so phones get a plain fade nav.
-    if (window.matchMedia("(min-width: 640px)").matches) {
-      ensureScrollFlight();
-      initBrandDock();
-      initNavExpand();
-    } else {
-      initMobileNav();
-    }
+  function boot() {
+    initHeader();
+    initBrandDock();
   }
 
-  bootNavMotion();
+  boot();
   document.addEventListener("astro:after-swap", () => {
-    (window as Window & { __scrollFlight?: { destroy?: () => void } | null }).__scrollFlight?.destroy?.();
-    mobileNavCleanup?.();
-    mobileNavCleanup = null;
-    navExpandCleanup?.();
-    navExpandCleanup = null;
-    bootNavMotion();
+    cleanup?.();
+    cleanup = null;
+    boot();
   });
 </script>
