@@ -92,9 +92,20 @@ const dashboardUrl =
     justify-content: space-between;
     gap: 1rem;
     width: 100%;
+    /* 72rem matches the hero's max-w-6xl, and the inline padding matches its
+       px-5 sm:px-6 — so the wordmark sits on the same left edge as the headline
+       and the CTA on the same right edge as the content.
+       These were clamp(1rem, 3vw, 1.75rem), which agreed with the hero at no
+       width at all: 4px too far in on desktop and 4px too far out on mobile.
+       If the hero's container padding changes, change it here too. */
     max-width: 72rem;
     margin: 0 auto;
-    padding-inline: clamp(1rem, 3vw, 1.75rem);
+    padding-inline: 1.25rem;
+  }
+  @media (min-width: 640px) {
+    .site-header-inner {
+      padding-inline: 1.5rem;
+    }
   }
 
   /* font-size is the logo's size knob — the img is sized in em, and
