@@ -281,13 +281,30 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     margin-top: clamp(1.6rem, 3.8svh, 2.5rem);
     margin-inline: auto;
   }
-  /* Desktop: the widget sits under the copy column, sharing its left edge with
-     the headline, instead of centring under the whole hero. Keyed to the same
-     1024px breakpoint the grid splits at — below it the layout is a single
-     centred column and centring the widget is correct again. */
+  /* Desktop: line the widget's visible bar up with the headline.
+
+     Left-aligning this container is not enough on its own. The embed centres
+     its OWN card inside the iframe (max-width 620px collapsed, mx-auto), so in
+     a 740px frame the bar floats (740 - 620) / 2 = 60px in from the container's
+     edge — which is the gap that made it read as still-centred. Pulling the
+     frame left by exactly that inset puts the BAR on the headline's edge. The
+     frame's leading 60px is transparent and simply clips.
+
+     ⚠️ The frame must stay 740px. Below 640px the embed picks its mobile
+     fullscreen layout, which is the overlay flap noted at the top of this file
+     — so the frame cannot just be narrowed to the card's width instead.
+     ⚠️ 620/700 mirror --quote-collapsed-width / --quote-shell-width in
+     belpa-widget-frontend/app/globals.css. If those move, move these. */
   @media (min-width: 1024px) {
     .hero-widget {
-      margin-inline: 0 auto;
+      --q-embed-card-w: 620px;
+      margin-inline: calc((var(--q-embed-card-w) - 740px) / 2) auto;
+    }
+    /* In the flow stage the card grows to 700px. Since it grows about its own
+       centre, without this the bar's left edge would jump 40px further left as
+       the panel opens instead of staying put. */
+    .hero-widget:has(#belpa-widget[data-stage="flow"]) {
+      --q-embed-card-w: 700px;
     }
   }
   .hero-widget-spacer {
