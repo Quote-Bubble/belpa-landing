@@ -56,6 +56,12 @@ const {
       restores a few px (or animates there) while fonts/morph shift layout.
     -->
     <script is:inline>
+      // Marks that scripts run, BEFORE first paint. The header's own wordmark
+      // is hidden off this, because the flying hero wordmark is going to dock
+      // into that slot — waiting for brand-dock to set is-brand-morphing left a
+      // visible window at load where both marks were on screen at once.
+      // Without JS the class never lands and the header keeps its own wordmark.
+      document.documentElement.classList.add("has-js");
       try {
         if ("scrollRestoration" in history) history.scrollRestoration = "manual";
       } catch (_) {}

@@ -112,11 +112,13 @@ const dashboardUrl =
     height: 1em;
     width: auto;
   }
-  /* Hidden the moment the morph takes over, so the slot is pure layout and the
-     flying wordmark is the only one you ever see. Without the morph running
-     (no JS, or the script failing) this stays visible and the bar is complete
-     on its own. */
-  :global(html.is-brand-morphing) .header-brand img {
+  /* Hidden from the FIRST PAINT wherever scripts run, not once brand-dock has
+     booted. Keying this to is-brand-morphing left a window at load where the
+     bar's wordmark and the big hero one were both on screen — brand-dock only
+     sets that class after two animation frames.
+     `has-js` is set by an inline script in Layout.astro's <head>, so with no JS
+     it never lands and the header keeps its own wordmark. */
+  :global(html.has-js) .header-brand img {
     visibility: hidden;
   }
   .header-brand:focus-visible {
