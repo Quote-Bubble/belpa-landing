@@ -3,21 +3,36 @@
   "trailingSlash": false,
   "redirects": [
     {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "www.belpa.co.uk" }],
-      "destination": "https://belpa.co.uk/:path*",
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.belpa.co.uk"
+        }
+      ],
+      "destination": "https://belpa.co.uk/$1",
       "permanent": true
     },
     {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "quoter-landing.vercel.app" }],
-      "destination": "https://belpa.co.uk/:path*",
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "quoter-landing.vercel.app"
+        }
+      ],
+      "destination": "https://belpa.co.uk/$1",
       "permanent": true
     },
     {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "belpa-landing.vercel.app" }],
-      "destination": "https://belpa.co.uk/:path*",
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "belpa-landing.vercel.app"
+        }
+      ],
+      "destination": "https://belpa.co.uk/$1",
       "permanent": true
     }
   ],
