@@ -281,6 +281,15 @@ const meetingUrl = "https://cal.com/rafil-gohar-43ssls/15min";
     margin-top: clamp(1.6rem, 3.8svh, 2.5rem);
     margin-inline: auto;
   }
+  /* Desktop: the widget sits under the copy column, sharing its left edge with
+     the headline, instead of centring under the whole hero. Keyed to the same
+     1024px breakpoint the grid splits at — below it the layout is a single
+     centred column and centring the widget is correct again. */
+  @media (min-width: 1024px) {
+    .hero-widget {
+      margin-inline: 0 auto;
+    }
+  }
   .hero-widget-spacer {
     width: 100%;
     pointer-events: none;
