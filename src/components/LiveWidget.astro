@@ -20,8 +20,10 @@
 // not as a panel growing downward — see the modal block in the styles below.
 // That is this host's presentation choice only: the embed still reports plain
 // `expanded`, and the roofer loader (widget.js, serving /w/[slug]) still grows
-// it in place. `action:"close"` exists because the close control belongs to
-// the modal chrome out here while the flow state belongs to the widget.
+// it in place. `action:"close"` exists so the backdrop and Escape — which are
+// this host's chrome — can dismiss a flow whose state belongs to the widget.
+// The visible X is the embed's own, inside the panel; adding a second one out
+// here just put two crosses in the same corner.
 // ⚠️ COUPLED WITH vercel.json — the CSP `frame-src` there MUST list this exact
 // origin or the browser silently blocks this iframe (no error on the page, only
 // a CSP violation in the console). If you ever move the widget to a new URL
@@ -55,21 +57,12 @@ const COLLAPSED_H_MOBILE = 82;
   ></iframe>
 </div>
 
-<!-- Desktop modal chrome. Inert and invisible until the flow opens; both live
-     outside .q so they aren't inside the frame's stacking/paint context. -->
+<!-- Backdrop for the desktop modal. Inert until the flow opens, and outside
+     .q so it isn't inside the frame's stacking/paint context.
+     There is deliberately NO close button here: the embed draws its own inside
+     the panel, and a second one on the corner was simply two crosses. The
+     backdrop and Escape still close, both routed through the same message. -->
 <div class="q-backdrop" data-q-backdrop hidden></div>
-<div class="q-modal-chrome" data-q-chrome hidden>
-  <!-- Matches the modal's box so the close control can sit on its corner
-       without hard-coding a position. Only the button takes pointer events —
-       the rest of this layer must let backdrop clicks through. -->
-  <div class="q-modal-box">
-    <button type="button" class="q-close" data-q-close aria-label="Close quote">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-      </svg>
-    </button>
-  </div>
-</div>
 
 <style define:vars={{ collapsedH: `${COLLAPSED_H}px`, collapsedHMobile: `${COLLAPSED_H_MOBILE}px` }}>
   /* Reserved slot: a fixed height that never changes, so surrounding
@@ -146,66 +139,8 @@ const COLLAPSED_H_MOBILE = 82;
     opacity: 1;
   }
 
-  .q-modal-chrome {
-    position: fixed;
-    inset: 0;
-    z-index: 2002;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    /* Clicks must reach the backdrop underneath; only the button opts back in. */
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.24s ease 0.08s;
-  }
-  :global(html.belpa-modal-in) .q-modal-chrome {
-    opacity: 1;
-  }
-  /* Mirrors the frame's MEASURED rect (set in JS), not the height the embed
-     reports — that number includes shadow room below the card, so hanging the
-     close control off it put the button well above the panel's real corner.
-     The card is top-aligned in the frame and fills its width, so the frame's
-     top-right corner is the card's. */
-  .q-modal-box {
-    position: relative;
-    width: var(--q-modal-w, 700px);
-    height: var(--q-modal-h, 574px);
-  }
-  .q-close {
-    position: absolute;
-    top: -14px;
-    right: -14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    border: 1px solid rgba(16, 24, 40, 0.08);
-    border-radius: 999px;
-    background: #ffffff;
-    color: var(--color-ink);
-    cursor: pointer;
-    pointer-events: auto;
-    box-shadow:
-      0 2px 8px rgba(16, 24, 40, 0.12),
-      0 12px 28px -12px rgba(23, 60, 160, 0.5);
-    transition:
-      transform 0.18s var(--ease-out-soft, ease),
-      color 0.15s ease;
-  }
-  .q-close:hover {
-    transform: scale(1.06);
-    color: var(--color-brand-600);
-  }
-  .q-close:focus-visible {
-    outline: 2px solid var(--color-brand-500);
-    outline-offset: 3px;
-  }
-
   @media (prefers-reduced-motion: reduce) {
     .q-backdrop,
-    .q-modal-chrome,
     :global(html.belpa-modal) .q iframe {
       transition: none;
     }
@@ -461,10 +396,6 @@ const COLLAPSED_H_MOBILE = 82;
 
       if (mode === "expanded" && desktopMq.matches) {
         enterModal();
-        // The panel changes height between steps and the frame eases to it
-        // over 320ms, so measure once now and again once it has landed.
-        syncModalChrome();
-        window.setTimeout(syncModalChrome, 360);
         // The panel is centred over the page now instead of growing downward
         // into it, so there is nothing below to make room for. Both the
         // push-down and the scroll-into-view existed only for the inline
@@ -479,40 +410,20 @@ const COLLAPSED_H_MOBILE = 82;
     // —— Desktop modal ——
 
     const backdrop = document.querySelector<HTMLElement>("[data-q-backdrop]");
-    const chrome = document.querySelector<HTMLElement>("[data-q-chrome]");
-    const closeBtn = document.querySelector<HTMLElement>("[data-q-close]");
     let closeFallback = 0;
     let modalOpen = false;
-
-    /**
-     * Size the invisible box the close control hangs off to the frame's REAL
-     * rect. panelH is what the embed reports and includes shadow room below
-     * the card, so using it put the button above the panel's actual corner.
-     */
-    function syncModalChrome() {
-      if (!modalOpen || !frame) return;
-      const r = frame.getBoundingClientRect();
-      if (!r.width || !r.height) return;
-      const s = document.documentElement.style;
-      s.setProperty("--q-modal-w", `${Math.round(r.width)}px`);
-      s.setProperty("--q-modal-h", `${Math.round(r.height)}px`);
-    }
 
     function enterModal() {
       if (modalOpen) return;
       modalOpen = true;
       backdrop?.removeAttribute("hidden");
-      chrome?.removeAttribute("hidden");
       document.documentElement.classList.add("belpa-modal");
       // Lenis owns the scroll; CSS overflow alone wouldn't stop it.
       window.__lenis?.stop?.();
-      // Next frame, so the transition has a start state to run from — and the
-      // frame is only in its fixed, centred box by then, which is what the
-      // chrome has to measure.
+      // Next frame, so the transition has a start state to run from.
       requestAnimationFrame(() =>
         requestAnimationFrame(() => {
           document.documentElement.classList.add("belpa-modal-in");
-          syncModalChrome();
         }),
       );
     }
@@ -528,7 +439,6 @@ const COLLAPSED_H_MOBILE = 82;
         if (modalOpen) return;
         document.documentElement.classList.remove("belpa-modal");
         backdrop?.setAttribute("hidden", "");
-        chrome?.setAttribute("hidden", "");
       }, 240);
     }
 
@@ -554,9 +464,7 @@ const COLLAPSED_H_MOBILE = 82;
       }, 700);
     }
 
-    closeBtn?.addEventListener("click", requestClose);
     backdrop?.addEventListener("click", requestClose);
-    window.addEventListener("resize", syncModalChrome, { passive: true });
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && modalOpen) requestClose();
     });
