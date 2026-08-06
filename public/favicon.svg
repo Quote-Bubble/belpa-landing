@@ -1,11 +1,7 @@
-<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="fg" x1="8" y1="4" x2="40" y2="44" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#4f8bff" />
-      <stop offset="1" stop-color="#1f57f0" />
-    </linearGradient>
-  </defs>
-  <rect x="2" y="2" width="44" height="44" rx="13" fill="url(#fg)" />
-  <path d="M12 22.4 24 12.8 36 22.4" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-  <path d="M20.5 28.5h7" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Belpa mark on a white tile. The tile is deliberately opaque: on a
+       transparent icon the blue mark loses contrast against dark tab strips. -->
+  <rect width="512" height="512" rx="113" fill="#ffffff"/>
+  <polygon points="153.5,138.7 249.2,81.9 249.2,319.1 153.5,375.9" fill="#0547f2"/>
+  <polygon points="262.8,195.4 358.5,252.2 358.5,373.3 262.8,430.1" fill="#4094fe"/>
 </svg>
