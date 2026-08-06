@@ -11,10 +11,17 @@
 // caused.
 //
 //   embed -> host : { source:"belpa-embed", mode, height, stage }
-//   host  -> embed: { source:"belpa-host", action:"focus" }
+//   host  -> embed: { source:"belpa-host", action:"focus" | "close" }
 //
 // mode is one of: collapsed | suggesting | expanded | overlay. `stage` is
 // mirrored onto #belpa-widget so existing selectors keep working.
+//
+// On desktop `expanded` is presented as a CENTRED MODAL over a blurred page,
+// not as a panel growing downward — see the modal block in the styles below.
+// That is this host's presentation choice only: the embed still reports plain
+// `expanded`, and the roofer loader (widget.js, serving /w/[slug]) still grows
+// it in place. `action:"close"` exists because the close control belongs to
+// the modal chrome out here while the flow state belongs to the widget.
 // ⚠️ COUPLED WITH vercel.json — the CSP `frame-src` there MUST list this exact
 // origin or the browser silently blocks this iframe (no error on the page, only
 // a CSP violation in the console). If you ever move the widget to a new URL
@@ -46,6 +53,22 @@ const COLLAPSED_H_MOBILE = 82;
     scrolling="no"
     sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
   ></iframe>
+</div>
+
+<!-- Desktop modal chrome. Inert and invisible until the flow opens; both live
+     outside .q so they aren't inside the frame's stacking/paint context. -->
+<div class="q-backdrop" data-q-backdrop hidden></div>
+<div class="q-modal-chrome" data-q-chrome hidden>
+  <!-- Matches the modal's box so the close control can sit on its corner
+       without hard-coding a position. Only the button takes pointer events —
+       the rest of this layer must let backdrop clicks through. -->
+  <div class="q-modal-box">
+    <button type="button" class="q-close" data-q-close aria-label="Close quote">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
 </div>
 
 <style define:vars={{ collapsedH: `${COLLAPSED_H}px`, collapsedHMobile: `${COLLAPSED_H_MOBILE}px` }}>
@@ -83,6 +106,106 @@ const COLLAPSED_H_MOBILE = 82;
   .q[data-mode="expanded"] iframe {
     z-index: 60;
   }
+  /* —— Desktop modal ——
+     The flow opens centred over a blurred page rather than growing downward
+     in place. The frame is the same iframe, just re-positioned, so none of the
+     embed's own layout changes — which matters, because its layout is chosen
+     from its own width and dropping under 640px would flip it to the mobile
+     overlay. The clamp floor keeps it above that on narrow desktops. */
+  .q-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(9, 18, 40, 0.42);
+    backdrop-filter: blur(10px) saturate(1.1);
+    -webkit-backdrop-filter: blur(10px) saturate(1.1);
+    opacity: 0;
+    transition: opacity 0.3s var(--ease-out-soft, ease);
+  }
+  :global(html.belpa-modal) .q-backdrop {
+    opacity: 1;
+  }
+
+  :global(html.belpa-modal) .q iframe {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: clamp(640px, calc(100vw - 2rem), 700px);
+    z-index: 2001;
+    transform: translate(-50%, -50%) scale(0.96);
+    opacity: 0;
+    transition:
+      transform 0.34s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+      opacity 0.24s ease,
+      height 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  /* Second class, set a frame later, so the browser has a start state to
+     animate FROM — toggling both at once would paint the end state directly. */
+  :global(html.belpa-modal-in) .q iframe {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+
+  .q-modal-chrome {
+    position: fixed;
+    inset: 0;
+    z-index: 2002;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Clicks must reach the backdrop underneath; only the button opts back in. */
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.24s ease 0.08s;
+  }
+  :global(html.belpa-modal-in) .q-modal-chrome {
+    opacity: 1;
+  }
+  .q-modal-box {
+    position: relative;
+    width: clamp(640px, calc(100vw - 2rem), 700px);
+    height: var(--q-modal-h, 574px);
+  }
+  .q-close {
+    position: absolute;
+    top: -14px;
+    right: -14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid rgba(16, 24, 40, 0.08);
+    border-radius: 999px;
+    background: #ffffff;
+    color: var(--color-ink);
+    cursor: pointer;
+    pointer-events: auto;
+    box-shadow:
+      0 2px 8px rgba(16, 24, 40, 0.12),
+      0 12px 28px -12px rgba(23, 60, 160, 0.5);
+    transition:
+      transform 0.18s var(--ease-out-soft, ease),
+      color 0.15s ease;
+  }
+  .q-close:hover {
+    transform: scale(1.06);
+    color: var(--color-brand-600);
+  }
+  .q-close:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .q-backdrop,
+    .q-modal-chrome,
+    :global(html.belpa-modal) .q iframe {
+      transition: none;
+    }
+  }
+
   /* While the page is scrolling, let the wheel through to the document.
      Lenis drives the scroll by listening for `wheel` on the parent, but a
      cross-origin iframe consumes wheel events entirely — nothing bubbles out.
@@ -137,51 +260,14 @@ const COLLAPSED_H_MOBILE = 82;
     let panelH = 574;
     const desktopMq = window.matchMedia("(min-width: 640px)");
 
-    // The panel overlays downward and, on a short hero, its bottom lands over
-    // the section below. Push the lower sections down just enough to leave a
-    // clean gap beneath the panel. The gap is computed from the live layout
-    // (scroll-invariant, since both rects shift together), so it adapts to
-    // viewport height and where the bar sits.
+    // .page-lower padding is reset on close; nothing sets it any more now the
+    // desktop flow is a centred modal rather than a panel growing into the page.
     const lower = document.querySelector<HTMLElement>(".page-lower");
-    const GAP_BELOW_PANEL = 64;
-    function separateLowerSections() {
-      if (!lower) return;
-      // Measure against the panel's natural (unpadded) position.
-      lower.style.paddingTop = "";
-      const panelBottom = holder!.getBoundingClientRect().top + panelH;
-      const lowerTop = lower.getBoundingClientRect().top;
-      const needed = Math.max(0, panelBottom + GAP_BELOW_PANEL - lowerTop);
-      lower.style.paddingTop = `${Math.round(needed)}px`;
-    }
     function resetLowerSections() {
       if (lower) lower.style.paddingTop = "";
     }
 
-    // Desktop only: scroll so the expanded panel sits fully in view. On mobile
-    // the flow is a fullscreen overlay — this nudge freezes "It starts from
-    // space" into the locked backdrop and must never run.
-    function scrollPanelIntoView() {
-      if (!desktopMq.matches) return;
-      const rect = holder!.getBoundingClientRect();
-      const vh = window.innerHeight;
-      const topMargin = 24;
-      const bottomMargin = 24;
-      const panelBottom = rect.top + panelH;
-      let delta = panelBottom - (vh - bottomMargin);
-      if (delta <= 4) return;
-      // Never scroll so far that the panel's own top goes above topMargin.
-      const maxDelta = Math.max(0, rect.top - topMargin);
-      delta = Math.min(delta, maxDelta);
-      if (delta <= 4) return;
-      const lenis = (window as unknown as {
-        __lenis?: { scrollTo?: (t: number, o?: unknown) => void };
-      }).__lenis;
-      const target = window.scrollY + delta;
-      if (lenis?.scrollTo) lenis.scrollTo(target, { duration: 0.32 });
-      else window.scrollTo({ top: target, behavior: "smooth" });
-    }
-
-    // iOS-safe fullscreen. A transformed hero ancestor (.widget-load) traps
+// iOS-safe fullscreen. A transformed hero ancestor (.widget-load) traps
     // position:fixed so the iframe only covers the search slot — then the
     // locked backdrop shows the satellite section under the flow. We break
     // that containing block via CSS, size the iframe to the visual viewport
@@ -323,7 +409,6 @@ const COLLAPSED_H_MOBILE = 82;
       // An overlay-mode height is the device viewport, not the panel, so it
       // must never drive desktop layout — use the known panel height instead.
       const h = coercedFromOverlay ? panelH : hRaw;
-      const wasExpanded = holder.dataset.mode === "expanded";
       const wasOverlay = holder.dataset.mode === "overlay";
 
       // Mirror stage + mode so host CSS/selectors keep working.
@@ -370,14 +455,86 @@ const COLLAPSED_H_MOBILE = 82;
       }
 
       if (mode === "expanded" && desktopMq.matches) {
-        // Leave real space beneath the panel, then bring it fully into view.
-        separateLowerSections();
-        if (!wasExpanded) {
-          window.setTimeout(scrollPanelIntoView, 320);
-        }
-      } else if (mode !== "overlay") {
+        enterModal();
+        // The panel is centred over the page now instead of growing downward
+        // into it, so there is nothing below to make room for. Both the
+        // push-down and the scroll-into-view existed only for the inline
+        // panel and would now fight the modal.
         resetLowerSections();
+      } else {
+        exitModal();
+        if (mode !== "overlay") resetLowerSections();
       }
+    });
+
+    // —— Desktop modal ——
+
+    const backdrop = document.querySelector<HTMLElement>("[data-q-backdrop]");
+    const chrome = document.querySelector<HTMLElement>("[data-q-chrome]");
+    const closeBtn = document.querySelector<HTMLElement>("[data-q-close]");
+    let closeFallback = 0;
+    let modalOpen = false;
+
+    function enterModal() {
+      if (modalOpen) return;
+      modalOpen = true;
+      // Sizes the invisible box the close button hangs off, so the control
+      // tracks the panel's real height rather than a hard-coded one.
+      document.documentElement.style.setProperty("--q-modal-h", `${panelH}px`);
+      backdrop?.removeAttribute("hidden");
+      chrome?.removeAttribute("hidden");
+      document.documentElement.classList.add("belpa-modal");
+      // Lenis owns the scroll; CSS overflow alone wouldn't stop it.
+      window.__lenis?.stop?.();
+      // Next frame, so the transition has a start state to run from.
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() =>
+          document.documentElement.classList.add("belpa-modal-in"),
+        ),
+      );
+    }
+
+    function exitModal() {
+      if (!modalOpen) return;
+      modalOpen = false;
+      window.clearTimeout(closeFallback);
+      document.documentElement.classList.remove("belpa-modal-in");
+      window.__lenis?.start?.();
+      // Let it fade before the frame snaps back to the collapsed slot.
+      window.setTimeout(() => {
+        if (modalOpen) return;
+        document.documentElement.classList.remove("belpa-modal");
+        backdrop?.setAttribute("hidden", "");
+        chrome?.setAttribute("hidden", "");
+      }, 240);
+    }
+
+    /**
+     * Ask the embed to drop the flow. The close control is ours, but the flow
+     * state is the widget's, so this is a message rather than a direct call.
+     *
+     * The fallback is the important half: if that message is ever not acted on
+     * — an older embed, a dropped frame, a script error inside it — the visitor
+     * would be sealed behind a backdrop with no way out. Reloading the iframe
+     * always returns it to the collapsed bar, so being stuck is not reachable.
+     */
+    function requestClose() {
+      frame!.contentWindow?.postMessage(
+        { source: "belpa-host", action: "close" },
+        embedOrigin!,
+      );
+      window.clearTimeout(closeFallback);
+      closeFallback = window.setTimeout(() => {
+        if (holder!.dataset.stage !== "flow") return;
+        exitModal();
+        frame!.src = frame!.src;
+      }, 700);
+    }
+
+    closeBtn?.addEventListener("click", requestClose);
+    backdrop?.addEventListener("click", requestClose);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modalOpen) requestClose();
     });
 
     // Bridge for [data-try] buttons: focus the sealed input across the frame.
