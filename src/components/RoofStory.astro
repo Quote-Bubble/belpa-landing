@@ -246,7 +246,12 @@ const edges = corners
     isolation: isolate;
     overflow: hidden;
     margin: 0;
-    aspect-ratio: 16 / 10;
+    /* Taller than 16/10 so the panel carries more weight beside the rail. Safe
+       to change: the photo is 4:3 and the overlay's viewBox is 4:3, and both
+       fill by cropping from the centre (object-fit:cover / xMidYMid slice), so
+       the trace stays locked to the roof at any container aspect. A taller box
+       actually crops LESS of the photo. */
+    aspect-ratio: 7 / 5;
     border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.55);
     background: #0d1220;
