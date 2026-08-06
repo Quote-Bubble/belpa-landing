@@ -163,9 +163,6 @@ input {
      scales up with the screen) with its core behind the hero search cluster */
   background-position: center 300px;
   background-size: 100% auto;
-  /* Split hero: the demo column sits right of centre, so the glow follows it
-     rather than blooming in the gutter between the two columns. Desktop only —
-     below the lg breakpoint the grid stacks and centred is correct again. */
   filter: blur(14px);
   /* --blob-shift (mobile) slides the glow to the search cluster without
      changing the layer's intrinsic geometry. */
@@ -176,6 +173,9 @@ input {
   pointer-events: none;
   contain: paint;
 }
+/* Split hero: the demo column sits right of centre, so the glow follows it
+   rather than blooming in the gutter between the two columns. Desktop only —
+   below the lg breakpoint the grid stacks and centred is correct again. */
 @media (min-width: 1024px) {
   .site-bg {
     background-position: 68% 250px;
