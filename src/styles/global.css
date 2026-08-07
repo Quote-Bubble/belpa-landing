@@ -621,6 +621,7 @@ html.belpa-overlay-open #belpa-widget {
   animation: none !important;
 }
 html.belpa-overlay-open .site-header,
+html.belpa-overlay-open .brand-fly,
 html.belpa-overlay-open .hero-scroll,
 html.belpa-overlay-open .page-lower {
   opacity: 0 !important;
