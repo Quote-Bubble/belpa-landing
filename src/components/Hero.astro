@@ -337,12 +337,21 @@ import RoofStory from "./RoofStory.astro";
     .hero-promise { font-size: clamp(1.65rem, 3vw, 2.2rem); }
   }
 
-  /* Phones can't fit wordmark + copy + scan + widget in one screen. rafil is
-     right that something has to go, and it's the scan: the widget is the demo
-     and the copy is the pitch, so the animation is the only expendable one.
-     Words carry the story below this height. */
-  @media (max-width: 640px) and (max-height: 780px) {
-    .hero-scan { display: none; }
+  /* Keep the roof-story scan on phones. It used to hide under
+     (max-width: 640px) and (max-height: 780px), which is why DevTools
+     "mobile" (tall desktop window) still showed it while real handsets did
+     not. On narrow viewports it stacks under the widget in the single-column
+     grid — same reading order as a narrowed desktop window. */
+  @media (max-width: 640px) {
+    .hero-scan {
+      display: block;
+      max-width: 100%;
+      margin-top: 0.35rem;
+    }
+    /* Recover a little fold height now that the scan stays. */
+    .hero-brand {
+      margin-bottom: clamp(1.75rem, 5svh, 3rem);
+    }
   }
 
   /* —— Scroll cue —— */
