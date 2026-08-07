@@ -1,111 +1,30 @@
 ---
-// The hero's story animation: a customer asks for a price, the roof gets
-// measured, and the lead lands on the roofer's phone. Six beats on ONE clock.
+// The hero's story animation: customer journey → satellite measure → roofer
+// inbox payoff. One scrubbed JS clock (BEATS). Progress bar tracks the cycle.
 //
-// Why a JS timeline and not CSS keyframes: the previous version ran seven
-// elements off hand-tuned keyframe percentages, so every timing change meant
-// re-deriving all seven. Here each beat is a named window in BEATS below and
-// nothing else needs to know about it. It also makes the whole thing
-// scrubbable — append ?rs=0.42 to freeze the timeline at that point, which is
-// the only practical way to review a specific beat.
+// Loops cycle through ROOF_SCENES (westminster → terrace → bungalow) whenever
+// the matching satellite images are present in /public. Scene 1 always ships;
+// 2–3 join automatically once their .webp files exist.
 //
-// Everything drawn over the photo is DERIVED FROM THE POLYGON: the corners, the
-// edge lengths, the centroid the area sits on, and the area itself. Nothing is
-// placed by hand. If a mark appears, the geometry produced it.
-//
-// THE PRICE IS REAL. £11,500–£18,750 ex VAT is the actual output of
-// calculateReplacementEstimate() in belpa-widget-frontend, run against the live
-// belpa-landing-demo roofer config for this exact roof: 118 m², hipped, two
-// storeys, 35° pitch, concrete tile. Access multiplier 1.32, one week of
-// scaffold, confidence width 0.24. If the roof or the demo roofer's rates
-// change, re-run that calculation rather than editing these numbers by hand.
-//
-// AREA_M2 is the one input rather than an output — it describes the specific
-// house in the photo and is not measured at runtime, which is why the figure
-// stays aria-hidden. Swap the photo and all of this needs re-deriving.
-const roofPath =
-  "M277 356 L277 408 L277 480 L277 508 L308 512 L335 517 L339 533 L339 544 L411 545 L474 545 L534 545 L571 547 L625 548 L677 548 L724 551 L725 534 L774 526 L789 513 L807 490 L808 450 L794 428 L784 423 L784 387 L783 341 L777 318 L778 287 L778 255 L725 245 L669 241 L616 239 L611 201 L600 200 L601 141 L546 138 L494 140 L482 140 L479 197 L469 207 L467 239 L362 239 L357 324 L341 334 L342 354 L314 357 Z";
+// Scrub: ?rs=0.42 freezes the timeline. ?rsScene=terrace picks a scene.
+import { ROOF_SCENES } from "./roof-story-scenes";
 
-const AREA_M2 = 118;
-// Buckingham Palace. Deliberately a postcode nobody can mistake for a real
-// customer, because the animation pairs it with a specific roof and a specific
-// price and shouldn't point at anybody's actual house.
-//
-// This value is passed to the client through data-postcode on the figure below.
-// Do NOT re-declare it in the <script> block: it was duplicated there once and
-// the two drifted, so the field typed "HP13 5BP" while the notification said
-// something else entirely.
-const POSTCODE = "SW1A 1AA";
-const PRICE = "£11,500 – £18,750";
-const META = "Hipped · 35° pitch · 2 storeys";
+const boot = ROOF_SCENES[0];
+const roofPath = boot.roofPath;
+const corners = boot.corners;
+const edges = boot.edges;
+const c = boot.centroid;
+const POSTCODE = boot.postcode;
+const PRICE = boot.price;
+const META = boot.meta;
+const AREA_M2 = boot.areaM2;
+const scenesJson = JSON.stringify(ROOF_SCENES);
 
-type Pt = { x: number; y: number };
-const pts: Pt[] = [...roofPath.matchAll(/([ML])\s*(-?[\d.]+)\s+(-?[\d.]+)/g)].map(
-  (m) => ({ x: Number(m[2]), y: Number(m[3]) }),
-);
-
-function signedArea(p: Pt[]): number {
-  let a = 0;
-  for (let i = 0; i < p.length; i++) {
-    const q = p[(i + 1) % p.length];
-    a += p[i].x * q.y - q.x * p[i].y;
-  }
-  return a / 2;
-}
-const scale = Math.sqrt(AREA_M2 / Math.abs(signedArea(pts)));
-
-function centroid(p: Pt[]): Pt {
-  let cx = 0;
-  let cy = 0;
-  const a = signedArea(p);
-  for (let i = 0; i < p.length; i++) {
-    const q = p[(i + 1) % p.length];
-    const f = p[i].x * q.y - q.x * p[i].y;
-    cx += (p[i].x + q.x) * f;
-    cy += (p[i].y + q.y) * f;
-  }
-  return { x: cx / (6 * a), y: cy / (6 * a) };
-}
-const c = centroid(pts);
-
-// Real corners only. The trace lays several collinear points along each eave;
-// dropping them is what makes the vertices read as corners being found rather
-// than dots sprayed along a line.
-const corners = pts.filter((p, i) => {
-  const prev = pts[(i - 1 + pts.length) % pts.length];
-  const next = pts[(i + 1) % pts.length];
-  const a1 = Math.atan2(p.y - prev.y, p.x - prev.x);
-  const a2 = Math.atan2(next.y - p.y, next.x - p.x);
-  let d = ((a2 - a1) * 180) / Math.PI;
-  while (d > 180) d -= 360;
-  while (d < -180) d += 360;
-  return Math.abs(d) >= 25;
-});
-
-// Corner to corner, not point to point — measuring raw path segments gave a
-// 118 m² roof a longest side of 2.9 m.
-const edges = corners
-  .map((p, i) => {
-    const q = corners[(i + 1) % corners.length];
-    const dx = q.x - p.x;
-    const dy = q.y - p.y;
-    const mid = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
-    const ox = mid.x - c.x;
-    const oy = mid.y - c.y;
-    const on = Math.hypot(ox, oy) || 1;
-    let angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-    if (angle > 90) angle -= 180;
-    if (angle < -90) angle += 180;
-    return {
-      len: Math.hypot(dx, dy),
-      angle,
-      x: mid.x + (ox / on) * 22,
-      y: mid.y + (oy / on) * 22,
-      metres: (Math.hypot(dx, dy) * scale).toFixed(1),
-    };
-  })
-  .sort((a, b) => b.len - a.len)
-  .slice(0, 4);
+const CONTACT = {
+  name: "James Whitaker",
+  phone: "07700 900142",
+  email: "james@whitaker.co.uk",
+};
 ---
 
 <figure
@@ -113,9 +32,14 @@ const edges = corners
   data-roof-story
   data-postcode={POSTCODE}
   data-area={String(AREA_M2)}
+  data-contact-name={CONTACT.name}
+  data-contact-phone={CONTACT.phone}
+  data-contact-email={CONTACT.email}
   aria-hidden="true"
 >
-  <!-- Scene 1 — the customer asking. Mirrors the real embed's collapsed bar. -->
+  <script type="application/json" data-st-scenes set:html={scenesJson}></script>
+
+  <!-- 1 — Customer types a postcode (mirrors the collapsed embed bar). -->
   <div class="st-scene st-ask" data-st-ask>
     <div class="st-ask-inner">
       <div class="st-bar">
@@ -134,13 +58,77 @@ const edges = corners
     </div>
   </div>
 
-  <!-- Scene 2 — the measurement. -->
+  <!-- 2 — Widget choice steps (job → property → storeys). Not pixel-perfect. -->
+  <div class="st-scene st-flow" data-st-flow>
+    <div class="st-sheet">
+      <div class="st-sheet-panel is-on" data-st-panel="job">
+        <p class="st-sheet-h">What do you need doing?</p>
+        <div class="st-opts">
+          <span class="st-opt" data-st-opt="job" data-value="full">Full roof replacement</span>
+          <span class="st-opt" data-st-opt="job" data-value="repair">Tile or slate repair</span>
+          <span class="st-opt" data-st-opt="job" data-value="gutter">Gutters &amp; fascias</span>
+        </div>
+      </div>
+      <div class="st-sheet-panel" data-st-panel="prop">
+        <p class="st-sheet-h">What type of property is it?</p>
+        <div class="st-opts st-opts--2">
+          <span class="st-opt" data-st-opt="prop" data-value="detached">Detached</span>
+          <span class="st-opt" data-st-opt="prop" data-value="semi">Semi-detached</span>
+          <span class="st-opt" data-st-opt="prop" data-value="terrace">Terrace</span>
+          <span class="st-opt" data-st-opt="prop" data-value="bungalow">Bungalow</span>
+        </div>
+      </div>
+      <div class="st-sheet-panel" data-st-panel="storeys">
+        <p class="st-sheet-h">How many storeys?</p>
+        <div class="st-opts st-opts--2">
+          <span class="st-opt" data-st-opt="storeys" data-value="1">1 storey</span>
+          <span class="st-opt" data-st-opt="storeys" data-value="2">2 storeys</span>
+          <span class="st-opt" data-st-opt="storeys" data-value="3">3 storeys</span>
+          <span class="st-opt" data-st-opt="storeys" data-value="4">4+</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 — Contact details. -->
+  <div class="st-scene st-contact" data-st-contact>
+    <div class="st-sheet">
+      <p class="st-sheet-h">Where should we send the quote?</p>
+      <div class="st-fields">
+        <label class="st-field">
+          <span class="st-field-l">Name</span>
+          <span class="st-field-v"
+            ><span data-st-name></span><span class="st-caret st-caret--field" data-st-name-caret
+            ></span></span
+          >
+        </label>
+        <label class="st-field">
+          <span class="st-field-l">Mobile</span>
+          <span class="st-field-v"
+            ><span data-st-phone></span><span class="st-caret st-caret--field" data-st-phone-caret
+            ></span></span
+          >
+        </label>
+        <label class="st-field">
+          <span class="st-field-l">Email</span>
+          <span class="st-field-v"
+            ><span data-st-email></span><span class="st-caret st-caret--field" data-st-email-caret
+            ></span></span
+          >
+        </label>
+      </div>
+      <span class="st-continue" data-st-continue>Continue</span>
+    </div>
+  </div>
+
+  <!-- 4 — Satellite measure (the hero beat). -->
   <div class="st-scene st-map" data-st-map>
     <div class="st-stage" data-st-stage>
       <img
         class="st-photo"
-        src="/satellite-roof.webp"
-        srcset="/satellite-roof-760.webp 760w, /satellite-roof.webp 1280w"
+        data-st-photo
+        src={boot.photo}
+        srcset={`${boot.photo760} 760w, ${boot.photo} 1280w`}
         sizes="(min-width: 1024px) 46vw, 92vw"
         alt=""
         width="1280"
@@ -194,10 +182,22 @@ const edges = corners
           ))}
         </g>
 
-        <!-- Plate behind the area, so it holds contrast over any roof colour. -->
         <g data-st-area class="st-area">
-          <rect class="st-area-plate" x={c.x - 108} y={c.y - 40} width="216" height="80" rx="16" />
-          <text class="st-area-text" x={c.x.toFixed(1)} y={c.y.toFixed(1)} data-st-area-text>0 m²</text>
+          <rect
+            class="st-area-plate"
+            data-st-area-plate
+            x={c.x - 108}
+            y={c.y - 40}
+            width="216"
+            height="80"
+            rx="16"
+          />
+          <text
+            class="st-area-text"
+            x={c.x.toFixed(1)}
+            y={c.y.toFixed(1)}
+            data-st-area-text
+          >0 m²</text>
         </g>
       </svg>
     </div>
@@ -205,25 +205,10 @@ const edges = corners
     <figcaption class="st-meta" data-st-meta>{META}</figcaption>
   </div>
 
-  <!-- Scene 3 — the lead arriving with the roofer.
-       Its own scene rather than an overlay: sitting on the map it covered the
-       measurement the sequence had just spent six seconds producing.
-
-       NO PHONE FRAME, deliberately. A drawn handset was tried and looked
-       uncanny — a bezel is either photoreal or it reads as a cartoon, and at
-       this size it can't be photoreal. It also forced the notification down to
-       a width where the price stopped being readable. The notification's own
-       form is unmistakably a phone notification, so the hardware was carrying
-       no meaning the card wasn't already carrying. -->
-
+  <!-- 5 — Roofer payoff: notification, then quotes inbox + lead detail. -->
   <div class="st-scene st-lead" data-st-lead>
-    <div class="st-notif">
+    <div class="st-notif" data-st-notif>
       <div class="st-notif-top">
-        <!-- The real wordmark, the same asset and treatment the widget uses for
-             "Powered by" (public/belpa-wordmark.png at a fixed height, auto
-             width). It replaces the favicon plus a typed "BELPA" — the mark
-             already says the name, so setting it again was doubling up. Costs
-             nothing extra: Layout.astro already preloads this for the hero. -->
         <img
           class="st-notif-mark"
           src="/belpa-wordmark.png"
@@ -234,12 +219,100 @@ const edges = corners
         <span class="st-notif-time">now</span>
       </div>
       <p class="st-notif-title">New lead</p>
-      <p class="st-notif-body">{POSTCODE} · 118 m² hipped roof</p>
-      <p class="st-notif-price">{PRICE}<span class="st-notif-vat"> ex VAT</span></p>
+      <p class="st-notif-body" data-st-notif-body>
+        {POSTCODE} · {AREA_M2} m² {boot.shape}
+      </p>
+      <p class="st-notif-price">
+        <span data-st-notif-price>{PRICE}</span><span class="st-notif-vat"> ex VAT</span>
+      </p>
+    </div>
+
+    <div class="st-dash" data-st-dash>
+      <div class="st-dash-head">
+        <div>
+          <p class="st-dash-title">Quotes</p>
+          <p class="st-dash-sub">Every lead your widget has captured.</p>
+        </div>
+        <img class="st-dash-mark" src="/belpa-wordmark.png" alt="" width="900" height="279" />
+      </div>
+
+      <div class="st-dash-filters">
+        <span class="st-pill is-on">All <em>12</em></span>
+        <span class="st-pill">New <em>4</em></span>
+        <span class="st-pill">Contacted <em>5</em></span>
+        <span class="st-pill">Completed <em>2</em></span>
+      </div>
+
+      <div class="st-dash-table">
+        <div class="st-dash-cols">
+          <span>Contact</span><span>Job</span><span>Estimate</span><span>Status</span>
+        </div>
+
+        <!-- Incoming lead — slides in mid-beat. -->
+        <div class="st-row st-row--new" data-st-row-new>
+          <div class="st-row-dot" aria-hidden="true"></div>
+          <div class="st-row-contact">
+            <strong data-st-lead-name>{CONTACT.name}</strong>
+            <span data-st-lead-pc>{POSTCODE}</span>
+          </div>
+          <span class="st-row-job">Full replacement</span>
+          <span class="st-row-price" data-st-lead-price>{PRICE}</span>
+          <span class="st-status">New</span>
+        </div>
+
+        <div class="st-detail" data-st-detail>
+          <div class="st-detail-inner">
+            <div class="st-detail-grid">
+              <div>
+                <p class="st-detail-price" data-st-detail-price>{PRICE}</p>
+                <p class="st-detail-vat">ex. VAT · indicative band</p>
+                <p class="st-detail-job">Full roof replacement</p>
+                <span class="st-status">New</span>
+              </div>
+              <div class="st-detail-stats">
+                <div>
+                  <span class="st-detail-k">Measured</span>
+                  <span class="st-detail-v" data-st-detail-area>{AREA_M2} m²</span>
+                </div>
+                <div>
+                  <span class="st-detail-k">Roof</span>
+                  <span class="st-detail-v" data-st-detail-shape>{boot.shape}</span>
+                </div>
+                <div>
+                  <span class="st-detail-k">Postcode</span>
+                  <span class="st-detail-v" data-st-detail-pc>{POSTCODE}</span>
+                </div>
+                <div>
+                  <span class="st-detail-k">Phone</span>
+                  <span class="st-detail-v">{CONTACT.phone}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="st-row st-row--muted">
+          <div class="st-row-contact">
+            <strong>Priya Raval</strong>
+            <span>HP13 5BP</span>
+          </div>
+          <span class="st-row-job">Tile repair</span>
+          <span class="st-row-price">£1,350</span>
+          <span class="st-status st-status--contacted">Contacted</span>
+        </div>
+        <div class="st-row st-row--muted">
+          <div class="st-row-contact">
+            <strong>Tom Whitfield</strong>
+            <span>CF10 1EP</span>
+          </div>
+          <span class="st-row-job">Full replacement</span>
+          <span class="st-row-price">£9,200</span>
+          <span class="st-status">New</span>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Loop progress — driven by the same `p` as the beats, so it can't drift. -->
   <div class="st-progress" aria-hidden="true">
     <div class="st-progress-fill" data-st-progress></div>
   </div>
@@ -251,11 +324,6 @@ const edges = corners
     isolation: isolate;
     overflow: hidden;
     margin: 0;
-    /* Taller than 16/10 so the panel carries more weight beside the rail. Safe
-       to change: the photo is 4:3 and the overlay's viewBox is 4:3, and both
-       fill by cropping from the centre (object-fit:cover / xMidYMid slice), so
-       the trace stays locked to the roof at any container aspect. A taller box
-       actually crops LESS of the photo. */
     aspect-ratio: 7 / 5;
     border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.55);
@@ -265,7 +333,6 @@ const edges = corners
       0 2px 8px rgba(16, 24, 40, 0.08),
       0 28px 60px -28px rgba(23, 60, 160, 0.5);
   }
-  /* Desktop: between the base 7/5 and the previous oversized pass. */
   @media (min-width: 1200px) {
     .st {
       aspect-ratio: 5 / 4;
@@ -279,7 +346,7 @@ const edges = corners
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 5;
+    z-index: 8;
     height: 3px;
     background: rgba(255, 255, 255, 0.14);
     pointer-events: none;
@@ -302,12 +369,13 @@ const edges = corners
     inset: 0;
   }
 
-  /* —— Scene 1: the ask —— */
+  /* —— Ask —— */
   .st-ask {
     display: grid;
     place-items: center;
     background:
       radial-gradient(ellipse 70% 60% at 50% 40%, #ffffff 0%, #f3f6fc 60%, #e8eefb 100%);
+    z-index: 4;
   }
   .st-ask-inner {
     width: min(82%, 460px);
@@ -343,6 +411,10 @@ const edges = corners
     background: var(--color-brand-500);
     opacity: 0;
   }
+  .st-caret--field {
+    height: 1em;
+    vertical-align: -0.1em;
+  }
   .st-btn {
     margin-left: auto;
     flex: none;
@@ -352,12 +424,117 @@ const edges = corners
     font-weight: 700;
     color: #fff;
     white-space: nowrap;
-    transition: transform 0.12s ease;
   }
 
-  /* —— Scene 2: the measurement —— */
+  /* —— Flow / contact sheets —— */
+  .st-flow,
+  .st-contact {
+    display: grid;
+    place-items: center;
+    padding: 6% 7%;
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 35%, #ffffff 0%, #f2f5fc 55%, #e6edfa 100%);
+    opacity: 0;
+    z-index: 3;
+  }
+  .st-sheet {
+    width: min(100%, 420px);
+    padding: 1.15rem 1.15rem 1.2rem;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(23, 60, 160, 0.1);
+    box-shadow: 0 22px 48px -28px rgba(10, 32, 90, 0.55);
+  }
+  .st-sheet-h {
+    margin: 0 0 0.85rem;
+    text-align: center;
+    font-family: var(--font-display, var(--font-sans));
+    font-size: clamp(1.05rem, 2.4cqw, 1.35rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+  }
+  .st-sheet-panel {
+    display: none;
+  }
+  .st-sheet-panel.is-on {
+    display: block;
+  }
+  .st-opts {
+    display: grid;
+    gap: 0.45rem;
+  }
+  .st-opts--2 {
+    grid-template-columns: 1fr 1fr;
+  }
+  .st-opt {
+    display: flex;
+    align-items: center;
+    min-height: 2.55rem;
+    padding: 0.55rem 0.85rem;
+    border-radius: 14px;
+    border: 1.5px solid rgba(23, 60, 160, 0.12);
+    background: #fff;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--color-ink);
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease,
+      box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  .st-opt.is-sel {
+    border-color: var(--color-brand-500, #2f6bff);
+    background: var(--color-brand-50, #eef4ff);
+    color: var(--color-brand-700, #1546c9);
+    box-shadow: 0 0 0 1px rgba(47, 107, 255, 0.2);
+    transform: scale(1.02);
+  }
+  .st-fields {
+    display: grid;
+    gap: 0.55rem;
+  }
+  .st-field {
+    display: grid;
+    gap: 0.25rem;
+  }
+  .st-field-l {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-muted);
+  }
+  .st-field-v {
+    display: block;
+    min-height: 2.4rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 12px;
+    border: 1.5px solid rgba(23, 60, 160, 0.14);
+    background: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-ink);
+    white-space: pre;
+  }
+  .st-continue {
+    display: block;
+    margin-top: 0.85rem;
+    padding: 0.7rem 1rem;
+    border-radius: 999px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #fff;
+    background: linear-gradient(180deg, var(--color-brand-500), var(--color-brand-600));
+    opacity: 0.35;
+    transform: scale(0.98);
+  }
+  .st-continue.is-ready {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* —— Map —— */
   .st-map {
     opacity: 0;
+    z-index: 2;
   }
   .st-stage {
     position: absolute;
@@ -381,7 +558,6 @@ const edges = corners
     pointer-events: none;
     overflow: visible;
   }
-
   .st-fill {
     fill: rgba(47, 107, 255, 0.17);
     opacity: 0;
@@ -409,10 +585,6 @@ const edges = corners
     transform-box: fill-box;
     transform-origin: center;
   }
-
-  /* Plates rather than outlined text. An outline keeps the glyph legible but
-     leaves the number sitting in whatever the roof is doing behind it; a plate
-     gives every label the same contrast regardless of what it lands on. */
   .st-dim,
   .st-area {
     opacity: 0;
@@ -440,11 +612,10 @@ const edges = corners
     font-weight: 700;
     letter-spacing: -0.02em;
   }
-
   .st-meta {
     position: absolute;
     left: clamp(0.85rem, 3%, 1.25rem);
-    bottom: clamp(0.75rem, 3%, 1.1rem);
+    bottom: clamp(0.85rem, 3.2%, 1.25rem);
     z-index: 3;
     font-size: 0.76rem;
     font-weight: 600;
@@ -454,42 +625,32 @@ const edges = corners
     opacity: 0;
   }
 
-  /* —— Scene 3: the lead —— */
-  /* Bottom-right, not top-right. A notification lands top-right by convention,
-     but there it sat straight over the roof's top edge and the 4.5 m label —
-     covering the measurement the sequence had just spent six seconds making. */
-  /* The lock-screen dark the notification would be sitting on anyway, which is
-     what makes it read as a phone without drawing one. */
+  /* —— Roofer —— */
   .st-lead {
     display: grid;
     place-items: center;
-    padding: 0 8%;
+    padding: 5% 6%;
     z-index: 5;
     opacity: 0;
     background:
       radial-gradient(ellipse 90% 70% at 50% 35%, #16224a 0%, #0a1024 55%, #05080f 100%);
   }
-
-  /* iOS-style notification: light, heavily rounded. Now free to take a
-     comfortable width, since it isn't squeezed inside a handset. */
   .st-notif {
     width: 100%;
-    max-width: 420px;
+    max-width: 400px;
     padding: 0.85rem 1rem 0.95rem;
     border-radius: 20px;
     background: rgba(244, 247, 255, 0.94);
     box-shadow: 0 10px 24px -12px rgba(3, 10, 28, 0.8);
-    /* The phone arrives first and settles; the notification then drops onto
-       it, which is the beat that actually matters. */
     opacity: 0;
     transform: translate3d(0, -10px, 0);
+    position: absolute;
   }
   .st-notif-top {
     display: flex;
     align-items: center;
     gap: 0.3rem;
   }
-  /* Height is the size knob, width follows — same as the widget's h-5 w-auto. */
   .st-notif-mark {
     height: 15px;
     width: auto;
@@ -527,222 +688,733 @@ const edges = corners
     color: rgba(20, 30, 55, 0.5);
   }
 
-  @media (max-width: 640px) {
-    .st-dim { display: none; }
-    .st-area-text { font-size: 56px; }
-    /* Narrower card, so the handset takes proportionally more of it or the
-       notification text stops being legible. */
-    .st-lead { padding: 0 5%; }
-    .st-notif-title { font-size: 0.9rem; }
-    .st-notif-price { font-size: 1.05rem; }
-    .st-notif-title { font-size: 0.68rem; }
-    .st-notif-price { font-size: 0.76rem; }
-    .st-meta { font-size: 0.7rem; }
+  .st-dash {
+    width: 100%;
+    max-width: 520px;
+    padding: 0.95rem 1rem 0.85rem;
+    border-radius: 20px;
+    background: rgba(252, 253, 255, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    box-shadow: 0 18px 40px -20px rgba(3, 10, 28, 0.75);
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.98);
+  }
+  .st-dash-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .st-dash-title {
+    margin: 0;
+    font-family: var(--font-display, var(--font-sans));
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+  }
+  .st-dash-sub {
+    margin: 0.15rem 0 0;
+    font-size: 0.72rem;
+    color: var(--color-ink-soft);
+  }
+  .st-dash-mark {
+    height: 14px;
+    width: auto;
+    margin-top: 0.25rem;
+    opacity: 0.85;
+  }
+  .st-dash-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.7rem;
+  }
+  .st-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.28rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--color-ink-soft);
+  }
+  .st-pill em {
+    font-style: normal;
+    opacity: 0.55;
+    font-size: 0.65rem;
+  }
+  .st-pill.is-on {
+    background: var(--color-ink);
+    color: #fff;
+  }
+  .st-pill.is-on em {
+    opacity: 0.75;
+  }
+  .st-dash-table {
+    margin-top: 0.65rem;
+    border-radius: 14px;
+    border: 1px solid var(--color-line, #e9eaee);
+    overflow: hidden;
+    background: #fff;
+  }
+  .st-dash-cols {
+    display: grid;
+    grid-template-columns: 1.4fr 1.1fr 1.1fr 0.8fr;
+    gap: 0.4rem;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--color-muted);
+    border-bottom: 1px solid var(--color-line, #e9eaee);
+  }
+  .st-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.4fr 1.1fr 1.1fr 0.8fr;
+    gap: 0.4rem;
+    align-items: center;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.72rem;
+    border-bottom: 1px solid rgba(233, 234, 238, 0.7);
+  }
+  .st-row--new {
+    background: var(--color-brand-50, #eef4ff);
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+    border-bottom-width: 0;
+  }
+  .st-row--new.is-in {
+    max-height: 4rem;
+    opacity: 1;
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+    border-bottom-width: 1px;
+  }
+  .st-row-dot {
+    position: absolute;
+    left: 0.35rem;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-brand-500);
+    transform: translateY(-50%);
+  }
+  .st-row-contact {
+    min-width: 0;
+    padding-left: 0.35rem;
+  }
+  .st-row-contact strong {
+    display: block;
+    font-weight: 700;
+    color: var(--color-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .st-row-contact span {
+    display: block;
+    font-size: 0.62rem;
+    color: var(--color-muted);
+  }
+  .st-row-job {
+    color: var(--color-ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .st-row-price {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .st-status {
+    display: inline-flex;
+    width: fit-content;
+    padding: 0.18rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: #1546c9;
+    background: #eef4ff;
+  }
+  .st-status--contacted {
+    color: #6d28d9;
+    background: #f3e8ff;
+  }
+  .st-row--muted {
+    opacity: 0.72;
   }
 
-  /* Reduced motion: hold the finished state — measured roof, lead delivered.
-     The still frame carries the whole story, so nothing is lost. */
+  .st-detail {
+    display: grid;
+    grid-template-rows: 0fr;
+    background: rgba(10, 11, 13, 0.02);
+    border-bottom: 1px solid rgba(233, 234, 238, 0.7);
+    transition: none;
+  }
+  .st-detail.is-open {
+    grid-template-rows: 1fr;
+  }
+  .st-detail-inner {
+    overflow: hidden;
+    min-height: 0;
+  }
+  .st-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr;
+    gap: 0.85rem;
+    padding: 0.7rem 0.85rem 0.8rem;
+  }
+  .st-detail-price {
+    margin: 0;
+    font-family: var(--font-display, var(--font-sans));
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+  }
+  .st-detail-vat {
+    margin: 0.1rem 0 0;
+    font-size: 0.62rem;
+    color: var(--color-muted);
+  }
+  .st-detail-job {
+    margin: 0.35rem 0 0.45rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-ink-soft);
+  }
+  .st-detail-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem 0.6rem;
+  }
+  .st-detail-k {
+    display: block;
+    font-size: 0.58rem;
+    font-weight: 600;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .st-detail-v {
+    display: block;
+    margin-top: 0.1rem;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--color-ink);
+    text-transform: capitalize;
+  }
+
+  @media (max-width: 640px) {
+    .st-dim {
+      display: none;
+    }
+    .st-area-text {
+      font-size: 56px;
+    }
+    .st-lead {
+      padding: 4% 4%;
+    }
+    .st-notif-title {
+      font-size: 0.9rem;
+    }
+    .st-notif-price {
+      font-size: 1.05rem;
+    }
+    .st-dash-cols,
+    .st-row {
+      grid-template-columns: 1.3fr 0.9fr 1fr 0.7fr;
+    }
+    .st-detail-grid {
+      grid-template-columns: 1fr;
+      gap: 0.55rem;
+    }
+    .st-meta {
+      font-size: 0.7rem;
+    }
+    .st-opts--2 {
+      grid-template-columns: 1fr;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .st-ask { display: none; }
-    .st-map { opacity: 1; }
+    .st-ask,
+    .st-flow,
+    .st-contact,
+    .st-lead {
+      display: none;
+    }
+    .st-map {
+      opacity: 1;
+    }
     .st-fill,
     .st-dim,
     .st-area,
-    .st-meta { opacity: 1; }
-    .st-vert { opacity: 1; }
-    /* Reduced motion holds the measured roof, not the phone — the map is the
-       frame that carries the whole story in one still. */
-    .st-lead { display: none; }
-    .st-notif { opacity: 1; transform: none; }
-    .st-progress { display: none; }
+    .st-meta {
+      opacity: 1;
+    }
+    .st-vert {
+      opacity: 1;
+    }
+    .st-progress {
+      display: none;
+    }
   }
 </style>
 
 <script>
-  // Beat boundaries as fractions of one cycle. Everything reads from here —
-  // change a number and only that beat moves.
-  // 11.5s. The earlier 9s left the settled notification on screen for under
-  // half a second — the payoff of the whole sequence was the shortest thing in
-  // it. The extra time goes almost entirely to the last beat.
-  const DUR = 11500;
+  import type { RoofScene } from "./roof-story-scenes";
+
+  // ~21.5s. Customer flow is readable; measure stays the hero beat; the
+  // roofer inbox gets the longest settled hold — that is the B2B proof.
+  const DUR = 21500;
   const BEATS = {
-    typeFrom: 0.03,
-    typeTo: 0.19,
-    press: 0.21,
-    whipFrom: 0.23,
-    whipTo: 0.3,
-    traceFrom: 0.3,
-    traceTo: 0.47,
-    fillFrom: 0.45,
-    fillTo: 0.52,
-    dimsFrom: 0.49,
-    dimsTo: 0.58,
-    areaFrom: 0.51,
-    areaTo: 0.6,
-    // The measured roof holds for a beat before it hands over.
-    // The map leaves before the lead arrives — they never share the frame.
-    mapOutFrom: 0.68,
-    mapOutTo: 0.73,
-    leadFrom: 0.71,
-    leadTo: 0.77,
-    notifFrom: 0.76,
-    notifTo: 0.81,
-    // Settled notification now holds ~1.8s, against 0.45s before.
-    holdTo: 0.97,
+    typeFrom: 0.02,
+    typeTo: 0.09,
+    press: 0.095,
+
+    askOutFrom: 0.1,
+    askOutTo: 0.13,
+
+    flowInFrom: 0.115,
+    flowInTo: 0.145,
+    jobPick: 0.16,
+    propShow: 0.195,
+    propPick: 0.22,
+    storeysShow: 0.255,
+    storeysPick: 0.28,
+    flowOutFrom: 0.305,
+    flowOutTo: 0.33,
+
+    contactInFrom: 0.32,
+    contactInTo: 0.345,
+    nameFrom: 0.35,
+    nameTo: 0.4,
+    phoneFrom: 0.405,
+    phoneTo: 0.44,
+    emailFrom: 0.445,
+    emailTo: 0.485,
+    continueReady: 0.49,
+    contactOutFrom: 0.505,
+    contactOutTo: 0.53,
+
+    whipFrom: 0.52,
+    whipTo: 0.565,
+    traceFrom: 0.565,
+    traceTo: 0.655,
+    fillFrom: 0.64,
+    fillTo: 0.69,
+    dimsFrom: 0.675,
+    dimsTo: 0.73,
+    areaFrom: 0.695,
+    areaTo: 0.745,
+
+    mapOutFrom: 0.77,
+    mapOutTo: 0.805,
+
+    leadFrom: 0.795,
+    leadTo: 0.825,
+    notifFrom: 0.82,
+    notifTo: 0.855,
+    notifOutFrom: 0.875,
+    notifOutTo: 0.9,
+
+    dashFrom: 0.885,
+    dashTo: 0.915,
+    rowFrom: 0.905,
+    rowTo: 0.93,
+    detailFrom: 0.935,
+    detailTo: 0.955,
+    holdTo: 0.985,
   };
+
+  const JOB_PICK = "full";
+
+  function picksFor(s: RoofScene) {
+    if (s.id === "terrace") return { prop: "terrace", storeys: "2" };
+    if (s.id === "bungalow") return { prop: "bungalow", storeys: "1" };
+    return { prop: "detached", storeys: "2" };
+  }
+
   const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
-  /** Normalised progress through a window, 0 before and 1 after. */
   const span = (p: number, a: number, b: number) => clamp01((p - a) / (b - a));
   const outCubic = (t: number) => 1 - Math.pow(1 - t, 3);
   const inOutCubic = (t: number) =>
     t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  function probeScene(scene: RoofScene): Promise<RoofScene | null> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(scene);
+      img.onerror = () => resolve(null);
+      img.src = scene.photo;
+    });
+  }
 
   function initRoofStory() {
     document.querySelectorAll<HTMLElement>("[data-roof-story]").forEach((root) => {
       if (root.dataset.stBound === "1") return;
       root.dataset.stBound = "1";
 
-      // Single source of truth, handed over on the element. These used to be
-      // re-declared here and drifted from the frontmatter — the typed field
-      // and the notification ended up showing different postcodes.
-      const POSTCODE = root.dataset.postcode ?? "";
-      const AREA_M2 = Number(root.dataset.area ?? 0);
+      const scenesEl = root.querySelector<HTMLScriptElement>("[data-st-scenes]");
+      let allScenes: RoofScene[] = [];
+      try {
+        allScenes = JSON.parse(scenesEl?.textContent ?? "[]") as RoofScene[];
+      } catch {
+        allScenes = [];
+      }
+      if (!allScenes.length) return;
+
+      const CONTACT_NAME = root.dataset.contactName ?? "James Whitaker";
+      const CONTACT_PHONE = root.dataset.contactPhone ?? "";
+      const CONTACT_EMAIL = root.dataset.contactEmail ?? "";
 
       const q = <T extends Element>(s: string) => root.querySelector<T>(s);
       const ask = q<HTMLElement>("[data-st-ask]")!;
+      const flow = q<HTMLElement>("[data-st-flow]")!;
+      const contact = q<HTMLElement>("[data-st-contact]")!;
       const map = q<HTMLElement>("[data-st-map]")!;
       const stage = q<HTMLElement>("[data-st-stage]")!;
+      const photo = q<HTMLImageElement>("[data-st-photo]")!;
       const typed = q<HTMLElement>("[data-st-typed]")!;
       const caret = q<HTMLElement>("[data-st-caret]")!;
       const btn = q<HTMLElement>("[data-st-btn]")!;
       const fill = q<SVGPathElement>("[data-st-fill]")!;
       const lines = [...root.querySelectorAll<SVGPathElement>("[data-st-line]")];
-      const verts = [...root.querySelectorAll<SVGCircleElement>(".st-vert")];
-      const dims = [...root.querySelectorAll<SVGGElement>(".st-dim")];
+      const vertsG = q<SVGGElement>("[data-st-verts]")!;
+      const dimsG = q<SVGGElement>("[data-st-dims]")!;
       const area = q<SVGGElement>("[data-st-area]")!;
+      const areaPlate = q<SVGRectElement>("[data-st-area-plate]")!;
       const areaText = q<SVGTextElement>("[data-st-area-text]")!;
       const meta = q<HTMLElement>("[data-st-meta]")!;
       const lead = q<HTMLElement>("[data-st-lead]")!;
-      const notif = q<HTMLElement>(".st-notif")!;
+      const notif = q<HTMLElement>("[data-st-notif]")!;
+      const dash = q<HTMLElement>("[data-st-dash]")!;
+      const rowNew = q<HTMLElement>("[data-st-row-new]")!;
+      const detail = q<HTMLElement>("[data-st-detail]")!;
       const progress = q<HTMLElement>("[data-st-progress]");
+      const nameEl = q<HTMLElement>("[data-st-name]")!;
+      const phoneEl = q<HTMLElement>("[data-st-phone]")!;
+      const emailEl = q<HTMLElement>("[data-st-email]")!;
+      const nameCaret = q<HTMLElement>("[data-st-name-caret]")!;
+      const phoneCaret = q<HTMLElement>("[data-st-phone-caret]")!;
+      const emailCaret = q<HTMLElement>("[data-st-email-caret]")!;
+      const continueBtn = q<HTMLElement>("[data-st-continue]")!;
+      const notifBody = q<HTMLElement>("[data-st-notif-body]")!;
+      const notifPrice = q<HTMLElement>("[data-st-notif-price]")!;
+      const leadName = q<HTMLElement>("[data-st-lead-name]")!;
+      const leadPc = q<HTMLElement>("[data-st-lead-pc]")!;
+      const leadPrice = q<HTMLElement>("[data-st-lead-price]")!;
+      const detailPrice = q<HTMLElement>("[data-st-detail-price]")!;
+      const detailArea = q<HTMLElement>("[data-st-detail-area]")!;
+      const detailShape = q<HTMLElement>("[data-st-detail-shape]")!;
+      const detailPc = q<HTMLElement>("[data-st-detail-pc]")!;
 
-      // Dash length must come from the path itself — a hardcoded value breaks
-      // the moment the outline is retraced.
-      const lens = lines.map((l) => Math.ceil(l.getTotalLength()) + 2);
+      const panels = {
+        job: q<HTMLElement>('[data-st-panel="job"]')!,
+        prop: q<HTMLElement>('[data-st-panel="prop"]')!,
+        storeys: q<HTMLElement>('[data-st-panel="storeys"]')!,
+      };
+      const jobOpts = [...root.querySelectorAll<HTMLElement>('[data-st-opt="job"]')];
+      const propOpts = [...root.querySelectorAll<HTMLElement>('[data-st-opt="prop"]')];
+      const storeysOpts = [...root.querySelectorAll<HTMLElement>('[data-st-opt="storeys"]')];
+
+      let verts = [...root.querySelectorAll<SVGCircleElement>(".st-vert")];
+      let dims = [...root.querySelectorAll<SVGGElement>(".st-dim")];
+      let lens = lines.map((l) => Math.ceil(l.getTotalLength()) + 2);
       lines.forEach((l, i) => {
         l.style.strokeDasharray = String(lens[i]);
       });
 
+      let scene = allScenes[0];
+      let available: RoofScene[] = [allScenes[0]];
+      let sceneIdx = 0;
+      let postcode = scene.postcode;
+      let areaM2 = scene.areaM2;
+
+      function rebuildGeometry(s: RoofScene) {
+        fill.setAttribute("d", s.roofPath);
+        lines.forEach((l) => l.setAttribute("d", s.roofPath));
+        lens = lines.map((l) => Math.ceil(l.getTotalLength()) + 2);
+        lines.forEach((l, i) => {
+          l.style.strokeDasharray = String(lens[i]);
+          l.style.strokeDashoffset = String(lens[i]);
+        });
+
+        vertsG.replaceChildren();
+        s.corners.forEach((p, i) => {
+          const el = document.createElementNS(SVG_NS, "circle");
+          el.setAttribute("class", "st-vert");
+          el.setAttribute("cx", String(p.x));
+          el.setAttribute("cy", String(p.y));
+          el.setAttribute("r", "4.5");
+          el.style.setProperty("--i", String(i));
+          el.style.opacity = "0";
+          vertsG.appendChild(el);
+        });
+        verts = [...vertsG.querySelectorAll<SVGCircleElement>(".st-vert")];
+
+        dimsG.replaceChildren();
+        s.edges.forEach((e, i) => {
+          const g = document.createElementNS(SVG_NS, "g");
+          g.setAttribute("class", "st-dim");
+          g.style.setProperty("--i", String(i));
+          g.style.opacity = "0";
+          const rot = `rotate(${e.angle.toFixed(2)} ${e.x.toFixed(1)} ${e.y.toFixed(1)})`;
+          const rect = document.createElementNS(SVG_NS, "rect");
+          rect.setAttribute("class", "st-dim-plate");
+          rect.setAttribute("x", String(e.x - 34));
+          rect.setAttribute("y", String(e.y - 15));
+          rect.setAttribute("width", "68");
+          rect.setAttribute("height", "30");
+          rect.setAttribute("rx", "8");
+          rect.setAttribute("transform", rot);
+          const text = document.createElementNS(SVG_NS, "text");
+          text.setAttribute("class", "st-dim-text");
+          text.setAttribute("x", String(e.x));
+          text.setAttribute("y", String(e.y));
+          text.setAttribute("transform", rot);
+          text.textContent = `${e.metres} m`;
+          g.append(rect, text);
+          dimsG.appendChild(g);
+        });
+        dims = [...dimsG.querySelectorAll<SVGGElement>(".st-dim")];
+
+        areaPlate.setAttribute("x", String(s.centroid.x - 108));
+        areaPlate.setAttribute("y", String(s.centroid.y - 40));
+        areaText.setAttribute("x", s.centroid.x.toFixed(1));
+        areaText.setAttribute("y", s.centroid.y.toFixed(1));
+      }
+
+      function applyScene(s: RoofScene) {
+        scene = s;
+        postcode = s.postcode;
+        areaM2 = s.areaM2;
+        root.dataset.postcode = s.postcode;
+        root.dataset.area = String(s.areaM2);
+
+        photo.src = s.photo;
+        photo.srcset = `${s.photo760} 760w, ${s.photo} 1280w`;
+        rebuildGeometry(s);
+
+        meta.textContent = s.meta;
+        notifBody.textContent = `${s.postcode} · ${s.areaM2} m² ${s.shape}`;
+        notifPrice.textContent = s.price;
+        leadName.textContent = CONTACT_NAME;
+        leadPc.textContent = s.postcode;
+        leadPrice.textContent = s.price;
+        detailPrice.textContent = s.price;
+        detailArea.textContent = `${s.areaM2} m²`;
+        detailShape.textContent = s.shape;
+        detailPc.textContent = s.postcode;
+      }
+
+      function showPanel(which: "job" | "prop" | "storeys") {
+        (Object.keys(panels) as Array<keyof typeof panels>).forEach((k) => {
+          panels[k].classList.toggle("is-on", k === which);
+        });
+      }
+
+      function pickOpt(opts: HTMLElement[], value: string, on: boolean) {
+        opts.forEach((o) => {
+          o.classList.toggle("is-sel", on && o.dataset.value === value);
+        });
+      }
+
+      function typeField(
+        el: HTMLElement,
+        caretEl: HTMLElement,
+        full: string,
+        p: number,
+        from: number,
+        to: number,
+      ) {
+        const t = span(p, from, to);
+        const n = Math.round(t * full.length);
+        el.textContent = full.slice(0, n);
+        const live = p >= from && p < to + 0.01;
+        caretEl.style.opacity = live
+          ? Math.floor((p * DUR) / 450) % 2
+            ? "0.2"
+            : "1"
+          : "0";
+      }
+
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (reduce) {
         lines.forEach((l) => (l.style.strokeDashoffset = "0"));
-        areaText.textContent = `${AREA_M2} m²`;
+        areaText.textContent = `${areaM2} m²`;
         return;
       }
 
       function render(p: number) {
         if (progress) progress.style.transform = `scaleX(${clamp01(p)})`;
 
-        // Scene 1 — typing, then the press.
+        // —— Ask ——
         const t = span(p, BEATS.typeFrom, BEATS.typeTo);
-        const chars = Math.round(t * POSTCODE.length);
-        typed.textContent = POSTCODE.slice(0, chars);
-        // Caret blinks while the field is live, then goes with the scene.
-        const live = p > 0.02 && p < BEATS.press;
-        caret.style.opacity = live ? (Math.floor(p * DUR / 500) % 2 ? "0.25" : "1") : "0";
-        const press = span(p, BEATS.press, BEATS.press + 0.02);
+        typed.textContent = postcode.slice(0, Math.round(t * postcode.length));
+        const liveAsk = p > 0.015 && p < BEATS.press;
+        caret.style.opacity = liveAsk
+          ? Math.floor((p * DUR) / 500) % 2
+            ? "0.25"
+            : "1"
+          : "0";
+        const press = span(p, BEATS.press, BEATS.press + 0.015);
         btn.style.transform = `scale(${1 - 0.06 * Math.sin(press * Math.PI)})`;
 
-        // The whip. Scene 1 pushes back and blurs out; the map comes in from a
-        // wider frame. CSS blur is omnidirectional and reads as smear, so the
-        // horizontal streak is carried by scaleX on the way in instead.
-        const w = inOutCubic(span(p, BEATS.whipFrom, BEATS.whipTo));
-        ask.style.opacity = String(1 - w);
-        ask.style.transform = `scale(${1 + 0.35 * w})`;
-        ask.style.filter = `blur(${18 * w}px)`;
-        // (map opacity is set once, further down, after mapOut is known)
-        const settle = span(p, BEATS.whipTo, BEATS.traceTo);
-        // Single assignment — appending to style.transform each frame grows the
-        // string without bound and the scale compounds.
-        const mapOut = span(p, BEATS.mapOutFrom, BEATS.mapOutTo);
-        stage.style.transform = `scale(${1.16 - 0.13 * outCubic(settle) - 0.04 * mapOut})`;
-        stage.style.filter = w < 1 ? `blur(${10 * (1 - w)}px)` : "none";
+        const askOut = inOutCubic(span(p, BEATS.askOutFrom, BEATS.askOutTo));
+        ask.style.opacity = String(1 - askOut);
+        ask.style.transform = `scale(${1 + 0.2 * askOut})`;
+        ask.style.filter = askOut > 0 ? `blur(${14 * askOut}px)` : "none";
+        ask.style.pointerEvents = askOut > 0.9 ? "none" : "auto";
 
-        // Corners land in path order.
+        // —— Flow choices ——
+        const flowIn = outCubic(span(p, BEATS.flowInFrom, BEATS.flowInTo));
+        const flowOut = span(p, BEATS.flowOutFrom, BEATS.flowOutTo);
+        flow.style.opacity = String(flowIn * (1 - flowOut));
+        flow.style.transform = `scale(${0.96 + 0.04 * flowIn})`;
+
+        if (p < BEATS.propShow) showPanel("job");
+        else if (p < BEATS.storeysShow) showPanel("prop");
+        else showPanel("storeys");
+
+        const picks = picksFor(scene);
+        pickOpt(jobOpts, JOB_PICK, p >= BEATS.jobPick);
+        pickOpt(propOpts, picks.prop, p >= BEATS.propPick);
+        pickOpt(storeysOpts, picks.storeys, p >= BEATS.storeysPick);
+
+        // —— Contact ——
+        const cIn = outCubic(span(p, BEATS.contactInFrom, BEATS.contactInTo));
+        const cOut = span(p, BEATS.contactOutFrom, BEATS.contactOutTo);
+        contact.style.opacity = String(cIn * (1 - cOut));
+        contact.style.transform = `translate3d(0, ${(1 - cIn) * 10}px, 0)`;
+
+        typeField(nameEl, nameCaret, CONTACT_NAME, p, BEATS.nameFrom, BEATS.nameTo);
+        typeField(phoneEl, phoneCaret, CONTACT_PHONE, p, BEATS.phoneFrom, BEATS.phoneTo);
+        typeField(emailEl, emailCaret, CONTACT_EMAIL, p, BEATS.emailFrom, BEATS.emailTo);
+        continueBtn.classList.toggle("is-ready", p >= BEATS.continueReady && p < BEATS.contactOutTo);
+
+        // —— Map whip + measure ——
+        const w = inOutCubic(span(p, BEATS.whipFrom, BEATS.whipTo));
+        const mapOut = span(p, BEATS.mapOutFrom, BEATS.mapOutTo);
+        const settle = span(p, BEATS.whipTo, BEATS.traceTo);
+        stage.style.transform = `scale(${1.16 - 0.13 * outCubic(settle) - 0.04 * mapOut})`;
+        stage.style.filter = w < 1 && w > 0 ? `blur(${10 * (1 - w)}px)` : "none";
+        map.style.opacity = String(w * (1 - mapOut));
+
         const tr = span(p, BEATS.traceFrom, BEATS.traceTo);
         verts.forEach((v, i) => {
-          const local = clamp01((tr - (i / verts.length) * 0.55) / 0.12);
+          const local = clamp01((tr - (i / Math.max(verts.length, 1)) * 0.55) / 0.12);
           v.style.opacity = String(local);
           v.style.transform = `scale(${0.3 + 0.7 * outCubic(local)})`;
         });
-
-        // The outline joins them, trailing the corners slightly.
         const draw = outCubic(clamp01((tr - 0.18) / 0.82));
         lines.forEach((l, i) => {
           l.style.strokeDashoffset = String(lens[i] * (1 - draw));
         });
-
         fill.style.opacity = String(span(p, BEATS.fillFrom, BEATS.fillTo));
 
-        // Edge lengths, longest first.
         const d = span(p, BEATS.dimsFrom, BEATS.dimsTo);
         dims.forEach((g, i) => {
           g.style.opacity = String(clamp01((d - i * 0.16) / 0.3));
         });
-
-        // The area resolves rather than appearing — a number that counts is a
-        // number being worked out.
         const a = span(p, BEATS.areaFrom, BEATS.areaTo);
         area.style.opacity = String(clamp01(a * 3));
-        areaText.textContent = `${Math.round(outCubic(a) * AREA_M2)} m²`;
-        meta.style.opacity = String(span(p, BEATS.dimsFrom, BEATS.dimsTo));
+        areaText.textContent = `${Math.round(outCubic(a) * areaM2)} m²`;
+        meta.style.opacity = String(span(p, BEATS.dimsFrom, BEATS.dimsTo) * (1 - mapOut));
 
-        // The map hands over to the phone. This is the point of the whole
-        // sequence: the customer got a price, and the roofer got the lead.
-        map.style.opacity = String(w * (1 - mapOut));
+        // —— Roofer ——
+        const leadIn = span(p, BEATS.leadFrom, BEATS.leadTo);
+        const leadOut = span(p, BEATS.holdTo, 1);
+        lead.style.opacity = String(leadIn * (1 - leadOut));
 
-        const ph = span(p, BEATS.leadFrom, BEATS.leadTo);
-        const out = span(p, BEATS.holdTo, 1);
-        lead.style.opacity = String(ph * (1 - out));
-
-        // The notification drops in the way a real one does — down from the
-        // top edge, slightly overshooting nothing, then still.
         const nf = span(p, BEATS.notifFrom, BEATS.notifTo);
-        notif.style.opacity = String(nf);
-        notif.style.transform =
-          `translate3d(0, ${-22 * (1 - outCubic(nf))}px, 0) scale(${0.96 + 0.04 * outCubic(nf)})`;
+        const nfOut = span(p, BEATS.notifOutFrom, BEATS.notifOutTo);
+        notif.style.opacity = String(nf * (1 - nfOut));
+        notif.style.transform = `translate3d(0, ${-22 * (1 - outCubic(nf)) - 8 * nfOut}px, 0) scale(${
+          0.96 + 0.04 * outCubic(nf) - 0.04 * nfOut
+        })`;
+
+        const df = outCubic(span(p, BEATS.dashFrom, BEATS.dashTo));
+        dash.style.opacity = String(df * (1 - leadOut));
+        dash.style.transform = `translate3d(0, ${(1 - df) * 16}px, 0) scale(${0.97 + 0.03 * df})`;
+
+        const rowT = span(p, BEATS.rowFrom, BEATS.rowTo);
+        rowNew.classList.toggle("is-in", rowT > 0.2);
+        rowNew.style.opacity = String(rowT);
+        detail.classList.toggle("is-open", span(p, BEATS.detailFrom, BEATS.detailTo) > 0.35);
       }
 
-      // Scrub: ?rs=0.42 freezes the timeline there. The only practical way to
-      // review one beat — and the reason this is a JS clock at all.
-      const forced = new URLSearchParams(location.search).get("rs");
-      if (forced !== null) {
-        render(clamp01(Number(forced)));
-        return;
-      }
+      const params = new URLSearchParams(location.search);
+      const forced = params.get("rs");
+      const forcedScene = params.get("rsScene");
 
-      let raf = 0;
-      let t0 = 0;
-      const loop = (now: number) => {
-        if (!t0) t0 = now;
-        render(((now - t0) % DUR) / DUR);
-        raf = requestAnimationFrame(loop);
-      };
+      async function boot() {
+        const probed = await Promise.all(allScenes.map(probeScene));
+        available = probed.filter((s): s is RoofScene => Boolean(s));
+        if (!available.length) available = [allScenes[0]];
 
-      // Loops forever, so don't burn frames while it's off screen.
-      const io = new IntersectionObserver(
-        ([e]) => {
-          if (e.isIntersecting) {
-            if (!raf) raf = requestAnimationFrame(loop);
-          } else {
-            cancelAnimationFrame(raf);
-            raf = 0;
-            t0 = 0;
+        if (forcedScene) {
+          const hit = available.find((s) => s.id === forcedScene);
+          if (hit) {
+            sceneIdx = available.indexOf(hit);
+            applyScene(hit);
           }
-        },
-        { threshold: 0.2 },
-      );
-      io.observe(root);
+        }
+
+        if (forced !== null) {
+          render(clamp01(Number(forced)));
+          return;
+        }
+
+        let raf = 0;
+        let t0 = 0;
+        let lastCycle = -1;
+
+        const loop = (now: number) => {
+          if (!t0) t0 = now;
+          const elapsed = now - t0;
+          const cycle = Math.floor(elapsed / DUR);
+          if (cycle !== lastCycle) {
+            if (lastCycle >= 0 && available.length > 1) {
+              sceneIdx = (sceneIdx + 1) % available.length;
+              applyScene(available[sceneIdx]);
+            }
+            lastCycle = cycle;
+          }
+          render((elapsed % DUR) / DUR);
+          raf = requestAnimationFrame(loop);
+        };
+
+        const io = new IntersectionObserver(
+          ([e]) => {
+            if (e.isIntersecting) {
+              if (!raf) raf = requestAnimationFrame(loop);
+            } else {
+              cancelAnimationFrame(raf);
+              raf = 0;
+              t0 = 0;
+              lastCycle = -1;
+            }
+          },
+          { threshold: 0.2 },
+        );
+        io.observe(root);
+      }
+
+      void boot();
     });
   }
 
