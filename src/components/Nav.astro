@@ -123,16 +123,23 @@ const dashboardUrl =
     height: 1em;
     width: auto;
   }
-  /* Hidden from the FIRST PAINT wherever scripts run, not once brand-dock has
-     booted. Keying this to is-brand-morphing left a window at load where the
-     bar's wordmark and the big hero one were both on screen — brand-dock only
-     sets that class after two animation frames.
-     `has-js` is set by an inline script in Layout.astro's <head>, so with no JS
-     it never lands and the header keeps its own wordmark.
-     Applies on phones too: the hero mark flies into this slot on scroll, so
-     showing the header img early was the double-logo bug. */
-  :global(html.has-js) .header-brand img {
-    visibility: hidden;
+  /* Desktop: morph owns the visible mark — hide the slot img from first paint.
+     Mobile: no scroll-linked flight (it jitters on touch momentum). Header mark
+     fades in once the bar sticks; hero mark scrolls away. `has-js` is set in
+     Layout.astro's <head>. */
+  @media (min-width: 640px) {
+    :global(html.has-js) .header-brand img {
+      visibility: hidden;
+    }
+  }
+  @media (max-width: 639px) {
+    :global(html.has-js) .header-brand img {
+      opacity: 0;
+      transition: opacity 0.4s var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1));
+    }
+    :global(html.has-js) .site-header.is-stuck .header-brand img {
+      opacity: 1;
+    }
   }
   .header-brand:focus-visible {
     outline: 2px solid var(--color-brand-500);
@@ -202,7 +209,12 @@ const dashboardUrl =
     flex: none;
   }
 
-  /* —— The flying wordmark —— */
+  /* —— The flying wordmark (desktop morph only) —— */
+  @media (max-width: 639px) {
+    .brand-fly {
+      display: none;
+    }
+  }
   .brand-fly {
     position: fixed;
     top: 0;
@@ -329,12 +341,14 @@ const dashboardUrl =
     };
   }
 
-  // Morph runs on every viewport: hero mark → header slot. brand-dock already
-  // ignores URL-bar-only resizes on mobile (width-only remeasure), which was
-  // the old "breaks on mobile" bug — not a reason to skip the flight entirely.
+  // Scroll-linked morph is desktop-only. On touch, momentum scrolling and
+  // per-frame transforms fight each other and read as jitter — phones get a
+  // CSS fade of the header mark when the bar sticks instead.
+  const DESKTOP = "(min-width: 640px)";
+
   function boot() {
     initHeader();
-    initBrandDock();
+    if (window.matchMedia(DESKTOP).matches) initBrandDock();
   }
 
   boot();

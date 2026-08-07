@@ -208,8 +208,10 @@ import RoofStory from "./RoofStory.astro";
      fit below that, so the layout stacks instead of cramming. */
   @media (min-width: 1200px) {
     .hero-grid {
-      grid-template-columns: 680px minmax(0, 1fr);
-      column-gap: clamp(2rem, 3vw, 3.5rem);
+      /* Rail stays 680px so the embed never flips to mobile overlay. Extra
+         fr weight + taller story aspect (RoofStory) makes the panel bigger. */
+      grid-template-columns: 680px minmax(0, 1.35fr);
+      column-gap: clamp(1.5rem, 2.5vw, 2.75rem);
       align-items: center;
     }
   }
@@ -252,6 +254,8 @@ import RoofStory from "./RoofStory.astro";
     .hero-scan {
       max-width: none;
       margin-inline: 0;
+      width: 100%;
+      align-self: center;
     }
   }
 

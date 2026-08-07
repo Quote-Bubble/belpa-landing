@@ -260,6 +260,14 @@ const edges = corners
       0 2px 8px rgba(16, 24, 40, 0.08),
       0 28px 60px -28px rgba(23, 60, 160, 0.5);
   }
+  /* Desktop beside the rail: more presence without touching the mobile stack. */
+  @media (min-width: 1200px) {
+    .st {
+      aspect-ratio: 5 / 4;
+      border-radius: 26px;
+      min-height: min(36rem, 62vh);
+    }
+  }
   .st-scene {
     position: absolute;
     inset: 0;
