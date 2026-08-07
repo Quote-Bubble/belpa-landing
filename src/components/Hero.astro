@@ -115,10 +115,12 @@ import RoofStory from "./RoofStory.astro";
 
   /* —— Brand —— */
   .hero-brand {
-    /* Opens the rail, so it needs air beneath it rather than sitting on the
-       headline. It is no longer the biggest thing on screen — the promise is,
-       which is the right way round for a brand nobody recognises yet. */
-    margin: 0 0 clamp(1.4rem, 3.2svh, 2.25rem);
+    /* Opens the rail, so it needs real air beneath it rather than sitting on
+       the headline. It is no longer the biggest thing on screen — the promise
+       is, which is the right way round for a brand nobody recognises yet.
+       Kept in svh so short laptops give the space back on their own instead of
+       pushing the widget out of the fold. */
+    margin: 0 0 clamp(3rem, 8svh, 6rem);
     /* Zero strut so the inline-block spacer isn't sitting on a baseline with a
        descender gap under it — the line box is then exactly the logo's height. */
     line-height: 0;
