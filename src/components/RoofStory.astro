@@ -238,6 +238,11 @@ const edges = corners
       <p class="st-notif-price">{PRICE}<span class="st-notif-vat"> ex VAT</span></p>
     </div>
   </div>
+
+  <!-- Loop progress — driven by the same `p` as the beats, so it can't drift. -->
+  <div class="st-progress" aria-hidden="true">
+    <div class="st-progress-fill" data-st-progress></div>
+  </div>
 </figure>
 
 <style>
@@ -268,6 +273,30 @@ const edges = corners
       min-height: min(28rem, 48vh);
     }
   }
+
+  .st-progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.14);
+    pointer-events: none;
+  }
+  .st-progress-fill {
+    height: 100%;
+    width: 100%;
+    transform-origin: 0 50%;
+    transform: scaleX(0);
+    background: linear-gradient(
+      90deg,
+      rgba(91, 140, 255, 0.85),
+      var(--color-brand-500, #2f6bff)
+    );
+    will-change: transform;
+  }
+
   .st-scene {
     position: absolute;
     inset: 0;
@@ -525,6 +554,7 @@ const edges = corners
        frame that carries the whole story in one still. */
     .st-lead { display: none; }
     .st-notif { opacity: 1; transform: none; }
+    .st-progress { display: none; }
   }
 </style>
 
@@ -594,6 +624,7 @@ const edges = corners
       const meta = q<HTMLElement>("[data-st-meta]")!;
       const lead = q<HTMLElement>("[data-st-lead]")!;
       const notif = q<HTMLElement>(".st-notif")!;
+      const progress = q<HTMLElement>("[data-st-progress]");
 
       // Dash length must come from the path itself — a hardcoded value breaks
       // the moment the outline is retraced.
@@ -610,6 +641,8 @@ const edges = corners
       }
 
       function render(p: number) {
+        if (progress) progress.style.transform = `scaleX(${clamp01(p)})`;
+
         // Scene 1 — typing, then the press.
         const t = span(p, BEATS.typeFrom, BEATS.typeTo);
         const chars = Math.round(t * POSTCODE.length);
