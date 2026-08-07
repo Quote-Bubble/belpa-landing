@@ -82,6 +82,10 @@ const COLLAPSED_H_MOBILE = 82;
     height: var(--collapsedH);
     border: 0;
     background: transparent;
+    /* Without this a visitor in dark mode gets the browser's dark canvas
+       painted behind the transparent frame until the embed's document loads —
+       the black box that flashed around every embed on first paint. */
+    color-scheme: light;
     /* Matches the widget's internal SHELL_TRANSITION (320ms, ease-soft) so
        the iframe and the card inside it grow/shrink in lockstep. */
     transition: height 320ms cubic-bezier(0.22, 1, 0.36, 1);
