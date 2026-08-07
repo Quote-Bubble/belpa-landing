@@ -56,9 +56,20 @@ import RoofStory from "./RoofStory.astro";
         <h1 class="font-display hero-promise sub-load">
           Stop losing leads with slow quotes.
         </h1>
+        <!-- The lead-in names the audience, which nothing above it does: the
+             wordmark is a name and the promise is a symptom ("slow quotes")
+             that a builder, a plumber or a window fitter would all recognise.
+             A visitor arriving from search needs to know in the first line
+             whether this is for them.
+
+             It sits inside the paragraph rather than as an eyebrow above the
+             h1 on purpose — an eyebrow would add a fourth object to a rail
+             that was deliberately restructured down to brand → promise →
+             support → widget, and would push the widget further from the fold. -->
         <p class="hero-support sub-load sub-load-late">
-          We'll give your customers instant, indicative quotes from satellite
-          imagery, so you know which jobs are worth the visit.
+          <span class="hero-support-lede">Built for UK roofers.</span> We'll give
+          your customers instant, indicative quotes from satellite imagery, so you
+          know which jobs are worth the visit.
         </p>
 
         <!-- The embed is the real widget, unmodified — the same one roofers put
@@ -237,6 +248,15 @@ import RoofStory from "./RoofStory.astro";
     letter-spacing: -0.015em;
     line-height: 1.6;
     color: var(--color-ink-soft);
+  }
+
+  /* Full ink rather than the paragraph's soft grey, and a step heavier. That
+     is enough to read as a lead-in on its own — brand blue was the other
+     option but the widget's button is the only blue in this rail and it should
+     stay the one thing pulling the eye. */
+  .hero-support-lede {
+    color: var(--color-ink);
+    font-weight: 650;
   }
 
 
