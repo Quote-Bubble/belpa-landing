@@ -136,6 +136,23 @@ import RoofStory from "./RoofStory.astro";
        descender gap under it — the line box is then exactly the logo's height. */
     line-height: 0;
   }
+  /* Desktop only: drop the wordmark a little off the header so it reads as the
+     top of the rail rather than something tucked under the nav. Phones keep it
+     high — the fold is scarcer there and the header is shorter.
+
+     svh, and capped, for the reason the margin below it is: on a short laptop
+     this is height the widget needs more, and svh hands it back automatically
+     rather than needing its own breakpoint.
+
+     Nothing in brand-dock.ts needs touching for this. It measures the spacer's
+     untransformed offsetTop and ends the flight at `from.y - dockY`, so moving
+     the wordmark down lengthens the flight by exactly the same amount and the
+     morph stays anchored at both ends. */
+  @media (min-width: 1024px) {
+    .hero-brand {
+      margin-top: clamp(0.5rem, 2.4svh, 1.75rem);
+    }
+  }
   /* font-size is the single size knob: brand-dock.ts reads
      getComputedStyle(spacer).fontSize and drives the docked wordmark off it,
      and the img is sized in `em`. Change the size here, never on the img. */
