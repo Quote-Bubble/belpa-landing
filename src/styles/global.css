@@ -61,8 +61,11 @@ html {
   font-size: 110%;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* auto — Lenis owns intentional smooth scrolls. CSS `smooth` also animates
-     browser scroll-restoration on refresh, which feels like a mystery nudge. */
+  /* auto, deliberately. `smooth` here would also animate the browser's own
+     scroll-restoration on refresh and back-navigation, which reads as a
+     mystery nudge rather than a transition. Intentional smooth scrolls are
+     opted into per call with scrollIntoView({ behavior: "smooth" }), which
+     honours prefers-reduced-motion on its own. */
   scroll-behavior: auto;
   /* clip (with hidden fallback) — clip never creates a scroll container, so
      vertical scrolling stays native and sideways rubber-banding is impossible */
@@ -111,17 +114,15 @@ main {
   overflow-anchor: none;
 }
 
-/* Lenis smooth-scroll support: when Lenis drives the scroll it must own the
-   curve, so native CSS smoothing steps aside */
-html.lenis,
-html.lenis body {
-  height: auto;
-}
-.lenis.lenis-smooth {
-  scroll-behavior: auto !important;
-}
-.lenis.lenis-stopped {
-  overflow: hidden;
+/* Scroll targets clear the fixed header.
+   Lenis supplied this as `{ offset: -24 }` on each scrollTo call. Native
+   scrollIntoView has no offset argument — the target's own scroll-margin IS
+   the mechanism — so it moves here, where it sits next to the header that
+   creates the need. .site-header is position:fixed, so without this a section
+   scrolled to lands underneath it. */
+section[id],
+[data-scroll-target] {
+  scroll-margin-top: 5.5rem;
 }
 
 /* Touch feel: no grey tap flash, no double-tap-zoom delay on controls */

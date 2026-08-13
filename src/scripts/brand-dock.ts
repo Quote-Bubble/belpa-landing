@@ -1,4 +1,4 @@
-﻿import { bindLenisScroll, clamp01, getScroll, smoothstep } from "./scroll-helpers";
+﻿import { clamp01, getScroll, smoothstep } from "./scroll-helpers";
 import { ensureScrollFlight } from "./scroll-flight";
 
 type Pt = { x: number; y: number; w: number; fs: number };
@@ -207,7 +207,6 @@ export function initBrandDock() {
   const unsub = flight.on(() => {
     if (ready) paint();
   });
-  const unbindLenis = bindLenisScroll("brand", () => flight.kick(), fly);
 
   window.addEventListener(
     "scroll",
@@ -247,9 +246,7 @@ export function initBrandDock() {
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       if (location.pathname !== "/" && location.pathname !== "") return;
       e.preventDefault();
-      const lenis = window.__lenis;
-      if (lenis?.scrollTo) lenis.scrollTo(0, { duration: 1.15 });
-      else window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     },
     { signal },
   );
@@ -307,7 +304,6 @@ export function initBrandDock() {
   signal.addEventListener("abort", () => {
     running = false;
     unsub();
-    unbindLenis();
     document.documentElement.classList.remove("is-brand-morphing");
     if (glass) glass.style.transition = "";
     (window as Window & { __brandDock?: { sync: () => void } | null }).__brandDock = null;

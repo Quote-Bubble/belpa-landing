@@ -317,7 +317,7 @@ const dashboardUrl =
 
     const evaluate = () => {
       raf = 0;
-      const y = window.__lenis?.scroll ?? window.scrollY;
+      const y = window.scrollY;
       if (!stuck && y > 24) {
         stuck = true;
         header.classList.add("is-stuck");
@@ -332,8 +332,6 @@ const dashboardUrl =
 
     evaluate();
     window.addEventListener("scroll", onScroll, { passive: true });
-    const lenis = window.__lenis;
-    lenis?.on?.("scroll", onScroll);
 
     cleanup = () => {
       if (raf) cancelAnimationFrame(raf);

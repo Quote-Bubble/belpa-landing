@@ -166,60 +166,39 @@ const ogImage = new URL("/og-image.jpg", Astro.site).href;
 </html>
 
 <script>
-  // Lenis smooth scrolling — a soft ease-out curve on wheel scrolling.
-  // Desktop-feel only: touch keeps native momentum (hijacking touch feels
-  // wrong on phones). Skipped entirely for reduced-motion users.
-  import Lenis from "lenis";
-
-  declare global {
-    interface Window {
-      __lenis?: Lenis;
-    }
-  }
+  // Scrolling is native. Lenis used to drive it with a 2.1s eased glide; it
+  // was removed because people disliked it — a hijacked wheel fights muscle
+  // memory, and the cost was not only taste. It read `wheel` off the document,
+  // so a cross-origin iframe under the cursor starved it mid-glide and needed a
+  // pointer-events workaround in LiveWidget; it owned the scroll position, so
+  // every scroll-driven effect had to ask it rather than the window; and it
+  // could not be stopped by CSS, so overlays had to call into it to lock.
+  // All of that is gone with it.
 
   function pinTop() {
     window.scrollTo(0, 0);
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
-    window.__lenis?.scrollTo(0, { immediate: true, force: true });
   }
 
-  function initLenis() {
-    if (window.__lenis) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  function initAnchorScroll() {
+    if (document.documentElement.dataset.anchorScrollBound === "1") return;
+    document.documentElement.dataset.anchorScrollBound = "1";
 
-    const lenis = new Lenis({
-      // Longer glide. At 1.1 each wheel notch resolved fast enough that a
-      // normal mouse (which fires discrete, chunky deltas rather than a
-      // trackpad's stream) read as a series of steps instead of one motion.
-      // A softer multiplier keeps a single notch from overshooting now that
-      // it decays more slowly.
-      duration: 2.1,
-      wheelMultiplier: 0.85,
-      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+    // scrollIntoView with behavior:"smooth" is the native equivalent, and it
+    // respects prefers-reduced-motion on its own — no media query needed.
+    // scroll-margin-top on the targets supplies the offset the old
+    // `{ offset: -24 }` did, so it lives in CSS with the layout it belongs to.
+    document.addEventListener("click", (e) => {
+      const a = (e.target as HTMLElement | null)?.closest?.<HTMLAnchorElement>(
+        'a[href^="#"]',
+      );
+      if (!a || !a.hash || a.hash === "#") return;
+      const target = document.querySelector(a.hash);
+      if (!target) return;
+      e.preventDefault();
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
     });
-    window.__lenis = lenis;
-    window.dispatchEvent(new CustomEvent("belpa:lenis"));
-
-    function raf(time: number) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    }
-    requestAnimationFrame(raf);
-
-    // Anchor links ride the same curve
-    document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]').forEach((a) => {
-      a.addEventListener("click", (e) => {
-        if (!a.hash || a.hash === "#") return;
-        const target = document.querySelector(a.hash);
-        if (!target) return;
-        e.preventDefault();
-        lenis.scrollTo(target as HTMLElement, { offset: -24 });
-      });
-    });
-
-    // Fresh loads should start at top; Lenis can inherit a restored offset
-    if (!location.hash) pinTop();
   }
 
   // Hold the top through hero entrance layout shifts unless the user scrolls.
@@ -263,17 +242,17 @@ const ogImage = new URL("/og-image.jpg", Astro.site).href;
     window.addEventListener(
       "pageshow",
       (e) => {
-        // bfcache restore can bring back a mid-scroll Lenis state
+        // bfcache restore can bring back a mid-scroll offset
         if (e.persisted && !location.hash) pinTop();
       },
       { passive: true }
     );
   }
 
-  initLenis();
+  initAnchorScroll();
   holdHeroTop();
   document.addEventListener("astro:after-swap", () => {
-    initLenis();
+    initAnchorScroll();
     holdHeroTop();
   });
 </script>

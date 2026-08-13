@@ -11,7 +11,7 @@ export default defineConfig({
   site: 'https://belpa.co.uk',
   integrations: [
     // Only registers when a DSN is present, so local builds stay clean. This
-    // site is static, so what it catches is browser-side: the Lenis/embed
+    // site is static, so what it catches is browser-side: the embed
     // wiring in Hero.astro and LiveWidget.astro, which is the most intricate
     // code here and the part that decides whether a visitor can get a quote
     // at all.

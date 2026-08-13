@@ -150,17 +150,6 @@ const COLLAPSED_H_MOBILE = 82;
     }
   }
 
-  /* While the page is scrolling, let the wheel through to the document.
-     Lenis drives the scroll by listening for `wheel` on the parent, but a
-     cross-origin iframe consumes wheel events entirely — nothing bubbles out.
-     So the moment the widget passed under the cursor mid-scroll, Lenis stopped
-     receiving input and its glide stalled, which reads as the scroll snagging.
-     Only ever applied while collapsed and actively scrolling (see the script
-     below); it's removed as soon as scrolling stops, so the widget is
-     clickable at rest. */
-  .q.is-page-scrolling iframe {
-    pointer-events: none;
-  }
   /* Mobile overlay: sized to the visual viewport in JS. CSS here is a
      fallback if JS styles haven't applied yet. */
   .q[data-mode="overlay"] iframe {
@@ -267,17 +256,9 @@ const COLLAPSED_H_MOBILE = 82;
       }
       overlayMounted = true;
       restoreY = window.scrollY || window.pageYOffset || 0;
-      const lenis = (window as unknown as {
-        __lenis?: {
-          stop?: () => void;
-          scrollTo?: (t: number, o?: unknown) => void;
-        };
-      }).__lenis;
       // Pin to top before locking so the frozen backdrop is the hero, not
       // satellite copy that a desktop scroll-nudge may have revealed.
-      if (lenis?.scrollTo) lenis.scrollTo(0, { immediate: true, force: true });
-      else window.scrollTo(0, 0);
-      lenis?.stop?.();
+      window.scrollTo(0, 0);
 
       applyOverlayFrameStyles();
       window.addEventListener("resize", onViewportChange);
@@ -322,10 +303,6 @@ const COLLAPSED_H_MOBILE = 82;
       document.body.style.right = "";
       document.body.style.width = "";
       document.body.style.overflow = "";
-      const lenis = (window as unknown as {
-        __lenis?: { start?: () => void };
-      }).__lenis;
-      lenis?.start?.();
       window.scrollTo(0, restoreY);
     }
 
@@ -422,8 +399,13 @@ const COLLAPSED_H_MOBILE = 82;
       modalOpen = true;
       backdrop?.removeAttribute("hidden");
       document.documentElement.classList.add("belpa-modal");
-      // Lenis owns the scroll; CSS overflow alone wouldn't stop it.
-      window.__lenis?.stop?.();
+      // lenis.stop() used to hold the page still here. With native scrolling
+      // the lock is overflow:hidden on the root, plus padding to replace the
+      // scrollbar's width — without that the page is a scrollbar wider the
+      // instant the modal opens and everything shifts sideways behind it.
+      const sbw = window.innerWidth - document.documentElement.clientWidth;
+      if (sbw > 0) document.documentElement.style.paddingRight = `${sbw}px`;
+      document.documentElement.style.overflow = "hidden";
       // Next frame, so the transition has a start state to run from.
       requestAnimationFrame(() =>
         requestAnimationFrame(() => {
@@ -437,7 +419,8 @@ const COLLAPSED_H_MOBILE = 82;
       modalOpen = false;
       window.clearTimeout(closeFallback);
       document.documentElement.classList.remove("belpa-modal-in");
-      window.__lenis?.start?.();
+      document.documentElement.style.overflow = "";
+      document.documentElement.style.paddingRight = "";
       // Let it fade before the frame snaps back to the collapsed slot.
       window.setTimeout(() => {
         if (modalOpen) return;
@@ -481,52 +464,8 @@ const COLLAPSED_H_MOBILE = 82;
       );
     };
   }
-  /**
-   * Keep the page scrolling when the cursor crosses the embed.
-   *
-   * Lenis reads `wheel` off the parent document. A cross-origin iframe eats
-   * those events outright — they are delivered to the frame's own document and
-   * nothing reaches us — so as soon as the widget slid under a stationary
-   * cursor mid-scroll, Lenis went input-starved and its 2.1s glide stalled.
-   *
-   * The cursor doesn't move here; the PAGE does. So by the time the widget
-   * reaches the cursor we have already seen wheel/scroll events on the parent,
-   * which is what lets us pre-emptively make the frame transparent to the
-   * pointer. (Detecting it any later is impossible for exactly the reason the
-   * bug exists.) Pointer events come back ~200ms after scrolling stops.
-   *
-   * Skipped unless the widget is collapsed: with the suggestions list or the
-   * panel open the user is working inside the frame and must keep the pointer.
-   */
-  function initScrollPassThrough() {
-    const holder = document.getElementById("belpa-widget");
-    if (!holder || holder.dataset.passThroughBound === "1") return;
-    holder.dataset.passThroughBound = "1";
-
-    let idle: number | undefined;
-    const settle = () => holder.classList.remove("is-page-scrolling");
-
-    const mark = () => {
-      if (holder.dataset.mode !== "collapsed") {
-        settle();
-        return;
-      }
-      holder.classList.add("is-page-scrolling");
-      window.clearTimeout(idle);
-      idle = window.setTimeout(settle, 200);
-    };
-
-    // `scroll` covers the whole Lenis glide (it scrolls the window natively,
-    // so real scroll events still fire); `wheel` catches the very first notch
-    // before the page has actually moved.
-    window.addEventListener("scroll", mark, { passive: true });
-    window.addEventListener("wheel", mark, { passive: true });
-  }
-
   initBelpaEmbed();
-  initScrollPassThrough();
   document.addEventListener("astro:after-swap", () => {
     initBelpaEmbed();
-    initScrollPassThrough();
   });
 </script>

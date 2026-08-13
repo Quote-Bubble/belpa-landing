@@ -60,7 +60,6 @@ export function ensureScrollFlight(): ScrollFlight {
   window.addEventListener("scrollend", onScroll, { passive: true });
   window.addEventListener("resize", onResize, { passive: true });
   window.addEventListener("pageshow", scheduleMeasure, { passive: true });
-  window.addEventListener("belpa:lenis", schedulePaint as EventListener);
   document.fonts?.ready?.then(() => scheduleMeasure());
 
   const shell = document.querySelector("[data-widget-shell]");
@@ -92,7 +91,6 @@ export function ensureScrollFlight(): ScrollFlight {
       window.removeEventListener("scrollend", onScroll);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("pageshow", scheduleMeasure);
-      window.removeEventListener("belpa:lenis", schedulePaint as EventListener);
       ro?.disconnect();
       listeners.clear();
       g.__scrollFlight = null;

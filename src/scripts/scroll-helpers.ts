@@ -51,47 +51,6 @@ export function dockRange(
 }
 
 export function getScroll(): number {
-  const lenis = window.__lenis;
-  if (lenis && typeof lenis.scroll === "number") return lenis.scroll;
   return window.scrollY || document.documentElement.scrollTop || 0;
 }
 
-export function bindLenisScroll(
-  key: string,
-  onScroll: () => void,
-  host: HTMLElement,
-): () => void {
-  const flag = `__lenisBound_${key}`;
-  let timer = 0;
-
-  const tryBind = () => {
-    const lenis = window.__lenis;
-    if (!lenis?.on || (host as unknown as Record<string, boolean>)[flag]) return;
-    (host as unknown as Record<string, boolean>)[flag] = true;
-    lenis.on("scroll", onScroll);
-  };
-
-  tryBind();
-  timer = window.setInterval(() => {
-    tryBind();
-    if ((host as unknown as Record<string, boolean>)[flag]) {
-      window.clearInterval(timer);
-    }
-  }, 100);
-  window.setTimeout(() => window.clearInterval(timer), 2000);
-
-  return () => {
-    window.clearInterval(timer);
-    (host as unknown as Record<string, boolean>)[flag] = false;
-  };
-}
-
-declare global {
-  interface Window {
-    __lenis?: {
-      scroll?: number;
-      on?: (event: string, fn: () => void) => void;
-      scrollTo?: (target: number | HTMLElement, opts?: unknown) => void;
-    };
-  }
-}

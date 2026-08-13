@@ -454,9 +454,7 @@ import RoofStory from "./RoofStory.astro";
       (btn as HTMLElement).dataset.tryBound = "1";
       btn.addEventListener("click", () => {
         // Always return to the top search
-        const lenis = window.__lenis;
-        if (lenis?.scrollTo) lenis.scrollTo(0, { duration: 1.1 });
-        else window.scrollTo({ top: 0, behavior: "smooth" });
+        window.scrollTo({ top: 0, behavior: "smooth" });
         // The search input lives inside the widget iframe now — focus it
         // across the frame boundary via the host bridge.
         const focusEmbed = (window as unknown as { __belpaFocus?: () => void })
@@ -503,7 +501,7 @@ import RoofStory from "./RoofStory.astro";
     const show = () => {
       if (gone) return;
       // Already scrolled (e.g. restored) — never flash the cue
-      const y = window.__lenis?.scroll ?? window.scrollY;
+      const y = window.scrollY;
       if (y > 24) {
         dismiss();
         return;
@@ -514,20 +512,16 @@ import RoofStory from "./RoofStory.astro";
     window.setTimeout(show, reduce ? 400 : 2600);
 
     const onScroll = () => {
-      const y = window.__lenis?.scroll ?? window.scrollY;
+      const y = window.scrollY;
       if (y > 18) dismiss();
     };
     window.addEventListener("scroll", onScroll, { passive: true });
-    const lenis = window.__lenis;
-    lenis?.on?.("scroll", onScroll);
 
     cue.addEventListener("click", () => {
       dismiss();
       const target = document.querySelector("#numbers") || document.querySelector("#how");
       if (!target) return;
-      const l = window.__lenis;
-      if (l?.scrollTo) l.scrollTo(target as HTMLElement, { offset: -24, duration: 1.2 });
-      else (target as HTMLElement).scrollIntoView({ behavior: "smooth", block: "start" });
+      (target as HTMLElement).scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
