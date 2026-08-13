@@ -148,9 +148,22 @@ import RoofStory from "./RoofStory.astro";
      untransformed offsetTop and ends the flight at `from.y - dockY`, so moving
      the wordmark down lengthens the flight by exactly the same amount and the
      morph stays anchored at both ends. */
+  /* Desktop only: drop the wordmark clear of the header so it reads as the top
+     of the rail. Phones keep it high — scarcer fold, shorter header.
+
+     Scaled off the height ABOVE 700px rather than a plain svh fraction. A
+     fraction cannot separate these cases: 7.5svh is 60px at 800px tall and 81px
+     at 1080px, so protecting a short laptop would mean barely moving it on a
+     real monitor. Two media queries would do it but leave a ~50px jump at the
+     breakpoint, visible as the logo hopping while a window is resized.
+
+     Measuring from 700px makes it continuous and much steeper — ~22px on a
+     short laptop, ~84px at 1080p — because on a short laptop this is height the
+     widget needs to stay in the fold, and that is the whole constraint the hero
+     layout is built around. */
   @media (min-width: 1024px) {
     .hero-brand {
-      margin-top: clamp(0.9rem, 4svh, 2.75rem);
+      margin-top: clamp(0.5rem, calc((100svh - 700px) * 0.22), 5.5rem);
     }
   }
   /* font-size is the single size knob: brand-dock.ts reads
