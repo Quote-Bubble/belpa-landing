@@ -161,19 +161,26 @@ import RoofStory from "./RoofStory.astro";
      short laptop, ~84px at 1080p — because on a short laptop this is height the
      widget needs to stay in the fold, and that is the whole constraint the hero
      layout is built around. */
+  /* Desktop: sit the wordmark lower without moving anything else.
+
+     .hero-brand is the FIRST child of the rail, so plain margin-top pushes the
+     whole left column down — and because .hero-grid is align-items:center, the
+     column then re-centres against the roof-story panel and the two visibly
+     fall out of line. That is a column offset, not a logo offset.
+
+     So the space is TRADED, not added: whatever margin-top takes, margin-bottom
+     gives back. The rail's total height is unchanged, both columns stay
+     aligned, and the wordmark alone moves down.
+
+     The cost is unavoidable and worth stating: the gap between the wordmark and
+     the promise shrinks by exactly what the wordmark gains above it. --brand-
+     drop is capped at 2.5rem so that gap never falls below ~1rem even at its
+     tightest. */
   @media (min-width: 1024px) {
     .hero-brand {
-      /* Roughly DOUBLE what the wordmark should actually move, because the hero
-         is vertically centred: .hero-stage is `flex-1 flex-col justify-center`
-         inside a 100svh section, so growing the content block by N pushes its
-         top up by N/2 as it re-centres. Half of every value here is eaten
-         before anything moves — which is why 84px read as barely a nudge.
-
-         Still measured from 700px of height rather than as an svh fraction: a
-         fraction cannot separate a short laptop from a real monitor (7.5svh is
-         60px at 800px tall and 81px at 1080px), and on a short laptop this is
-         height the widget needs to stay in the fold. */
-      margin-top: clamp(0.5rem, calc((100svh - 700px) * 0.55), 13rem);
+      --brand-drop: clamp(0.5rem, 3svh, 2.5rem);
+      margin-top: var(--brand-drop);
+      margin-bottom: calc(clamp(3rem, 8svh, 6rem) - var(--brand-drop));
     }
   }
   /* font-size is the single size knob: brand-dock.ts reads
