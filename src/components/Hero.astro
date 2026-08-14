@@ -163,7 +163,17 @@ import RoofStory from "./RoofStory.astro";
      layout is built around. */
   @media (min-width: 1024px) {
     .hero-brand {
-      margin-top: clamp(0.5rem, calc((100svh - 700px) * 0.22), 5.5rem);
+      /* Roughly DOUBLE what the wordmark should actually move, because the hero
+         is vertically centred: .hero-stage is `flex-1 flex-col justify-center`
+         inside a 100svh section, so growing the content block by N pushes its
+         top up by N/2 as it re-centres. Half of every value here is eaten
+         before anything moves — which is why 84px read as barely a nudge.
+
+         Still measured from 700px of height rather than as an svh fraction: a
+         fraction cannot separate a short laptop from a real monitor (7.5svh is
+         60px at 800px tall and 81px at 1080px), and on a short laptop this is
+         height the widget needs to stay in the fold. */
+      margin-top: clamp(0.5rem, calc((100svh - 700px) * 0.55), 13rem);
     }
   }
   /* font-size is the single size knob: brand-dock.ts reads
