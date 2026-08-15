@@ -28,15 +28,17 @@ export function initSectionFx(): () => void {
 
   // 0 when the element's top sits at the bottom edge of the viewport, 1 once it
   // has risen ~72% of a screen height — the band over which the effect plays.
-  function enterP(el: HTMLElement, vh: number): number {
-    const top = el.getBoundingClientRect().top;
+  function enterP(top: number, vh: number): number {
     return smoothstep(clamp01((vh - top) / (vh * 0.72)));
   }
 
   // Every effect resolves to the element's untouched resting state at p=1
   // (scale 1, no offset, no rotation) so nothing is left displaced or clipped.
-  function apply(el: HTMLElement, fx: string, vh: number) {
-    const p = enterP(el, vh);
+  //
+  // Takes `top` as an argument rather than measuring it. See paint() — the
+  // measurement has to happen before any of the writes, not next to them.
+  function apply(el: HTMLElement, fx: string, vh: number, top: number) {
+    const p = enterP(top, vh);
     const inv = 1 - p;
     switch (fx) {
       // Satellite: BANKS in from orbit — swings around its Y axis while zooming,
@@ -69,9 +71,26 @@ export function initSectionFx(): () => void {
     }
   }
 
+  // Read everything, then write everything.
+  //
+  // This used to measure and write inside one loop: getBoundingClientRect on an
+  // element, then style writes to that same element, then the next element. Each
+  // read after a write forces the browser to flush layout before it can answer,
+  // so a three-item list cost three synchronous layouts EVERY frame of every
+  // scroll. Two testers described the scroll as heavy and stuttering, and this
+  // is the shape that produces exactly that.
+  //
+  // Split into phases, the writes from the previous pass are flushed once by the
+  // first read and the rest come free: three forced layouts per frame become one.
+  const tops: number[] = new Array(items.length);
   function paint() {
     const vh = flight.vh;
-    for (const { el, fx } of items) apply(el, fx, vh);
+    for (let i = 0; i < items.length; i += 1) {
+      tops[i] = items[i].el.getBoundingClientRect().top;
+    }
+    for (let i = 0; i < items.length; i += 1) {
+      apply(items[i].el, items[i].fx, vh, tops[i]);
+    }
   }
 
   for (const { el } of items) el.style.willChange = "transform";
