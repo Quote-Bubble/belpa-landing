@@ -51,5 +51,17 @@ export default defineConfig({
   },
   vite: {
     plugins: [tailwindcss()],
+    /* Sentry ships Replay and Tracing regardless of their sample rates — the
+       rates stop them RUNNING, not being bundled. On this page that was 143KB
+       of monitoring in front of 11KB of site. These are Sentry's documented
+       tree-shaking flags; Vite substitutes them and Rollup drops the dead
+       branches. */
+    define: {
+      __SENTRY_DEBUG__: false,
+      __SENTRY_TRACING__: false,
+      __RRWEB_EXCLUDE_CANVAS__: true,
+      __RRWEB_EXCLUDE_IFRAME__: true,
+      __RRWEB_EXCLUDE_SHADOW_DOM__: true,
+    },
   },
 });
