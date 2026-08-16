@@ -441,20 +441,35 @@ input {
 */
 .sub-load {
   opacity: 0;
-  transform: translate3d(var(--in-x, 0px), var(--in-y, 26px), 0)
+  /* Rotation is in the token set so elements can arrive on genuinely different
+     axes rather than all sliding along one. rotateY on the proof panel and a
+     long lateral on the headline are what make it read as multi-directional
+     instead of as a single sheet moving. */
+  /* perspective() as a transform FUNCTION, never the `perspective` property on
+     an ancestor. The property would make .hero-grid a containing block for
+     position:fixed descendants — and the widget's mobile fullscreen overlay and
+     the desktop quote modal are both fixed elements inside it, so the quote
+     flow would open pinned to the hero instead of the viewport. */
+  transform: perspective(1600px)
+    translate3d(var(--in-x, 0px), var(--in-y, 28px), 0)
+    rotateX(var(--in-rx, 0deg)) rotateY(var(--in-ry, 0deg))
     scale(var(--in-s, 1));
-  animation: hero-in var(--in-dur, 0.9s) var(--ease-out-expo)
-    var(--in-delay, 0.05s) forwards;
+  animation: hero-in var(--in-dur, 1.6s) var(--ease-out-expo)
+    var(--in-delay, 0.08s) forwards;
 }
 /* Kept as a hook for elements further down the rail; the real values are set
    per element in Hero.astro so each can carry its own depth. */
 .sub-load-late {
-  --in-delay: 0.09s;
+  --in-delay: 0.16s;
 }
 @keyframes hero-in {
   to {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+    /* `none`, not an identity transform. Any transform left on the element
+       keeps it a containing block for fixed descendants — the hazard
+       .widget-load.is-settled was written to work around. Ending at none means
+       nothing has to be cleaned up afterwards. */
+    transform: none;
   }
 }
 
@@ -462,11 +477,15 @@ input {
    causes a compositor snap when the keyframes finish. */
 /* Last and furthest, so it lands as the movement settles rather than starting
    a second one. Same curve and band as everything else. */
+/* Furthest and slowest, so it is still settling as everything else arrives —
+   the movement resolves on the control rather than ending before it.
+   Translate and scale only: this wraps a cross-origin iframe, and 3D rotation
+   on an iframe rasterises badly mid-animation in more than one browser. */
 .widget-load {
   opacity: 0;
-  transform: translate3d(0, 38px, 0) scale(0.975);
+  transform: translate3d(0, 72px, 0) scale(0.955);
   transform-origin: center top;
-  animation: widget-rise 0.9s var(--ease-out-expo) 0.15s forwards;
+  animation: widget-rise 1.75s var(--ease-out-expo) 0.26s forwards;
 }
 .widget-load.is-settled {
   animation: none;
@@ -476,7 +495,9 @@ input {
 @keyframes widget-rise {
   100% {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+    /* none rather than an identity transform — see hero-in. This is the element
+       that actually contains the fixed overlay. */
+    transform: none;
   }
 }
 

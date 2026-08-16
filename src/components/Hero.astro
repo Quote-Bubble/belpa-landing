@@ -203,7 +203,7 @@ import RoofStory from "./RoofStory.astro";
     transform: translateY(0.16em) scale(1.1);
     filter: blur(8px);
     transform-origin: 0% 100%;
-    animation: brand-enter 0.85s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) 0s forwards;
+    animation: brand-enter 1.05s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) 0s forwards;
   }
   .hero-brand-spacer img {
     display: block;
@@ -288,9 +288,12 @@ import RoofStory from "./RoofStory.astro";
      the left while .hero-scan enters from the right, converging on the centre
      instead of sliding in parallel. */
   .hero-promise {
-    --in-delay: 0.05s;
-    --in-y: 26px;
-    --in-x: -10px;
+    /* Long lateral from the left — the biggest single travel in the hero, so
+       the headline is the thing your eye follows in. */
+    --in-delay: 0.08s;
+    --in-dur: 1.65s;
+    --in-y: 14px;
+    --in-x: -64px;
     margin: 0;
     max-width: 15em;
     font-size: clamp(1.8rem, 3.9vw, 2.75rem);
@@ -301,9 +304,12 @@ import RoofStory from "./RoofStory.astro";
   }
 
   .hero-support {
-    --in-delay: 0.09s;
-    --in-y: 30px;
-    --in-x: -10px;
+    /* Follows the headline on the same axis but shorter and lower, so the two
+       read as one column arriving rather than two lines. */
+    --in-delay: 0.18s;
+    --in-dur: 1.6s;
+    --in-y: 34px;
+    --in-x: -40px;
     margin: 1.05rem 0 0;
     max-width: 34rem;
     font-size: clamp(1rem, 1.7vw, 1.1rem);
@@ -331,11 +337,16 @@ import RoofStory from "./RoofStory.astro";
     /* Enters from the RIGHT while the copy column enters from the left, so the
        two halves converge. Slightly longer than the copy so the proof settles
        last, under the same curve. */
-    --in-delay: 0.11s;
-    --in-y: 28px;
-    --in-x: 18px;
-    --in-s: 0.97;
-    --in-dur: 0.95s;
+    /* Swings in from the right on its own axis. rotateY is what makes this
+       genuinely a different direction rather than a mirrored slide — the panel
+       turns to face you as it arrives, which is also the only 3D move in the
+       hero, so it reads as the proof presenting itself. */
+    --in-delay: 0.12s;
+    --in-dur: 1.85s;
+    --in-y: 22px;
+    --in-x: 86px;
+    --in-ry: -16deg;
+    --in-s: 0.955;
     width: 100%;
     max-width: 34rem;
     margin-inline: auto;
