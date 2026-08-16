@@ -194,10 +194,16 @@ import RoofStory from "./RoofStory.astro";
     user-select: none;
     pointer-events: none;
     opacity: 0;
-    transform: translateY(0.3em) scale(1.35);
-    filter: blur(14px);
+    /* Opens the movement at t=0 and travels least, because it sits furthest
+       "back" in the rail's depth order. The old 1.35 scale and 14px blur were
+       sized for an entrance that ran alone for half a second before anything
+       else moved; inside a 1s composite that reads as one element misbehaving.
+       Blur is kept HERE and nowhere else — one element re-rastering briefly is
+       a flourish, five at once is the jank the scroll audit removed. */
+    transform: translateY(0.16em) scale(1.1);
+    filter: blur(8px);
     transform-origin: 0% 100%;
-    animation: brand-enter 1.2s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) 0.18s forwards;
+    animation: brand-enter 0.85s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) 0s forwards;
   }
   .hero-brand-spacer img {
     display: block;
@@ -277,7 +283,14 @@ import RoofStory from "./RoofStory.astro";
     text-align: left;
   }
 
+  /* Entrance tokens — see the hero-in comment in global.css. Travel grows down
+     the rail so nearer elements move further, and the copy column enters from
+     the left while .hero-scan enters from the right, converging on the centre
+     instead of sliding in parallel. */
   .hero-promise {
+    --in-delay: 0.05s;
+    --in-y: 26px;
+    --in-x: -10px;
     margin: 0;
     max-width: 15em;
     font-size: clamp(1.8rem, 3.9vw, 2.75rem);
@@ -288,6 +301,9 @@ import RoofStory from "./RoofStory.astro";
   }
 
   .hero-support {
+    --in-delay: 0.09s;
+    --in-y: 30px;
+    --in-x: -10px;
     margin: 1.05rem 0 0;
     max-width: 34rem;
     font-size: clamp(1rem, 1.7vw, 1.1rem);
@@ -312,6 +328,14 @@ import RoofStory from "./RoofStory.astro";
      on the left — the two used to sit at matching weight, which is why the page
      read as having two competing search bars. */
   .hero-scan {
+    /* Enters from the RIGHT while the copy column enters from the left, so the
+       two halves converge. Slightly longer than the copy so the proof settles
+       last, under the same curve. */
+    --in-delay: 0.11s;
+    --in-y: 28px;
+    --in-x: 18px;
+    --in-s: 0.97;
+    --in-dur: 0.95s;
     width: 100%;
     max-width: 34rem;
     margin-inline: auto;

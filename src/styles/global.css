@@ -412,36 +412,61 @@ input {
 }
 
 /*
-  Hero load timeline — dramatic but a touch snappier:
-  0.00–0.85s   atmosphere / brand presence
-  0.58–1.50s   subtitle rises
-  1.20–2.40s   widget lifts in
-  1.70–2.65s   book-a-call follows the widget
+  Hero entrance — ONE movement, not a queue.
+
+  It used to be a stagger spread over 2.4s: brand at 0.18s, subtitle at 0.58s,
+  support at 0.78s, widget at 1.2s. Gaps that size read as separate events —
+  you watch four things arrive in turn, and the hero is still assembling long
+  after you have started reading it.
+
+  Now everything leaves at once and lands together, finishing by ~1.05s. Three
+  things do the work:
+
+  DEPTH, not delay. Offsets are 40-150ms — too short to read as sequence, long
+  enough that the elements do not move as one flat sheet. Travel distance grows
+  down the rail (14px at the wordmark, 38px at the widget), so nearer things
+  move further, which is how parallax reads as depth.
+
+  DIRECTION. The copy column comes in from the left and the roof panel from the
+  right, so the hero converges on itself rather than everything sliding the
+  same way.
+
+  ONE CURVE. Every element shares the same duration band and the same expo-out,
+  so they decelerate in sympathy. Mixed curves are what makes a composite
+  entrance feel loose.
+
+  Transform and opacity only. The old version animated blur on every element;
+  filter on several elements at once is a re-raster per frame, which is exactly
+  the jank two testers reported. Blur is now used once, on the wordmark alone.
 */
 .sub-load {
   opacity: 0;
-  transform: translateY(28px) skewY(1deg);
-  filter: blur(3px);
-  animation: sub-in 0.95s var(--ease-out-expo) 0.58s forwards;
+  transform: translate3d(var(--in-x, 0px), var(--in-y, 26px), 0)
+    scale(var(--in-s, 1));
+  animation: hero-in var(--in-dur, 0.9s) var(--ease-out-expo)
+    var(--in-delay, 0.05s) forwards;
 }
+/* Kept as a hook for elements further down the rail; the real values are set
+   per element in Hero.astro so each can carry its own depth. */
 .sub-load-late {
-  animation-delay: 0.78s;
+  --in-delay: 0.09s;
 }
-@keyframes sub-in {
+@keyframes hero-in {
   to {
     opacity: 1;
-    transform: translateY(0) skewY(0);
-    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 /* Transform + opacity only — filter on a glass (backdrop-filter) child
    causes a compositor snap when the keyframes finish. */
+/* Last and furthest, so it lands as the movement settles rather than starting
+   a second one. Same curve and band as everything else. */
 .widget-load {
   opacity: 0;
-  transform: translate3d(0, 48px, 0) scale(0.94);
+  transform: translate3d(0, 38px, 0) scale(0.975);
   transform-origin: center top;
-  animation: widget-rise 1.2s var(--ease-out-expo) 1.2s forwards;
+  animation: widget-rise 0.9s var(--ease-out-expo) 0.15s forwards;
 }
 .widget-load.is-settled {
   animation: none;

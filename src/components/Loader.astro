@@ -1,35 +1,34 @@
 ---
 /**
- * Load state for the landing page.
+ * Load screen for the landing page.
  *
- * The page is not slow to arrive — the document is served in under 200ms — but
- * it is slow to SETTLE: ~650KB of subresources, three font files, two large
- * aerials and a widget iframe, all landing at different moments. That staggered
- * assembly is what reads as lag, and it is what this covers.
+ * The page arrives fast — 184ms to first byte — but it SETTLES slowly: ~650KB
+ * of subresources, three fonts, two large aerials and a widget iframe, all
+ * landing at different moments. That staggered assembly is what reads as lag,
+ * and it is what this covers.
  *
- * Three rules, all learned the hard way:
+ * What it shows is the product doing its job: a roof outline tracing itself,
+ * closing, and being measured. It is the same path RoofStory traces in the
+ * hero, so the loader is not decoration bolted on the front — it is a preview
+ * of the thing the visitor came for, and it costs no new asset.
  *
- *   1. It must not flash. A loader that appears for 120ms on a warm cache is
- *      worse than none — it turns an instant load into a visible blink. So it
- *      stays invisible for the first 250ms and only fades in if the page is
- *      genuinely still working.
+ * Three properties matter more than the look, all learned the hard way:
  *
- *   2. Once seen, it must not blink out. A minimum on-screen time stops it
- *      appearing and vanishing in the same breath.
- *
- *   3. It must never be the reason someone is stuck. A hard cap in the module,
- *      and a second failsafe in the inline script that put it there, so a
- *      failure to load the module cannot leave the page behind a curtain.
- *
- * It sits in the page's own background colour rather than a branded takeover,
- * so on a fast connection the transition reads as the page simply drawing.
+ *   1. It must not flash. Invisible for the first 250ms; if the page is ready
+ *      inside that it is removed having never rendered. A loader that blinks on
+ *      a warm cache turns an instant load into a visible stutter.
+ *   2. Once seen, it must not blink out. A minimum on-screen time.
+ *   3. It must never be why someone is stuck. A cap in the module, and a second
+ *      failsafe in the inline script that created the overlay — because if the
+ *      module fails to run, nothing else will remove it.
  */
+import { ROOF_PATH } from "../data/roof-figure";
 ---
 
 {/*
-  Inline and synchronous so the overlay exists on the first frame. Deciding in
-  a module script would let the half-assembled page show before it was covered,
-  which is the exact thing being hidden.
+  Inline and synchronous so the overlay exists on the first frame. Deciding this
+  in a module script would let the half-assembled page show before it was
+  covered, which is precisely what is being hidden.
 */}
 <script is:inline>
   (() => {
@@ -38,9 +37,6 @@
       if (sessionStorage.getItem("belpa:loaded")) return;
       sessionStorage.setItem("belpa:loaded", "1");
       doc.classList.add("ld-on");
-      // Failsafe. This script created the overlay, so it owns getting rid of
-      // it: if the module below never runs, nothing else will. Longer than the
-      // module's own cap, so in normal operation it never fires.
       setTimeout(() => doc.classList.add("ld-done", "ld-released"), 4000);
     } catch {
       /* Private mode can throw on sessionStorage. Skip the loader. */
@@ -49,19 +45,36 @@
 </script>
 
 <div class="ld" data-loader aria-hidden="true">
-  <div class="ld-mark">
-    {/* Two copies of the wordmark, one ghosted and one full-strength, with the
-        top one revealed left to right by a clip. The brand assembling itself is
-        the progress bar — there is no separate bar to design, and no asset
-        beyond the logo the page already loads. */}
-    <img class="ld-ghost" src="/belpa-wordmark.png" alt="" width="900" height="279" />
+  <div class="ld-inner">
+    <div class="ld-scene">
+      <svg class="ld-svg" viewBox="0 0 1024 768" aria-hidden="true">
+        <defs>
+          <filter id="ld-glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="9" result="b" />
+            <feMerge><feMergeNode in="b" /></feMerge>
+          </filter>
+        </defs>
+
+        {/* Faint full outline underneath, so the shape is present from the
+            first frame and the trace reads as completing rather than as
+            appearing out of nothing. */}
+        <path class="ld-ghost" d={ROOF_PATH} />
+        <path class="ld-halo" d={ROOF_PATH} filter="url(#ld-glow)" data-ld-line />
+        <path class="ld-line" d={ROOF_PATH} data-ld-line />
+        <path class="ld-fill" d={ROOF_PATH} />
+      </svg>
+
+      {/* Sweeps down the outline as it draws — the scan doing the measuring. */}
+      <span class="ld-scan" data-ld-scan></span>
+    </div>
+
     <img
-      class="ld-fill"
+      class="ld-mark"
       src="/belpa-wordmark.png"
       alt=""
       width="900"
       height="279"
-      data-ld-fill
+      data-ld-mark
     />
   </div>
 </div>
@@ -77,15 +90,13 @@
     position: fixed;
     inset: 0;
     z-index: 9000;
-    /* The page's own canvas colour, not a branded panel. On a quick load this
-       reads as the page still drawing rather than as a splash screen. */
+    /* The page's own canvas, not a branded panel. On a quick connection the
+       handover reads as the page drawing rather than as a splash screen
+       getting out of the way. */
     background: var(--color-canvas, #fff);
     pointer-events: none;
-    /* Invisible for the first beat. If the page is ready inside 250ms the
-       visitor never sees anything at all — the overlay is removed before this
-       delay elapses. */
     opacity: 0;
-    animation: ld-appear 0.28s ease-out 0.25s forwards;
+    animation: ld-appear 0.3s ease-out 0.25s forwards;
   }
   @keyframes ld-appear {
     to {
@@ -96,61 +107,130 @@
   :global(html.ld-done) .ld {
     display: none;
   }
-
   :global(html.ld-leaving) .ld {
     animation: none;
     opacity: 0;
-    transition: opacity 0.34s ease-in;
+    transition: opacity 0.4s ease-in 0.12s;
+  }
+
+  .ld-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.6rem;
+  }
+
+  .ld-scene {
+    position: relative;
+    width: clamp(9rem, 20vw, 13rem);
+    aspect-ratio: 4 / 3;
+  }
+
+  .ld-svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .ld-ghost {
+    fill: none;
+    stroke: rgba(31, 87, 240, 0.14);
+    stroke-width: 5;
+    stroke-linejoin: round;
+  }
+
+  .ld-halo {
+    fill: none;
+    stroke: rgba(90, 140, 255, 0.55);
+    stroke-width: 9;
+    stroke-linejoin: round;
+  }
+
+  .ld-line {
+    fill: none;
+    stroke: var(--color-brand-600, #1f57f0);
+    stroke-width: 5;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+
+  /* Washes in only once the outline closes, so completion is felt rather than
+     announced. */
+  .ld-fill {
+    fill: rgba(31, 87, 240, 0.1);
+    stroke: none;
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
+  }
+  :global(html.ld-traced) .ld-fill {
+    opacity: 1;
+  }
+
+  .ld-scan {
+    position: absolute;
+    left: -6%;
+    right: -6%;
+    top: 0;
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(31, 87, 240, 0.75) 22%,
+      rgba(120, 170, 255, 0.95) 50%,
+      rgba(31, 87, 240, 0.75) 78%,
+      transparent
+    );
+    box-shadow: 0 0 18px 3px rgba(90, 150, 255, 0.45);
+    opacity: 0;
+    will-change: transform, opacity;
+  }
+  :global(html.ld-traced) .ld-scan {
+    opacity: 0 !important;
+    transition: opacity 0.35s ease-out;
   }
 
   .ld-mark {
-    position: relative;
-    width: clamp(9rem, 22vw, 15rem);
-    line-height: 0;
-  }
-
-  .ld-ghost,
-  .ld-fill {
-    display: block;
-    width: 100%;
+    width: clamp(6.5rem, 13vw, 9rem);
     height: auto;
+    opacity: 0;
+    animation: ld-mark 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.36s forwards;
+  }
+  @keyframes ld-mark {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 0.9;
+      transform: none;
+    }
   }
 
-  /* Ghost sits underneath at low contrast: the shape is present from the first
-     frame, so the fill reads as completion rather than as arrival. */
-  .ld-ghost {
-    opacity: 0.12;
-    filter: grayscale(1);
-  }
-
-  .ld-fill {
-    position: absolute;
-    inset: 0;
-    /* Driven from JS. inset() rather than a width change so nothing reflows —
-       the clip is a paint-only property. */
-    clip-path: inset(0 100% 0 0);
-    will-change: clip-path;
-  }
-
-  /* Reduced motion gets the mark at full strength and no sweep. The overlay
-     still does its job of covering the assembly; it simply does not animate. */
+  /* Reduced motion: the shape and the mark, no tracing and no scan. The overlay
+     still covers the assembly; it just does not perform. */
   @media (prefers-reduced-motion: reduce) {
     :global(html.ld-on) .ld {
       animation-duration: 0.01s;
     }
-    .ld-ghost {
-      opacity: 0;
+    .ld-line,
+    .ld-halo {
+      stroke-dasharray: none !important;
+      stroke-dashoffset: 0 !important;
     }
-    .ld-fill {
-      clip-path: none !important;
+    .ld-scan {
+      display: none;
+    }
+    .ld-mark {
+      animation-duration: 0.01s;
+      animation-delay: 0s;
     }
   }
 </style>
 
 <style is:global>
-  /* Hold the hero's entrance while the loader is up, or it plays to nobody and
-     the page is already static by the time it is uncovered. Released the
-     moment the loader starts fading, so the two overlap. */
+  /* Hold the hero's own entrance while the loader is up, or it plays to nobody
+     and the hero is already static by the time it is uncovered. Released as the
+     loader begins fading, so the two overlap into one movement. */
   html.ld-on:not(.ld-released) .sub-load,
   html.ld-on:not(.ld-released) .widget-load,
   html.ld-on:not(.ld-released) .hero-brand-spacer {
@@ -165,16 +245,58 @@
       return;
     }
 
-    const fill = document.querySelector<HTMLElement>("[data-ld-fill]");
+    const lines = Array.from(
+      document.querySelectorAll<SVGPathElement>("[data-ld-line]"),
+    );
+    const scan = document.querySelector<HTMLElement>("[data-ld-scan]");
+    const mark = document.querySelector<HTMLImageElement>("[data-ld-mark]");
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // Real path length, so the dash maths is exact rather than an overshoot
+    // guess that would make the trace finish early or late.
+    const lengths = lines.map((line) => {
+      const len = line.getTotalLength();
+      line.style.strokeDasharray = `${len}`;
+      line.style.strokeDashoffset = `${len}`;
+      return len;
+    });
+
     const shownAt = performance.now();
-    // Matches the CSS appear delay. Below this the overlay was never visible,
-    // so it can be torn down with no fade at all.
+    // Matches the CSS appear delay: below this the overlay never rendered.
     const APPEAR_AT = 250;
-    // Once it HAS been seen, keep it long enough that it does not blink.
-    const MIN_VISIBLE = 420;
+    // Once it HAS been seen, long enough that it cannot blink out.
+    const MIN_VISIBLE = 520;
 
     let done = false;
     let raf = 0;
+
+    function drawTo(p: number) {
+      if (reduced) return;
+      lines.forEach((line, i) => {
+        line.style.strokeDashoffset = `${lengths[i] * (1 - p)}`;
+      });
+      if (scan) {
+        scan.style.opacity = p > 0.01 && p < 0.995 ? "1" : "0";
+        scan.style.transform = `translateY(${(p * 100).toFixed(2)}%)`;
+      }
+    }
+
+    /**
+     * The trace tracks loading rather than running on a fixed clock.
+     *
+     * It eases toward 92% and the last 8% only happens when the page really is
+     * ready. A bar that reaches 100% and then sits there is what makes a load
+     * feel broken instead of merely slow — so this never claims to be finished
+     * before it is.
+     */
+    function tick() {
+      const t = (performance.now() - shownAt) / 1500;
+      const eased = 1 - Math.pow(1 - Math.min(1, t), 2.2);
+      drawTo(Math.min(0.92, eased * 0.92));
+      if (!done) raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
 
     function finish() {
       if (done) return;
@@ -183,7 +305,7 @@
 
       const elapsed = performance.now() - shownAt;
       if (elapsed < APPEAR_AT) {
-        // Never rendered. Remove it outright rather than fading nothing out.
+        // Never rendered — tear it down rather than fade nothing out.
         root.classList.add("ld-done", "ld-released");
         root.classList.remove("ld-on");
         return;
@@ -191,55 +313,31 @@
 
       const wait = Math.max(0, APPEAR_AT + MIN_VISIBLE - elapsed);
       window.setTimeout(() => {
-        if (fill) fill.style.clipPath = "inset(0 0 0 0)";
-        root.classList.add("ld-leaving", "ld-released");
+        // Close the outline, then let it be measured for a beat before leaving.
+        drawTo(1);
+        root.classList.add("ld-traced");
         window.setTimeout(() => {
-          root.classList.add("ld-done");
-          root.classList.remove("ld-on", "ld-leaving");
-        }, 360);
+          root.classList.add("ld-leaving", "ld-released");
+          window.setTimeout(() => {
+            root.classList.add("ld-done");
+            root.classList.remove("ld-on", "ld-leaving");
+          }, 520);
+        }, 260);
       }, wait);
     }
 
     /**
-     * Progress creeps toward 92% and only completes when the page actually is.
+     * Ready means the HERO is ready, not the whole document.
      *
-     * Deliberately not a fake fixed-duration bar: it eases so that a slow load
-     * keeps moving without ever claiming to be finished, and the last 8% is
-     * real. A bar that hits 100% and then waits is the thing that makes a load
-     * feel broken rather than slow.
+     * window.load was the obvious signal and the wrong one — it waits on every
+     * image including a 189KB aerial and the widget's own bundle, none of it
+     * above the fold. Waiting for those would park the curtain on screen for
+     * seconds after the page was usable, which is a slower site, not a
+     * smoother one.
+     *
+     * The wordmark is included because the loader is DRAWING it: if it has not
+     * decoded, the loader itself is the broken thing on screen.
      */
-    function tick() {
-      const t = (performance.now() - shownAt) / 1400;
-      const eased = 1 - Math.pow(1 - Math.min(1, t), 2.2);
-      const pct = Math.min(92, eased * 92);
-      if (fill) fill.style.clipPath = `inset(0 ${(100 - pct).toFixed(2)}% 0 0)`;
-      if (!done) raf = requestAnimationFrame(tick);
-    }
-    raf = requestAnimationFrame(tick);
-
-    /**
-     * Ready means THE HERO is ready, not the whole document.
-     *
-     * window.load was the obvious signal and the wrong one: it waits for every
-     * image on the page — a 189KB aerial, a 126KB scan, the widget iframe and
-     * its own bundle — none of which are above the fold or block the hero from
-     * looking right. Waiting for them would routinely park the loader on screen
-     * for seconds after the page was perfectly usable, which is a slower site,
-     * not a smoother one.
-     *
-     * What actually has to be true is that text will not reflow and the visible
-     * imagery has decoded. Everything below the fold can keep arriving behind
-     * the curtain being lifted.
-     */
-    // Only the wordmark. Not ".hero img" — that pulls in RoofStory's 189KB
-    // aerial, which is decorative, sits in a panel that can fade in on its own,
-    // and would drag the curtain out by hundreds of milliseconds on a slow
-    // connection. The wordmark is different: the loader is DRAWING it, so if it
-    // has not decoded the loader itself is the broken thing on screen.
-    const heroImages = Array.from(
-      document.querySelectorAll<HTMLImageElement>("[data-brand-spacer] img"),
-    );
-
     const ready = Promise.all([
       document.fonts?.ready?.catch(() => undefined) ?? Promise.resolve(),
       new Promise<void>((resolve) => {
@@ -248,14 +346,10 @@
           once: true,
         });
       }),
-      ...heroImages.map((img) =>
-        img.decode ? img.decode().catch(() => undefined) : Promise.resolve(),
-      ),
+      mark?.decode?.().catch(() => undefined) ?? Promise.resolve(),
     ]);
 
-    // Ceiling. A stalled font or a third-party script must not hold the page.
     const cap = new Promise<void>((resolve) => window.setTimeout(resolve, 2600));
-
     Promise.race([ready, cap]).then(finish).catch(finish);
   }
 
