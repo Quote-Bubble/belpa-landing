@@ -485,7 +485,7 @@ input {
   opacity: 0;
   transform: translate3d(0, 46px, 0) scale(0.97);
   transform-origin: center top;
-  animation: widget-rise 1s var(--ease-out-expo) 1.2s forwards;
+  animation: widget-rise 0.7s var(--ease-out-expo) 0.82s forwards;
 }
 .widget-load.is-settled {
   animation: none;

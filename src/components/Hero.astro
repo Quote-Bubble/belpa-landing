@@ -293,7 +293,7 @@ import RoofStory from "./RoofStory.astro";
 
   :global(html.brand-zoom) .hero-brand-spacer {
     transform-origin: 50% 50%;
-    animation: brand-enter 1.4s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1))
+    animation: brand-enter 0.95s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1))
       forwards;
   }
 
@@ -399,8 +399,8 @@ import RoofStory from "./RoofStory.astro";
        the headline is the thing your eye follows in. */
     /* ACT THREE. Starts as the wordmark is finishing its descent, not after —
        overlapping by ~0.4s means no dead beat between the two acts. */
-    --in-delay: 1s;
-    --in-dur: 0.9s;
+    --in-delay: 0.68s;
+    --in-dur: 0.62s;
     --in-y: 30px;
     --in-x: -26px;
     margin: 0;
@@ -415,8 +415,8 @@ import RoofStory from "./RoofStory.astro";
   .hero-support {
     /* Follows the headline on the same axis but shorter and lower, so the two
        read as one column arriving rather than two lines. */
-    --in-delay: 1.08s;
-    --in-dur: 0.9s;
+    --in-delay: 0.74s;
+    --in-dur: 0.62s;
     --in-y: 34px;
     --in-x: -20px;
     margin: 1.05rem 0 0;
@@ -450,8 +450,8 @@ import RoofStory from "./RoofStory.astro";
        genuinely a different direction rather than a mirrored slide — the panel
        turns to face you as it arrives, which is also the only 3D move in the
        hero, so it reads as the proof presenting itself. */
-    --in-delay: 1.12s;
-    --in-dur: 1s;
+    --in-delay: 0.76s;
+    --in-dur: 0.7s;
     --in-y: 26px;
     --in-x: 44px;
     --in-ry: -10deg;
