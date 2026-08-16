@@ -118,6 +118,66 @@ import RoofStory from "./RoofStory.astro";
   </button>
 </section>
 
+{/*
+  Inline and immediately after the hero, so it runs BEFORE the first paint that
+  could include the wordmark. As a deferred module this lost a race on mobile:
+  the element got painted in a fallback state first, then the zoom restarted
+  from huge, and the logo visibly flashed its destination before flying to it.
+
+  Placed after the markup because it measures the element — it needs it parsed
+  and laid out. getBoundingClientRect flushes layout for what has been parsed so
+  far, and the stylesheet is inlined in <head>, so the rect is the real one.
+*/}
+<script is:inline>
+  (() => {
+    const root = document.documentElement;
+    // Whatever happens below, the wordmark must end up visible. Nothing else
+    // grants it visibility, so a thrown error here would leave it invisible for
+    // good.
+    const plain = () => root.classList.add("brand-plain");
+    try {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        plain();
+        return;
+      }
+      const spacer = document.querySelector("[data-brand-spacer]");
+      if (!spacer) return plain();
+
+      const r = spacer.getBoundingClientRect();
+      if (!r.width) return plain();
+
+      // Largest the wordmark gets, as a share of the viewport. Capped so it is
+      // imposing on a laptop without turning into a billboard on a 5K display.
+      const target = Math.min(window.innerWidth * 0.54, 880);
+      const scale = Math.max(2, Math.min(target / r.width, 5));
+
+      spacer.style.setProperty(
+        "--bz-x",
+        window.innerWidth / 2 - (r.left + r.width / 2) + "px",
+      );
+      spacer.style.setProperty(
+        "--bz-y",
+        window.innerHeight / 2 - (r.top + r.height / 2) + "px",
+      );
+      spacer.style.setProperty("--bz-s", String(scale));
+      root.classList.add("brand-zoom");
+    } catch {
+      plain();
+    }
+  })();
+</script>
+
+{/* JS off entirely: no script runs, no class lands, so this is the only thing
+    standing between the wordmark and permanent invisibility. */}
+<noscript>
+  <style>
+    .hero-brand-spacer {
+      opacity: 1 !important;
+      animation: none !important;
+    }
+  </style>
+</noscript>
+
 <style>
   .hero-stage {
     padding-top: max(5.5rem, calc(env(safe-area-inset-top, 0px) + 5rem));
@@ -209,13 +269,26 @@ import RoofStory from "./RoofStory.astro";
        the flying wordmark silently stops working. */
     transform: none;
     filter: none;
-    animation: brand-fade 0.7s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1))
-      0.35s forwards;
+    /* No animation by DEFAULT, and opacity 0.
+       There used to be a delayed fade here as the no-JS fallback, and on mobile
+       it caused the exact bug it was meant to prevent: JS took longer than the
+       0.35s delay, so the fade ran first and painted the wordmark at its final
+       size and position, and only then did the script swap in the zoom, which
+       restarts from huge. The logo flashed its end state before flying.
+       A delayed fallback is a race, and this one is unwinnable on a slow phone.
+       So the default state now shows nothing at all — there is no frame in
+       which a wrong state can be painted. Visibility is granted only by a class,
+       from the inline script below or from the failsafe. */
   }
   @keyframes brand-fade {
     to {
       opacity: 1;
     }
+  }
+  /* Failsafe and no-JS path: no zoom, just present. */
+  :global(html.brand-plain) .hero-brand-spacer {
+    animation: brand-fade 0.6s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1))
+      forwards;
   }
 
   :global(html.brand-zoom) .hero-brand-spacer {
@@ -658,52 +731,3 @@ import RoofStory from "./RoofStory.astro";
 </script>
 
 
-<script>
-  /**
-   * Act one: place the wordmark huge and centred, so the CSS can zoom it back.
-   *
-   * Measured rather than guessed. The wordmark lives in the left rail, so
-   * centring it means knowing where it actually is — a viewport-unit
-   * approximation would drift with every breakpoint and land the zoom off its
-   * own resting place, which is the one thing this animation cannot get wrong.
-   *
-   * Runs before the fallback fade's 0.35s delay, so in practice the plain fade
-   * never starts. If this never runs at all, that fade is what plays and the
-   * wordmark still arrives — it simply does not zoom.
-   */
-  function initBrandZoom() {
-    const root = document.documentElement;
-    if (root.classList.contains("brand-zoom")) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    const spacer = document.querySelector<HTMLElement>("[data-brand-spacer]");
-    if (!spacer) return;
-
-    const r = spacer.getBoundingClientRect();
-    if (r.width < 1) return;
-
-    // How wide the wordmark should be at its largest, as a share of the
-    // viewport. Clamped so it is imposing on a laptop without becoming a
-    // billboard on a 5K display.
-    const target = Math.min(window.innerWidth * 0.54, 880);
-    const scale = Math.max(2, Math.min(target / r.width, 5));
-
-    spacer.style.setProperty(
-      "--bz-x",
-      `${window.innerWidth / 2 - (r.left + r.width / 2)}px`,
-    );
-    spacer.style.setProperty(
-      "--bz-y",
-      `${window.innerHeight / 2 - (r.top + r.height / 2)}px`,
-    );
-    spacer.style.setProperty("--bz-s", String(scale));
-
-    root.classList.add("brand-zoom");
-  }
-
-  initBrandZoom();
-  document.addEventListener("astro:after-swap", () => {
-    document.documentElement.classList.remove("brand-zoom");
-    initBrandZoom();
-  });
-</script>
