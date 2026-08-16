@@ -483,9 +483,9 @@ input {
    on an iframe rasterises badly mid-animation in more than one browser. */
 .widget-load {
   opacity: 0;
-  transform: translate3d(0, 72px, 0) scale(0.955);
+  transform: translate3d(0, 46px, 0) scale(0.97);
   transform-origin: center top;
-  animation: widget-rise 1.75s var(--ease-out-expo) 0.26s forwards;
+  animation: widget-rise 1s var(--ease-out-expo) 1.2s forwards;
 }
 .widget-load.is-settled {
   animation: none;

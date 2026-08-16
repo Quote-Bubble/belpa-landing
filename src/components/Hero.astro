@@ -194,17 +194,36 @@ import RoofStory from "./RoofStory.astro";
     user-select: none;
     pointer-events: none;
     opacity: 0;
-    /* Opens the movement at t=0 and travels least, because it sits furthest
-       "back" in the rail's depth order. The old 1.35 scale and 14px blur were
-       sized for an entrance that ran alone for half a second before anything
-       else moved; inside a 1s composite that reads as one element misbehaving.
-       Blur is kept HERE and nowhere else — one element re-rastering briefly is
-       a flourish, five at once is the jank the scroll audit removed. */
-    transform: translateY(0.16em) scale(1.1);
-    filter: blur(8px);
-    transform-origin: 0% 100%;
-    animation: brand-enter 1.05s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) 0s forwards;
+    /* ACT ONE. The wordmark opens huge and centred in the viewport, then zooms
+       back to its place in the rail — and only once it lands does the rest of
+       the hero arrive. Two acts, deliberately: the logo IS the event, and
+       everything else is the settle.
+
+       The big transform is measured and set from JS as --bz-*, because centring
+       an element that lives in the left rail means knowing where it actually
+       is. Without JS this falls through to a plain fade (see below), so the
+       wordmark is never left invisible.
+
+       Keep the animation NAMED brand-enter. brand-dock.ts boots the
+       scroll-to-nav morph off animationend for exactly that name; rename it and
+       the flying wordmark silently stops working. */
+    transform: none;
+    filter: none;
+    animation: brand-fade 0.7s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1))
+      0.35s forwards;
   }
+  @keyframes brand-fade {
+    to {
+      opacity: 1;
+    }
+  }
+
+  :global(html.brand-zoom) .hero-brand-spacer {
+    transform-origin: 50% 50%;
+    animation: brand-enter 1.4s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1))
+      forwards;
+  }
+
   .hero-brand-spacer img {
     display: block;
     height: 1em;
@@ -241,9 +260,24 @@ import RoofStory from "./RoofStory.astro";
     visibility: hidden;
   }
 
+  /* Lands on transform:none, never an identity transform — a transform left on
+     the element keeps it a containing block for fixed descendants, and
+     brand-dock hands this element off to a fixed flying mark. */
   @keyframes brand-enter {
-    50% { opacity: 1; filter: blur(2.5px); }
-    100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+    0% {
+      opacity: 0;
+      transform: translate3d(var(--bz-x, 0px), var(--bz-y, 0px), 0)
+        scale(var(--bz-s, 3.4));
+      filter: blur(16px);
+    }
+    14% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+      filter: blur(0);
+    }
   }
   @keyframes brand-sheen {
     0% { background-position: 200% 50%; }
@@ -290,10 +324,12 @@ import RoofStory from "./RoofStory.astro";
   .hero-promise {
     /* Long lateral from the left — the biggest single travel in the hero, so
        the headline is the thing your eye follows in. */
-    --in-delay: 0.08s;
-    --in-dur: 1.65s;
-    --in-y: 14px;
-    --in-x: -64px;
+    /* ACT THREE. Starts as the wordmark is finishing its descent, not after —
+       overlapping by ~0.4s means no dead beat between the two acts. */
+    --in-delay: 1s;
+    --in-dur: 0.9s;
+    --in-y: 30px;
+    --in-x: -26px;
     margin: 0;
     max-width: 15em;
     font-size: clamp(1.8rem, 3.9vw, 2.75rem);
@@ -306,10 +342,10 @@ import RoofStory from "./RoofStory.astro";
   .hero-support {
     /* Follows the headline on the same axis but shorter and lower, so the two
        read as one column arriving rather than two lines. */
-    --in-delay: 0.18s;
-    --in-dur: 1.6s;
+    --in-delay: 1.08s;
+    --in-dur: 0.9s;
     --in-y: 34px;
-    --in-x: -40px;
+    --in-x: -20px;
     margin: 1.05rem 0 0;
     max-width: 34rem;
     font-size: clamp(1rem, 1.7vw, 1.1rem);
@@ -341,12 +377,12 @@ import RoofStory from "./RoofStory.astro";
        genuinely a different direction rather than a mirrored slide — the panel
        turns to face you as it arrives, which is also the only 3D move in the
        hero, so it reads as the proof presenting itself. */
-    --in-delay: 0.12s;
-    --in-dur: 1.85s;
-    --in-y: 22px;
-    --in-x: 86px;
-    --in-ry: -16deg;
-    --in-s: 0.955;
+    --in-delay: 1.12s;
+    --in-dur: 1s;
+    --in-y: 26px;
+    --in-x: 44px;
+    --in-ry: -10deg;
+    --in-s: 0.965;
     width: 100%;
     max-width: 34rem;
     margin-inline: auto;
@@ -621,3 +657,53 @@ import RoofStory from "./RoofStory.astro";
   });
 </script>
 
+
+<script>
+  /**
+   * Act one: place the wordmark huge and centred, so the CSS can zoom it back.
+   *
+   * Measured rather than guessed. The wordmark lives in the left rail, so
+   * centring it means knowing where it actually is — a viewport-unit
+   * approximation would drift with every breakpoint and land the zoom off its
+   * own resting place, which is the one thing this animation cannot get wrong.
+   *
+   * Runs before the fallback fade's 0.35s delay, so in practice the plain fade
+   * never starts. If this never runs at all, that fade is what plays and the
+   * wordmark still arrives — it simply does not zoom.
+   */
+  function initBrandZoom() {
+    const root = document.documentElement;
+    if (root.classList.contains("brand-zoom")) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const spacer = document.querySelector<HTMLElement>("[data-brand-spacer]");
+    if (!spacer) return;
+
+    const r = spacer.getBoundingClientRect();
+    if (r.width < 1) return;
+
+    // How wide the wordmark should be at its largest, as a share of the
+    // viewport. Clamped so it is imposing on a laptop without becoming a
+    // billboard on a 5K display.
+    const target = Math.min(window.innerWidth * 0.54, 880);
+    const scale = Math.max(2, Math.min(target / r.width, 5));
+
+    spacer.style.setProperty(
+      "--bz-x",
+      `${window.innerWidth / 2 - (r.left + r.width / 2)}px`,
+    );
+    spacer.style.setProperty(
+      "--bz-y",
+      `${window.innerHeight / 2 - (r.top + r.height / 2)}px`,
+    );
+    spacer.style.setProperty("--bz-s", String(scale));
+
+    root.classList.add("brand-zoom");
+  }
+
+  initBrandZoom();
+  document.addEventListener("astro:after-swap", () => {
+    document.documentElement.classList.remove("brand-zoom");
+    initBrandZoom();
+  });
+</script>
