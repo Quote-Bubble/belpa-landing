@@ -1,5 +1,5 @@
 /**
- * The roof outline the site draws, shared by RoofStory and the loader.
+ * The roof outline the site draws (RoofStory hero animation).
  *
  * Coordinates are in a 1024x768 viewBox matching the 4:3 aerial. Kept in one
  * place because two components now trace it: if they held separate copies, a
